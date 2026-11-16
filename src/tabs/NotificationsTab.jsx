@@ -1,0 +1,222 @@
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
+import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+
+const notifications = [
+  { key: 'guerra_enabled', label: 'Guerra & Conflitos', desc: 'Notícias sobre guerras ativas e conflitos armados', icon: '⚔️', color: '#ff0000' },
+  { key: 'catastrofes_enabled', label: 'Catástrofes Naturais', desc: 'Terramotos, tsunamis, erupções e outros desastres', icon: '🌋', color: '#ff6600' },
+  { key: 'meteorologia_enabled', label: 'Meteorologia Portugal', desc: 'Alertas meteorológicos e condições extremas', icon: '🌧️', color: '#00aaff' },
+  { key: 'tensao_global_enabled', label: 'Tensão Global', desc: 'Indicadores de escalada de tensão internacional', icon: '🌍', color: '#ffaa00' },
+  { key: 'pizza_index_enabled', label: 'Índice Pizza', desc: 'Alterações significativas no índice de atividade', icon: '🍕', color: '#ff9900' },
+  { key: 'deals_enabled', label: 'Promoções Sobrevivência', desc: 'Novas ofertas em equipamento de preparação', icon: '🛒', color: '#00cc66' },
+];
+
+export default function NotificationsTab() {
+  const [settings, setSettings] = useState({
+    guerra_enabled: true,
+    catastrofes_enabled: true,
+    meteorologia_enabled: true,
+    tensao_global_enabled: true,
+    pizza_index_enabled: false,
+    deals_enabled: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [existingId, setExistingId] = useState(null);
+  const [user, setUser] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const existing = await base44.entities.NotificationSettings.list();
+      if (existing.length > 0) {
+        setSettings(existing[0]);
+        setExistingId(existing[0].id);
+      }
+      
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+      } catch (e) {
+        setUser(null);
+      }
+    };
+    load();
+  }, []);
+
+  const handleToggle = (key) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    setSaved(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const data = { ...settings, last_check: new Date().toISOString() };
+    delete data.id;
+    delete data.created_date;
+    delete data.updated_date;
+    delete data.created_by;
+
+    if (existingId) {
+      await base44.entities.NotificationSettings.update(existingId, data);
+    } else {
+      const created = await base44.entities.NotificationSettings.create(data);
+      setExistingId(created.id);
+    }
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const enabledCount = notifications.filter(n => settings[n.key]).length;
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await base44.entities.User.delete(user.id);
+      await base44.auth.logout();
+    } catch (error) {
+      alert('Erro ao eliminar conta. Tente novamente.');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Bell size={16} style={{ color: '#00ff41' }} />
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+            Notificações
+          </h2>
+        </div>
+        <span className="text-[10px] px-2 py-1 rounded-sm"
+          style={{ background: '#00ff4122', color: '#00ff41', border: '1px solid #00ff4133' }}>
+          {enabledCount}/{notifications.length} ativas
+        </span>
+      </div>
+
+      <div className="p-3 rounded-sm mb-4" style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
+        <p className="text-[10px]" style={{ color: '#00ff4177' }}>
+          🔔 Configure quais notificações deseja receber. Os dados são atualizados diariamente às 4:00 AM.
+        </p>
+      </div>
+
+      <div className="space-y-2 mb-6">
+        {notifications.map((notif, i) => (
+          <motion.div
+            key={notif.key}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="flex items-center justify-between p-3 rounded-sm transition-all"
+            style={{
+              background: settings[notif.key] ? '#001a0066' : '#001a0022',
+              border: `1px solid ${settings[notif.key] ? notif.color + '33' : '#00ff4111'}`,
+              borderLeft: `3px solid ${settings[notif.key] ? notif.color : '#00ff4122'}`,
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-lg">{notif.icon}</span>
+              <div>
+                <h3 className="text-xs font-bold" style={{ color: settings[notif.key] ? '#00ff41cc' : '#00ff4155' }}>
+                  {notif.label}
+                </h3>
+                <p className="text-[10px] mt-0.5" style={{ color: '#00ff4155' }}>{notif.desc}</p>
+              </div>
+            </div>
+            <Switch
+              checked={settings[notif.key]}
+              onCheckedChange={() => handleToggle(notif.key)}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full flex items-center justify-center gap-2 p-3 rounded-sm text-xs uppercase tracking-wider font-bold transition-all"
+        style={{
+          background: saved ? '#00ff4122' : '#00ff4111',
+          border: `1px solid ${saved ? '#00ff4166' : '#00ff4133'}`,
+          color: '#00ff41',
+        }}
+      >
+        {saving ? (
+          <><Loader2 size={14} className="animate-spin" /> A GUARDAR...</>
+        ) : saved ? (
+          <><Check size={14} /> GUARDADO!</>
+        ) : (
+          <><Save size={14} /> GUARDAR DEFINIÇÕES</>
+        )}
+      </button>
+
+      {/* Delete Account Section */}
+      {user && (
+        <div className="mt-6 pt-6" style={{ borderTop: '1px solid #ff000022' }}>
+          <h3 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: '#ff0000cc' }}>
+            ⚠️ Zona de Perigo
+          </h3>
+          
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-sm text-xs uppercase tracking-wider font-bold transition-all"
+              style={{
+                background: '#ff000011',
+                border: '1px solid #ff000033',
+                color: '#ff0000cc',
+              }}
+            >
+              <UserX size={14} /> Eliminar Conta
+            </button>
+          ) : (
+            <div className="p-4 rounded-sm" style={{ background: '#ff000022', border: '1px solid #ff000044' }}>
+              <div className="flex items-start gap-2 mb-3">
+                <AlertTriangle size={16} style={{ color: '#ff0000' }} className="flex-shrink-0 mt-0.5" />
+                <p className="text-xs leading-relaxed" style={{ color: '#ff0000cc' }}>
+                  Esta ação é PERMANENTE e não pode ser revertida. Todos os seus dados serão eliminados.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="flex-1 px-3 py-2 rounded-sm text-xs uppercase tracking-wider"
+                  style={{
+                    background: '#001a0033',
+                    border: '1px solid #00ff4133',
+                    color: '#00ff4188',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-sm text-xs uppercase tracking-wider font-bold"
+                  style={{
+                    background: '#ff0000',
+                    border: '1px solid #ff0000',
+                    color: '#fff',
+                  }}
+                >
+                  {deleting ? (
+                    <><Loader2 size={14} className="animate-spin" /> A Eliminar...</>
+                  ) : (
+                    <>Confirmar Eliminação</>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
