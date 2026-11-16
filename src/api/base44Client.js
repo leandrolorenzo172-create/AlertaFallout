@@ -3,6 +3,7 @@
 // - IA (InvokeLLM, askMestre): usa o Claude quando a app corre como artefacto no claude.ai.
 // - Rádio: API pública radio-browser.info (só funciona fora do artefacto).
 import { SYSTEM_IDENTITY } from '@/data/survivalKnowledge';
+import { fetchWeather, fetchCatastrophes, fetchWarNews, fetchDashboard, fetchPizza } from './liveData';
 
 export const IS_ARTIFACT = typeof window !== 'undefined' && !!window.claude?.use;
 
@@ -50,6 +51,15 @@ const entities = {
 };
 
 async function invokeLLM({ prompt, add_context_from_internet, response_json_schema }) {
+  // Fora do claude.ai: dados reais de fontes públicas, escolhidos pelo formato que o separador pede
+  if (!IS_ARTIFACT) {
+    const props = response_json_schema?.properties || {};
+    if (props.cities) return fetchWeather();
+    if (props.war_risk) return fetchDashboard();
+    if (props.current_level) return fetchPizza();
+    if (props.articles) return /cat[aá]strofes/i.test(prompt) ? fetchCatastrophes() : fetchWarNews();
+    throw new Error('IA indisponível neste ambiente');
+  }
   const sample = await getSample();
   if (!sample) throw new Error('IA indisponível neste ambiente');
   let input = (add_context_from_internet ? SIM_PREAMBLE : '') + prompt;

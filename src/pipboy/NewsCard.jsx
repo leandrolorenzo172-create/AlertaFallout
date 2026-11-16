@@ -32,6 +32,11 @@ export default function NewsCard({ article, index = 0 }) {
         {article.region && <span>{article.region}</span>}
         {(article.category || article.type) && <span>{String(article.category || article.type).replace(/_/g, ' ')}</span>}
         {article.source && <span>Fonte: {article.source}</span>}
+        {article.url && (
+          <a href={article.url} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: '#00ff41' }}>
+            Ler notícia ↗
+          </a>
+        )}
       </div>
     </motion.div>
   );
