@@ -26,7 +26,7 @@ export default function StatusBar({ threatLevel = 0 }) {
     if (threatLevel >= 8) return '#ff0000';
     if (threatLevel >= 6) return '#ff6600';
     if (threatLevel >= 4) return '#ffaa00';
-    return '#00ff41';
+    return 'rgb(var(--c))';
   };
   
   const getStatusText = () => {
@@ -40,8 +40,8 @@ export default function StatusBar({ threatLevel = 0 }) {
   
   return (
     <div className="flex items-center justify-between px-4 py-2" style={{
-      background: '#001a00',
-      borderBottom: '1px solid #00ff4122',
+      background: 'rgb(var(--cd))',
+      borderBottom: '1px solid rgb(var(--c) / 0.13)',
     }}>
       <div className="flex items-center gap-3">
         <motion.div
@@ -57,15 +57,15 @@ export default function StatusBar({ threatLevel = 0 }) {
       
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
-          <Shield size={10} style={{ color: '#00ff4188' }} />
-          <span className="text-[10px]" style={{ color: '#00ff4188' }}>
+          <Shield size={10} style={{ color: 'rgb(var(--c) / 0.53)' }} />
+          <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             NÍVEL {Math.round(threatLevel)}
           </span>
         </div>
         
         <div className="flex items-center gap-1.5">
           {isOnline ? (
-            <Wifi size={10} style={{ color: '#00ff41' }} />
+            <Wifi size={10} style={{ color: 'rgb(var(--c))' }} />
           ) : (
             <motion.div
               animate={{ opacity: [0.4, 1, 0.4] }}
@@ -74,7 +74,7 @@ export default function StatusBar({ threatLevel = 0 }) {
               <WifiOff size={10} style={{ color: '#ff6600' }} />
             </motion.div>
           )}
-          <span className="text-[10px] tabular-nums" style={{ color: isOnline ? '#00ff41aa' : '#ff6600aa' }}>
+          <span className="text-[10px] tabular-nums" style={{ color: isOnline ? 'rgb(var(--c) / 0.67)' : '#ff6600aa' }}>
             {time.toLocaleTimeString('pt-PT')}
           </span>
         </div>

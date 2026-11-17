@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Trash2, X, Palette, Save, Crosshair } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { alpha } from '../theme';
 
 const BRAGA_CENTER = [41.5518, -8.4229];
 
 const PIN_COLORS = [
-  { name: 'Verde', value: '#00ff41' },
+  { name: 'Verde', value: 'rgb(var(--c))' },
   { name: 'Vermelho', value: '#ff0000' },
   { name: 'Laranja', value: '#ff6600' },
   { name: 'Amarelo', value: '#ffaa00' },
@@ -21,7 +22,7 @@ const PIN_COLORS = [
 function createColorIcon(color) {
   return L.divIcon({
     className: 'custom-marker',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #001a00;box-shadow:0 0 8px ${color}aa;"></div>`,
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid rgb(var(--cd));box-shadow:0 0 8px ${alpha(color, 'aa')};"></div>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
@@ -98,18 +99,18 @@ export default function BragaMapTab() {
     <div className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <MapPin size={16} style={{ color: '#00ff41' }} />
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+          <MapPin size={16} style={{ color: 'rgb(var(--c))' }} />
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
             Mapa Personalizado de Braga
           </h2>
         </div>
-        <span className="text-[10px]" style={{ color: '#00ff4166' }}>
+        <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>
           {pins.length} pino{pins.length !== 1 ? 's' : ''}
         </span>
       </div>
 
-      <div className="p-3 rounded-sm mb-3" style={{ background: '#00ff4110', border: '1px solid #00ff4133' }}>
-        <p className="text-[10px] leading-relaxed" style={{ color: '#00ff4199' }}>
+      <div className="p-3 rounded-sm mb-3" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
+        <p className="text-[10px] leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>
           📍 Clique no mapa para adicionar um pino. Defina nome, descrição e cor. Os pinos ficam guardados no dispositivo (offline).
         </p>
       </div>
@@ -123,21 +124,21 @@ export default function BragaMapTab() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-3"
           >
-            <div className="p-4 rounded-sm" style={{ background: '#001a0055', border: '1px solid #00ff4144' }}>
+            <div className="p-4 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.33)', border: '1px solid rgb(var(--c) / 0.27)' }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Crosshair size={14} style={{ color: '#00ff41' }} />
-                  <span className="text-xs uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+                  <Crosshair size={14} style={{ color: 'rgb(var(--c))' }} />
+                  <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
                     Novo Pino
                   </span>
                 </div>
                 <button onClick={() => setShowForm(false)} className="p-1 hover:bg-white/5 rounded-sm">
-                  <X size={14} style={{ color: '#00ff4166' }} />
+                  <X size={14} style={{ color: 'rgb(var(--c) / 0.4)' }} />
                 </button>
               </div>
 
               <div className="mb-2">
-                <span className="text-[10px]" style={{ color: '#00ff4166' }}>
+                <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>
                   Coords: {newPin.lat.toFixed(4)}, {newPin.lng.toFixed(4)}
                 </span>
               </div>
@@ -148,7 +149,7 @@ export default function BragaMapTab() {
                 onChange={(e) => setPinName(e.target.value)}
                 placeholder="Nome do local..."
                 className="w-full p-2 mb-2 rounded-sm text-xs outline-none"
-                style={{ background: '#0a0a0a', border: '1px solid #00ff4133', color: '#00ff41' }}
+                style={{ background: '#0a0a0a', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
                 autoFocus
               />
 
@@ -158,13 +159,13 @@ export default function BragaMapTab() {
                 placeholder="Descrição (opcional)..."
                 rows={2}
                 className="w-full p-2 mb-3 rounded-sm text-xs outline-none resize-none"
-                style={{ background: '#0a0a0a', border: '1px solid #00ff4133', color: '#00ff41' }}
+                style={{ background: '#0a0a0a', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
               />
 
               <div className="mb-3">
                 <div className="flex items-center gap-1 mb-2">
-                  <Palette size={12} style={{ color: '#00ff4188' }} />
-                  <span className="text-[10px] uppercase tracking-wider" style={{ color: '#00ff4188' }}>
+                  <Palette size={12} style={{ color: 'rgb(var(--c) / 0.53)' }} />
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.53)' }}>
                     Cor do Pino
                   </span>
                 </div>
@@ -176,7 +177,7 @@ export default function BragaMapTab() {
                       className="w-7 h-7 rounded-full transition-all"
                       style={{
                         background: c.value,
-                        border: pinColor === c.value ? '2px solid #00ff41' : '2px solid #001a00',
+                        border: pinColor === c.value ? '2px solid rgb(var(--c))' : '2px solid rgb(var(--cd))',
                         boxShadow: pinColor === c.value ? `0 0 8px ${c.value}` : 'none',
                       }}
                       title={c.name}
@@ -190,9 +191,9 @@ export default function BragaMapTab() {
                 disabled={!pinName.trim()}
                 className="w-full flex items-center justify-center gap-2 p-2 rounded-sm text-xs uppercase tracking-wider font-bold transition-all"
                 style={{
-                  background: pinName.trim() ? '#00ff4122' : '#001a0033',
-                  border: `1px solid ${pinName.trim() ? '#00ff4144' : '#00ff4111'}`,
-                  color: pinName.trim() ? '#00ff41' : '#00ff4144',
+                  background: pinName.trim() ? 'rgb(var(--c) / 0.13)' : 'rgb(var(--cd) / 0.2)',
+                  border: `1px solid ${pinName.trim() ? 'rgb(var(--c) / 0.27)' : 'rgb(var(--c) / 0.07)'}`,
+                  color: pinName.trim() ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.27)',
                 }}
               >
                 <Save size={12} />
@@ -204,7 +205,7 @@ export default function BragaMapTab() {
       </AnimatePresence>
 
       {/* Map */}
-      <div className="rounded-sm overflow-hidden relative" style={{ border: '1px solid #00ff4133', height: '450px' }}>
+      <div className="rounded-sm overflow-hidden relative" style={{ border: '1px solid rgb(var(--c) / 0.2)', height: '450px' }}>
         <MapContainer
           center={BRAGA_CENTER}
           zoom={13}
@@ -241,7 +242,7 @@ export default function BragaMapTab() {
       {pins.length > 0 && (
         <div className="mt-3">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: '#00ff4188' }}>
+            <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c) / 0.53)' }}>
               Pinos Guardados
             </h3>
             <button
@@ -258,12 +259,12 @@ export default function BragaMapTab() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-2 p-2 mb-1 rounded-sm"
-              style={{ background: '#001a0033', border: '1px solid #00ff4111' }}
+              style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}
             >
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: pin.color, boxShadow: `0 0 4px ${pin.color}88` }} />
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: pin.color, boxShadow: `0 0 4px ${alpha(pin.color, '88')}` }} />
               <div className="flex-1 min-w-0">
-                <span className="text-xs font-bold block truncate" style={{ color: '#00ff41cc' }}>{pin.name}</span>
-                {pin.desc && <span className="text-[10px] block truncate" style={{ color: '#00ff4166' }}>{pin.desc}</span>}
+                <span className="text-xs font-bold block truncate" style={{ color: 'rgb(var(--c) / 0.8)' }}>{pin.name}</span>
+                {pin.desc && <span className="text-[10px] block truncate" style={{ color: 'rgb(var(--c) / 0.4)' }}>{pin.desc}</span>}
               </div>
               <button
                 onClick={() => handleDeletePin(pin.id)}
@@ -277,9 +278,9 @@ export default function BragaMapTab() {
       )}
 
       {pins.length === 0 && !showForm && (
-        <div className="mt-3 p-4 text-center rounded-sm" style={{ background: '#001a0033', border: '1px dashed #00ff4122' }}>
-          <MapPin size={20} style={{ color: '#00ff4144' }} className="mx-auto mb-2" />
-          <p className="text-[10px]" style={{ color: '#00ff4155' }}>
+        <div className="mt-3 p-4 text-center rounded-sm" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px dashed rgb(var(--c) / 0.13)' }}>
+          <MapPin size={20} style={{ color: 'rgb(var(--c) / 0.27)' }} className="mx-auto mb-2" />
+          <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.33)' }}>
             Sem pinos. Clique no mapa para começar.
           </p>
         </div>

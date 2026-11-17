@@ -72,19 +72,19 @@ export default function PullToRefresh({ children, onRefresh }) {
         <div 
           className="flex items-center gap-2 px-4 py-2 rounded-full"
           style={{ 
-            background: '#001a00cc', 
-            border: '1px solid #00ff4133',
+            background: 'rgb(var(--cd) / 0.8)', 
+            border: '1px solid rgb(var(--c) / 0.2)',
             backdropFilter: 'blur(10px)',
           }}
         >
           <motion.div style={{ rotate: isRefreshing ? 360 : iconRotation }}>
             <RefreshCw 
               size={16} 
-              style={{ color: '#00ff41' }}
+              style={{ color: 'rgb(var(--c))' }}
               className={isRefreshing ? 'animate-spin' : ''}
             />
           </motion.div>
-          <span className="text-xs uppercase tracking-wider" style={{ color: '#00ff41' }}>
+          <span className="text-xs uppercase tracking-wider" style={{ color: 'rgb(var(--c))' }}>
             {isRefreshing ? 'A atualizar...' : 'Puxar para atualizar'}
           </span>
         </div>

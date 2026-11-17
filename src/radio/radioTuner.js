@@ -1,5 +1,6 @@
 // Sintonizador de rádio analógico (JavaScript puro, sem dependências).
 // Usado no separador Rádio da app e no ficheiro autónomo radio-fallout-pt.html.
+import { themedCtx } from './canvasTheme';
 
 // url = endereço principal; alt = alternativas tentadas por ordem se o principal falhar; page = site oficial
 export const DEFAULT_STATIONS = [
@@ -51,6 +52,7 @@ const TEMPLATE = `
       </div>
     </section>
     <section class="rf-right">
+      <div class="rf-clock rf-panelbox" aria-label="Hora atual"><span>HORA ATUAL</span><b data-rf="clock">--:--:--</b><span data-rf="date"></span></div>
       <div class="rf-tuner rf-panelbox">
         <div class="rf-screen" data-rf="screen" role="slider" tabindex="0" aria-label="Frequência (arrasta ou usa as setas)"><canvas data-rf="dial"></canvas></div>
         <div class="rf-volline"><span>VOLUME</span><i><b data-rf="volbar"></b></i><span data-rf="volpct">0%</span></div>
@@ -80,7 +82,6 @@ const TEMPLATE = `
           </div>
         </div>
       </div>
-      <div class="rf-vu rf-panelbox"><canvas data-rf="scope"></canvas></div>
     </section>
   </div>
   <div class="rf-presets" data-rf="presets"></div>
@@ -101,9 +102,9 @@ const TEMPLATE = `
 // Ícones originais por tipo de emissora (formas simples, a cor vem do CSS)
 const ART = {
   tower: '<path d="M100 78 62 180h14l8-24h32l8 24h14L100 78zm-11 62 11-32 11 32H89z"/><circle cx="100" cy="62" r="11"/><path d="M62 28a54 54 0 0 0 0 68l9-8a42 42 0 0 1 0-52zM138 28l-9 8a42 42 0 0 1 0 52l9 8a54 54 0 0 0 0-68zM42 12a80 80 0 0 0 0 100l9-8a68 68 0 0 1 0-84zM158 12l-9 8a68 68 0 0 1 0 84l9 8a80 80 0 0 0 0-100z"/>',
-  mic: '<rect x="76" y="18" width="48" height="92" rx="24"/><path d="M52 84h12a36 36 0 0 0 72 0h12a48 48 0 0 1-42 47.600V160h30v14H64v-14h30v-28.400A48 48 0 0 1 52 84z"/><rect x="84" y="38" width="32" height="5" fill="#030603"/><rect x="84" y="52" width="32" height="5" fill="#030603"/><rect x="84" y="66" width="32" height="5" fill="#030603"/>',
+  mic: '<rect x="76" y="18" width="48" height="92" rx="24"/><path d="M52 84h12a36 36 0 0 0 72 0h12a48 48 0 0 1-42 47.600V160h30v14H64v-14h30v-28.400A48 48 0 0 1 52 84z"/><rect x="84" y="38" width="32" height="5" fill="rgb(var(--cb))"/><rect x="84" y="52" width="32" height="5" fill="rgb(var(--cb))"/><rect x="84" y="66" width="32" height="5" fill="rgb(var(--cb))"/>',
   note: '<path d="M78 34 160 18v104a26 22 0 1 1-14-19V54L92 64v76a26 22 0 1 1-14-19z"/>',
-  disc: '<path fill-rule="evenodd" d="M100 16a84 84 0 1 0 0 168 84 84 0 0 0 0-168zm0 56a28 28 0 1 1 0 56 28 28 0 0 1 0-56zm0 20a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M100 30a70 70 0 0 0-70 70h10a60 60 0 0 1 60-60z" fill="#030603"/>',
+  disc: '<path fill-rule="evenodd" d="M100 16a84 84 0 1 0 0 168 84 84 0 0 0 0-168zm0 56a28 28 0 1 1 0 56 28 28 0 0 1 0-56zm0 20a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M100 30a70 70 0 0 0-70 70h10a60 60 0 0 1 60-60z" fill="rgb(var(--cb))"/>',
   bars: '<rect x="22" y="96" width="22" height="80"/><rect x="56" y="52" width="22" height="124"/><rect x="90" y="24" width="22" height="152"/><rect x="124" y="74" width="22" height="102"/><rect x="158" y="112" width="22" height="64"/>',
 };
 function artFor(st) {
@@ -123,7 +124,7 @@ function gearSvg(dot) {
     const pts = [[a - 0.26, 34], [a - 0.17, 47], [a + 0.17, 47], [a + 0.26, 34]];
     for (const [ang, r] of pts) d += `${d ? 'L' : 'M'}${(50 + Math.sin(ang) * r).toFixed(1)} ${(50 - Math.cos(ang) * r).toFixed(1)}`;
   }
-  return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d}Z" fill="#232622" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="17" fill="#181a17" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="8" fill="#2c302b"/><circle cx="50" cy="9" r="3.2" fill="${dot}"/></svg>`;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d}Z" fill="#232622" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="17" fill="#181a17" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="8" fill="#2c302b"/><circle cx="50" cy="9" r="3.2" style="fill:${dot}"/></svg>`;
 }
 
 function load(key, fallback) {
@@ -352,8 +353,7 @@ export function mountRadio(root) {
   }
 
   // ---------- Mostrador ----------
-  const dial = el.dial; const dctx = dial.getContext('2d');
-  const scope = el.scope; const sctx = scope.getContext('2d');
+  const dial = el.dial; const dctx = themedCtx(dial.getContext('2d'));
   let W = 0; let H = 0; let needsDraw = true;
   const FONT = "'Share Tech Mono', 'VT323', ui-monospace, monospace";
 
@@ -363,9 +363,6 @@ export function mountRadio(root) {
     W = r.width; H = r.height;
     dial.width = Math.round(W * dpr); dial.height = Math.round(H * dpr);
     dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const s = scope.getBoundingClientRect();
-    scope.width = Math.round(s.width * dpr); scope.height = Math.round(s.height * dpr);
-    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     needsDraw = true;
   }
   const pad = () => (W < 420 ? 40 : 56);
@@ -375,9 +372,9 @@ export function mountRadio(root) {
     dctx.clearRect(0, 0, W, H);
     const fmOn = state.band === 'FM';
     const small = W < 420;
-    const INK = '#04260f';
+    const INK = 'rgb(var(--cb))';
     const bg = dctx.createRadialGradient(W / 2, H * 0.45, 10, W / 2, H * 0.45, W * 0.7);
-    bg.addColorStop(0, '#3df272'); bg.addColorStop(1, '#1ba843');
+    bg.addColorStop(0, 'rgb(var(--c) / 0.95)'); bg.addColorStop(1, 'rgb(var(--c) / 0.62)');
     dctx.fillStyle = bg; dctx.fillRect(0, 0, W, H);
 
     const fmY = H * 0.2; const fmLine = H * 0.29; const trackY = H * 0.4; const trackH = H * 0.17; const amLine = H * 0.7; const amY = H * 0.87;
@@ -405,67 +402,17 @@ export function mountRadio(root) {
 
     // Faixa de sintonia, marcas das emissoras e cursor preto
     const tx0 = xOf(band().min, state.band); const tx1 = xOf(band().max, state.band);
-    dctx.fillStyle = 'rgba(2,60,22,0.5)'; dctx.fillRect(12, trackY, W - 24, trackH);
+    dctx.fillStyle = 'rgb(var(--cb) / 0.45)'; dctx.fillRect(12, trackY, W - 24, trackH);
     if (fmOn) {
-      dctx.fillStyle = 'rgba(4,38,15,0.75)';
+      dctx.fillStyle = 'rgb(var(--cb) / 0.8)';
       for (const st of stations()) dctx.fillRect(xOf(st.freq, 'FM') - 1, trackY + 3, 2, trackH - 6);
     }
     const nx = clamp(xOf(state.freq[state.band], state.band), tx0, tx1);
-    dctx.fillStyle = '#020503';
+    dctx.fillStyle = 'rgb(var(--cb))';
     const tw = small ? 10 : 13;
     dctx.beginPath();
     if (dctx.roundRect) dctx.roundRect(nx - tw / 2, trackY - 4, tw, trackH + 8, 2); else dctx.rect(nx - tw / 2, trackY - 4, tw, trackH + 8);
     dctx.fill();
-  }
-
-  // Medidor de agulha (decibéis de saída)
-  let vuLevel = 0;
-  function drawScope(t) {
-    const w = scope.clientWidth; const h = scope.clientHeight;
-    sctx.clearRect(0, 0, w, h);
-    const small = w < 420;
-    const G = '#22ff66';
-    // nível: estática medida no ruído; emissora com oscilação animada (o áudio do stream não pode ser lido pelo browser)
-    let target = 0;
-    if (state.on) {
-      const v = volume();
-      const live = state.status === 'live' ? state.gain : 0;
-      let rms = 0;
-      if (analyser) { analyser.getByteTimeDomainData(scopeData); let sum = 0; for (let i = 0; i < scopeData.length; i += 4) { const n = (scopeData[i] - 128) / 128; sum += n * n; } rms = Math.sqrt(sum / (scopeData.length / 4)); }
-      const stat = clamp(rms * 14, 0, 1) * 0.5 + (1 - live) * v * 0.28;
-      const music = live * v * (0.62 + 0.14 * Math.sin(t * 6.3) + 0.1 * Math.sin(t * 15.1) + 0.06 * Math.sin(t * 2.2));
-      target = clamp(Math.max(stat * (1 - live), music), 0, 1);
-    }
-    vuLevel += (target - vuLevel) * 0.12;
-
-    const px = w / 2; const py = h * 2.6; // pivô abaixo do painel
-    const spread = Math.atan((w * 0.42) / (py - h * 0.5));
-    const yTop = h * 0.3; const yA = h * 0.58; const yB = h * 0.68; const yBot = h * 0.9;
-    const ray = (a, y) => px + Math.tan(a) * (py - y);
-    const labels = ['-60', '-50', '-40', '-30', '-20', '-10', '0', '+4', '+6'];
-    sctx.fillStyle = G; sctx.strokeStyle = G; sctx.lineWidth = small ? 1.5 : 2.5; sctx.lineCap = 'round';
-    sctx.shadowColor = 'rgba(34,255,102,0.6)'; sctx.shadowBlur = 5;
-    sctx.font = `${small ? 10 : 13}px ${FONT}`; sctx.textAlign = 'right'; sctx.textBaseline = 'alphabetic';
-    sctx.fillText('DECIBÉIS', w - 8, h * 0.12);
-    sctx.textAlign = 'center';
-    const N = 16;
-    for (let i = 0; i <= N; i++) {
-      const a = -spread + (i / N) * spread * 2;
-      const major = i % 2 === 0;
-      const y0 = major ? yTop : yTop + (yA - yTop) * 0.5;
-      const y1 = major ? yBot : yBot - (yBot - yB) * 0.4;
-      sctx.beginPath(); sctx.moveTo(ray(a, y0), y0); sctx.lineTo(ray(a, yA), yA); sctx.stroke();
-      sctx.beginPath(); sctx.moveTo(ray(a, yB), yB); sctx.lineTo(ray(a, y1), y1); sctx.stroke();
-      if (major) sctx.fillText(labels[i / 2], ray(a, yTop - 8), yTop - 8);
-    }
-    sctx.beginPath(); sctx.moveTo(ray(-spread, yA), yA); sctx.lineTo(ray(spread, yA), yA); sctx.stroke();
-    sctx.beginPath(); sctx.moveTo(ray(-spread, yB), yB); sctx.lineTo(ray(spread, yB), yB); sctx.stroke();
-    sctx.fillText('OUTPUT', w / 2, h * 0.99);
-    // agulha
-    const an = -spread + vuLevel * spread * 2;
-    sctx.strokeStyle = '#ff2a2a'; sctx.shadowColor = 'rgba(255,42,42,0.8)'; sctx.shadowBlur = 8; sctx.lineWidth = small ? 2.5 : 3.5;
-    sctx.beginPath(); sctx.moveTo(ray(an, h + 4), h + 4); sctx.lineTo(ray(an, yTop - 2), yTop - 2); sctx.stroke();
-    sctx.shadowBlur = 0;
   }
 
   // ---------- Estado e interface ----------
@@ -691,6 +638,17 @@ export function mountRadio(root) {
   });
 
   on(window, 'resize', resize);
+  // Relógio: hora local do dispositivo, atualizada a cada segundo
+  const tick = () => {
+    const d = new Date();
+    el.clock.textContent = d.toLocaleTimeString('pt-PT', { hour12: false });
+    el.date.textContent = d.toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
+  };
+  tick();
+  const clockTimer = setInterval(tick, 1000);
+  // Quando o tema muda, o mostrador tem de ser redesenhado com as cores novas
+  const themeWatch = new MutationObserver(() => { needsDraw = true; });
+  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
   on(window, 'online', () => { if (state.on && state.station && state.status !== 'live') { retryDelay = 3000; startStream(state.station); } });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { needsDraw = true; });
 
@@ -708,11 +666,10 @@ export function mountRadio(root) {
     } else if (!drag) state.vel = 0;
     updateAudio();
     if (needsDraw) { drawDial(); needsDraw = false; }
-    drawScope(now / 1000);
     raf = requestAnimationFrame(frame);
   }
 
-  el.volcap.innerHTML = gearSvg('#22ff66'); el.tunecap.innerHTML = gearSvg('#22ff66');
+  el.volcap.innerHTML = gearSvg('rgb(var(--c))'); el.tunecap.innerHTML = gearSvg('rgb(var(--c))');
   renderPresets(); renderCustom();
   {
     const first = stations().find((x) => Math.abs(x.freq - state.freq.FM) <= LOCK);
@@ -725,6 +682,7 @@ export function mountRadio(root) {
   return function destroy() {
     destroyed = true;
     cancelAnimationFrame(raf);
+    clearInterval(clockTimer); themeWatch.disconnect();
     offs.forEach((f) => f());
     stopStream();
     if (ctx) ctx.close().catch(() => {});

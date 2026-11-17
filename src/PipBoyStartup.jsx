@@ -158,7 +158,7 @@ export default function PipBoyStartup({ onComplete }) {
                 width: '100px',
                 height: '100px',
                 borderRadius: '50%',
-                background: '#00ff41',
+                background: 'rgb(var(--c))',
                 filter: 'blur(80px)',
               }}
             />
@@ -174,8 +174,8 @@ export default function PipBoyStartup({ onComplete }) {
                   0deg,
                   transparent,
                   transparent 2px,
-                  rgba(0, 255, 65, 0.1) 2px,
-                  rgba(0, 255, 65, 0.1) 4px
+                  rgb(var(--c) / 0.1) 2px,
+                  rgb(var(--c) / 0.1) 4px
                 )`,
               }}
             />
@@ -187,7 +187,7 @@ export default function PipBoyStartup({ onComplete }) {
       <div 
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'repeating-linear-gradient(0deg, rgba(0,255,65,0.05) 0px, rgba(0,255,65,0.05) 2px, transparent 2px, transparent 4px)',
+          background: 'repeating-linear-gradient(0deg, rgb(var(--c) / 0.05) 0px, rgb(var(--c) / 0.05) 2px, transparent 2px, transparent 4px)',
           opacity: phase === 'screen-on' ? 1 : 0,
         }}
       />

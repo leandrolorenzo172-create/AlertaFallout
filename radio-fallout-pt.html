@@ -7,17 +7,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" />
 <style>
+:root { --c: 0 255 65; --cd: 0 26 0; --cb: 0 10 0; }
 html, body { margin: 0; min-height: 100%; background: #0a0d0a; color-scheme: dark; }
 body { display: flex; align-items: center; justify-content: center; padding: 12px 0;
   background: radial-gradient(ellipse at 50% 0%, #1a2019, #050605 70%); }
 #radio { width: 100%; }
 /* Rádio em painéis: PRESET à esquerda, mostrador verde iluminado, botões com anel, medidor de agulha */
 .rf-root {
-  --rf-screen: #030603;
-  --rf-green: #22ff66;
-  --rf-green2: #00e676;
-  --rf-dim: #0f7a35;
-  --rf-ring: #0c2a16;
+  --rf-screen: rgb(var(--cb));
+  --rf-green: rgb(var(--c));
+  --rf-green2: rgb(var(--c));
+  --rf-dim: rgb(var(--c) / 0.5);
+  --rf-ring: rgb(var(--c) / 0.16);
   --rf-needle: #ff2a2a;
   --rf-amber: #ffb000;
   --rf-body1: #2a2e29;
@@ -47,26 +48,26 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
 .rf-left { padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .rf-title { text-align: center; font-family: 'Arial Black', Impact, 'Share Tech Mono', sans-serif; font-style: italic; font-weight: 900;
   font-size: clamp(34px, 7vw, 58px); line-height: 1; letter-spacing: .02em; color: transparent; -webkit-text-stroke: 1.5px var(--rf-green);
-  filter: drop-shadow(0 0 5px #22ff6666); transform: skewX(-8deg); }
+  filter: drop-shadow(0 0 5px rgb(var(--c) / 0.4)); transform: skewX(-8deg); }
 .rf-sel { display: flex; align-items: center; gap: 8px; }
 .rf-sel button { flex: none; width: 46px; height: 32px; font: inherit; font-size: 22px; line-height: 1; cursor: pointer; color: var(--rf-green);
   background: transparent; border: 2px solid var(--rf-green); border-radius: 3px; }
 .rf-sel button:first-child { clip-path: polygon(28% 0, 100% 0, 100% 100%, 28% 100%, 0 50%); padding-left: 12px; border-left-width: 0;
   background: linear-gradient(var(--rf-green), var(--rf-green)) left / 0 no-repeat; box-shadow: inset 3px 0 0 transparent; }
 .rf-sel button:last-child { clip-path: polygon(0 0, 72% 0, 100% 50%, 72% 100%, 0 100%); padding-right: 12px; border-right-width: 0; }
-.rf-sel button:first-child, .rf-sel button:last-child { background: #0a2a14; }
-.rf-sel button:active { background: var(--rf-green); color: #031006; }
+.rf-sel button:first-child, .rf-sel button:last-child { background: rgb(var(--c) / 0.14); }
+.rf-sel button:active { background: var(--rf-green); color: rgb(var(--cb)); }
 .rf-name { flex: 1; min-width: 0; text-align: center; font-size: 17px; letter-spacing: .08em; text-transform: uppercase;
-  text-shadow: 0 0 8px #22ff6677; overflow-wrap: anywhere; }
+  text-shadow: 0 0 8px rgb(var(--c) / 0.47); overflow-wrap: anywhere; }
 .rf-art { position: relative; flex: 1; min-height: 230px; border: 2px solid var(--rf-green); border-radius: 18px; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px; }
 .rf-artsvg::after { content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(0deg, #030603aa 0 1px, transparent 1px 4px); }
-.rf-artsvg { position: relative; width: min(62%, 190px); aspect-ratio: 1; color: var(--rf-green); filter: drop-shadow(0 0 8px #22ff6655); transition: opacity .3s; }
+  background: repeating-linear-gradient(0deg, rgb(var(--cb) / 0.67) 0 1px, transparent 1px 4px); }
+.rf-artsvg { position: relative; width: min(62%, 190px); aspect-ratio: 1; color: var(--rf-green); filter: drop-shadow(0 0 8px rgb(var(--c) / 0.33)); transition: opacity .3s; }
 .rf-artsvg svg { width: 100%; height: 100%; display: block; }
 .rf-off .rf-artsvg { opacity: .18; }
 .rf-status { font-size: 11px; letter-spacing: .16em; color: var(--rf-dim); text-align: center; }
-.rf-status.live { color: var(--rf-green); text-shadow: 0 0 6px #22ff6688; }
+.rf-status.live { color: var(--rf-green); text-shadow: 0 0 6px rgb(var(--c) / 0.53); }
 .rf-status.conn { color: var(--rf-amber); }
 .rf-status.bad { color: var(--rf-needle); }
 .rf-genre { font-size: 12px; color: var(--rf-green2); opacity: .8; text-align: center; overflow-wrap: anywhere; }
@@ -77,8 +78,8 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
 /* Coluna direita */
 .rf-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .rf-tuner { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-.rf-screen { position: relative; height: 150px; border-radius: 26px 26px 40px 40px / 22px 22px 30px 30px; overflow: hidden; background: #06250f;
-  touch-action: none; cursor: ew-resize; box-shadow: 0 0 22px #22ff6633; transition: box-shadow .4s; }
+.rf-screen { position: relative; height: 150px; border-radius: 26px 26px 40px 40px / 22px 22px 30px 30px; overflow: hidden; background: rgb(var(--cd));
+  touch-action: none; cursor: ew-resize; box-shadow: 0 0 22px rgb(var(--c) / 0.2); transition: box-shadow .4s; }
 .rf-off .rf-screen { box-shadow: none; }
 .rf-screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: opacity .4s; }
 .rf-off .rf-screen canvas { opacity: .16; }
@@ -101,40 +102,42 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
   background: conic-gradient(from 225deg, var(--rf-green) calc(var(--p) * 270deg), var(--rf-ring) 0 270deg, transparent 0);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
-  filter: drop-shadow(0 0 4px #22ff6688); }
+  filter: drop-shadow(0 0 4px rgb(var(--c) / 0.53)); }
 .rf-off .rf-knob::before { opacity: .35; }
 .rf-cap { position: absolute; inset: 11%; border-radius: 50%; display: block; }
 .rf-cap svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 4px #000); }
 .rf-pills { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.rf-pill { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #020402;
+.rf-pill { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: rgb(var(--cb));
   border: 2px solid #2a2e29; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; min-width: 0; }
 .rf-pill span:last-child { font-variant-numeric: tabular-nums; }
 
 .rf-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
-.rf-nixie { display: flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 10px; background: #020402; border: 2px solid #2a2e29; }
+.rf-nixie { display: flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgb(var(--cb)); border: 2px solid #2a2e29; }
 .rf-nixie input { width: 5.2ch; background: transparent; border: 0; outline: 0; padding: 0; text-align: right; font: inherit; font-size: 24px; line-height: 1;
-  color: var(--rf-green); text-shadow: 0 0 8px #22ff6688; font-variant-numeric: tabular-nums; -webkit-user-select: text; user-select: text; }
+  color: var(--rf-green); text-shadow: 0 0 8px rgb(var(--c) / 0.53); font-variant-numeric: tabular-nums; -webkit-user-select: text; user-select: text; }
 .rf-nixie input:focus-visible { outline: 1px dashed var(--rf-green); outline-offset: 3px; }
 .rf-nixie span { font-size: 12px; color: var(--rf-green2); letter-spacing: .1em; }
 .rf-band { display: flex; border-radius: 10px; overflow: hidden; border: 2px solid #2a2e29; }
-.rf-band button { font: inherit; font-size: 13px; letter-spacing: .15em; padding: 9px 13px; border: 0; cursor: pointer; color: var(--rf-dim); background: #020402; }
-.rf-band button[aria-pressed="true"] { color: #031006; background: var(--rf-green); }
+.rf-band button { font: inherit; font-size: 13px; letter-spacing: .15em; padding: 9px 13px; border: 0; cursor: pointer; color: var(--rf-dim); background: rgb(var(--cb)); }
+.rf-band button[aria-pressed="true"] { color: rgb(var(--cb)); background: var(--rf-green); }
 .rf-leds { display: flex; flex-direction: column; gap: 5px; margin-left: auto; font-size: 10px; letter-spacing: .14em; }
 .rf-led { display: flex; align-items: center; gap: 6px; color: #5d6359; }
-.rf-led i { width: 9px; height: 9px; border-radius: 50%; background: #0c2413; }
-.rf-led.on { color: var(--rf-green); text-shadow: 0 0 6px #22ff6688; }
+.rf-led i { width: 9px; height: 9px; border-radius: 50%; background: rgb(var(--c) / 0.14); }
+.rf-led.on { color: var(--rf-green); text-shadow: 0 0 6px rgb(var(--c) / 0.53); }
 .rf-led.on i { background: var(--rf-green); box-shadow: 0 0 8px var(--rf-green); }
 
-/* Medidor */
-.rf-vu { padding: 8px 10px; }
-.rf-vu canvas { width: 100%; height: 170px; display: block; }
+/* Relógio */
+.rf-clock { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 12px 18px; }
+.rf-clock span { font-size: 11px; letter-spacing: .16em; color: rgb(var(--c) / 0.6); }
+.rf-clock b { font-weight: normal; font-size: clamp(30px, 8vw, 46px); line-height: 1; letter-spacing: .06em; font-variant-numeric: tabular-nums;
+  color: rgb(var(--c)); text-shadow: 0 0 12px rgb(var(--c) / 0.6); }
 
 /* Memórias */
 .rf-presets { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
-.rf-presets button { font: inherit; padding: 8px 2px 6px; border-radius: 10px; cursor: pointer; color: var(--rf-green); border: 2px solid #2a2e29; background: #020402;
+.rf-presets button { font: inherit; padding: 8px 2px 6px; border-radius: 10px; cursor: pointer; color: var(--rf-green); border: 2px solid #2a2e29; background: rgb(var(--cb));
   display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.rf-presets button:active, .rf-presets button.saved { background: var(--rf-green); color: #031006; }
-.rf-presets button:active small, .rf-presets button.saved small { color: #031006; }
+.rf-presets button:active, .rf-presets button.saved { background: var(--rf-green); color: rgb(var(--cb)); }
+.rf-presets button:active small, .rf-presets button.saved small { color: rgb(var(--cb)); }
 .rf-presets b { font-weight: normal; font-size: 14px; }
 .rf-presets small { font-size: 10px; color: var(--rf-green2); font-variant-numeric: tabular-nums; }
 .rf-presets button:focus-visible, .rf-band button:focus-visible, .rf-add:focus-visible, .rf-panel button:focus-visible, .rf-sel button:focus-visible { outline: 2px solid var(--rf-green); outline-offset: 2px; }
@@ -143,16 +146,16 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
 /* Estações personalizadas */
 .rf-add { display: block; margin: 12px auto 0; font: inherit; font-size: 11px; letter-spacing: .14em; background: none; border: 0; color: #9aa093; cursor: pointer; padding: 6px; }
 .rf-add:hover { color: var(--rf-green); }
-.rf-panel { margin-top: 8px; padding: 12px; border-radius: 14px; background: var(--rf-screen); border: 1px solid #1d5a30; font-size: 12px; }
+.rf-panel { margin-top: 8px; padding: 12px; border-radius: 14px; background: var(--rf-screen); border: 1px solid rgb(var(--c) / 0.35); font-size: 12px; }
 .rf-panel h3 { margin: 0 0 10px; font-size: 12px; font-weight: normal; letter-spacing: .14em; }
 .rf-panel form { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; }
 .rf-panel label { display: flex; flex-direction: column; gap: 3px; font-size: 10px; letter-spacing: .12em; color: var(--rf-green2); min-width: 0; }
 .rf-panel label.wide { grid-column: 1 / -1; }
-.rf-panel input { font: inherit; font-size: 14px; color: var(--rf-green); background: #020402; border: 1px solid #1d5a30; border-radius: 3px; padding: 7px 8px; min-width: 0; width: 100%;
+.rf-panel input { font: inherit; font-size: 14px; color: var(--rf-green); background: rgb(var(--cb)); border: 1px solid rgb(var(--c) / 0.35); border-radius: 3px; padding: 7px 8px; min-width: 0; width: 100%;
   -webkit-user-select: text; user-select: text; }
 .rf-panel input:focus-visible { outline: 1px solid var(--rf-green); }
 .rf-panel .rf-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.rf-panel button { font: inherit; font-size: 11px; letter-spacing: .12em; padding: 7px 10px; cursor: pointer; color: var(--rf-green); background: #0a2412; border: 1px solid #1d5a30; border-radius: 3px; }
+.rf-panel button { font: inherit; font-size: 11px; letter-spacing: .12em; padding: 7px 10px; cursor: pointer; color: var(--rf-green); background: rgb(var(--c) / 0.14); border: 1px solid rgb(var(--c) / 0.35); border-radius: 3px; }
 .rf-msg { font-size: 11px; color: var(--rf-amber); min-height: 1em; }
 .rf-custom { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .rf-custom li { display: flex; align-items: center; gap: 8px; }
@@ -175,15 +178,14 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
   .rf-knob { width: 78px; height: 78px; }
   .rf-mid { gap: 8px; }
   .rf-pill { padding: 8px 9px; font-size: 11px; letter-spacing: .04em; }
-  .rf-vu canvas { height: 130px; }
   .rf-panel form { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Ecrã inicial: um toque liga o rádio e começa a tocar */
 .rf-start { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  border: 0; border-radius: inherit; cursor: pointer; font: inherit; color: var(--rf-green); background: #020402d9; padding: 16px; text-align: center; }
+  border: 0; border-radius: inherit; cursor: pointer; font: inherit; color: var(--rf-green); background: rgb(var(--cb) / 0.85); padding: 16px; text-align: center; }
 .rf-start b { font-weight: normal; font-size: clamp(16px, 4vw, 24px); letter-spacing: .12em; padding: 14px 20px; border: 2px solid var(--rf-green); border-radius: 12px;
-  background: #0a2a14; text-shadow: 0 0 8px #22ff6688; box-shadow: 0 0 18px #22ff6644; }
+  background: rgb(var(--c) / 0.14); text-shadow: 0 0 8px rgb(var(--c) / 0.53); box-shadow: 0 0 18px rgb(var(--c) / 0.27); }
 .rf-start span { font-size: 12px; letter-spacing: .08em; color: var(--rf-green2); }
 .rf-start:focus-visible b { outline: 2px solid var(--rf-green); outline-offset: 4px; }
 
@@ -192,8 +194,37 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
 <body>
 <div id="radio"></div>
 <script>
+// Cores do tema em <canvas>: o canvas não entende var(--c), por isso resolvem-se aqui.
+// Resolve uma cor CSS com variáveis para um valor que o <canvas> aceite.
+const probe = typeof document !== 'undefined' ? document.createElement('span') : null;
+const cache = new Map();
+function resolveColor(str) {
+  if (typeof str !== 'string' || !str.includes('var(')) return str;
+  const key = `${document.documentElement.style.getPropertyValue('--c')}|${str}`;
+  if (cache.has(key)) return cache.get(key);
+  if (!probe.isConnected) { probe.style.display = 'none'; document.body.appendChild(probe); }
+  probe.style.color = ''; probe.style.color = str;
+  const out = getComputedStyle(probe).color || str;
+  cache.set(key, out);
+  return out;
+}
+// Contexto de canvas que aceita cores do tema (fillStyle, strokeStyle, shadowColor e gradientes).
+function themedCtx(ctx) {
+  const wrapGrad = (g) => { const add = g.addColorStop.bind(g); g.addColorStop = (o, c) => add(o, resolveColor(c)); return g; };
+  return new Proxy(ctx, {
+    get(t, k) {
+      const v = t[k];
+      if (typeof v !== 'function') return v;
+      if (k === 'createLinearGradient' || k === 'createRadialGradient') return (...a) => wrapGrad(v.apply(t, a));
+      return v.bind(t);
+    },
+    set(t, k, v) { t[k] = (k === 'fillStyle' || k === 'strokeStyle' || k === 'shadowColor') ? resolveColor(v) : v; return true; },
+  });
+}
+
 // Sintonizador de rádio analógico (JavaScript puro, sem dependências).
 // Usado no separador Rádio da app e no ficheiro autónomo radio-fallout-pt.html.
+
 
 // url = endereço principal; alt = alternativas tentadas por ordem se o principal falhar; page = site oficial
 const DEFAULT_STATIONS = [
@@ -245,6 +276,7 @@ const TEMPLATE = `
       </div>
     </section>
     <section class="rf-right">
+      <div class="rf-clock rf-panelbox" aria-label="Hora atual"><span>HORA ATUAL</span><b data-rf="clock">--:--:--</b><span data-rf="date"></span></div>
       <div class="rf-tuner rf-panelbox">
         <div class="rf-screen" data-rf="screen" role="slider" tabindex="0" aria-label="Frequência (arrasta ou usa as setas)"><canvas data-rf="dial"></canvas></div>
         <div class="rf-volline"><span>VOLUME</span><i><b data-rf="volbar"></b></i><span data-rf="volpct">0%</span></div>
@@ -274,7 +306,6 @@ const TEMPLATE = `
           </div>
         </div>
       </div>
-      <div class="rf-vu rf-panelbox"><canvas data-rf="scope"></canvas></div>
     </section>
   </div>
   <div class="rf-presets" data-rf="presets"></div>
@@ -295,9 +326,9 @@ const TEMPLATE = `
 // Ícones originais por tipo de emissora (formas simples, a cor vem do CSS)
 const ART = {
   tower: '<path d="M100 78 62 180h14l8-24h32l8 24h14L100 78zm-11 62 11-32 11 32H89z"/><circle cx="100" cy="62" r="11"/><path d="M62 28a54 54 0 0 0 0 68l9-8a42 42 0 0 1 0-52zM138 28l-9 8a42 42 0 0 1 0 52l9 8a54 54 0 0 0 0-68zM42 12a80 80 0 0 0 0 100l9-8a68 68 0 0 1 0-84zM158 12l-9 8a68 68 0 0 1 0 84l9 8a80 80 0 0 0 0-100z"/>',
-  mic: '<rect x="76" y="18" width="48" height="92" rx="24"/><path d="M52 84h12a36 36 0 0 0 72 0h12a48 48 0 0 1-42 47.600V160h30v14H64v-14h30v-28.400A48 48 0 0 1 52 84z"/><rect x="84" y="38" width="32" height="5" fill="#030603"/><rect x="84" y="52" width="32" height="5" fill="#030603"/><rect x="84" y="66" width="32" height="5" fill="#030603"/>',
+  mic: '<rect x="76" y="18" width="48" height="92" rx="24"/><path d="M52 84h12a36 36 0 0 0 72 0h12a48 48 0 0 1-42 47.600V160h30v14H64v-14h30v-28.400A48 48 0 0 1 52 84z"/><rect x="84" y="38" width="32" height="5" fill="rgb(var(--cb))"/><rect x="84" y="52" width="32" height="5" fill="rgb(var(--cb))"/><rect x="84" y="66" width="32" height="5" fill="rgb(var(--cb))"/>',
   note: '<path d="M78 34 160 18v104a26 22 0 1 1-14-19V54L92 64v76a26 22 0 1 1-14-19z"/>',
-  disc: '<path fill-rule="evenodd" d="M100 16a84 84 0 1 0 0 168 84 84 0 0 0 0-168zm0 56a28 28 0 1 1 0 56 28 28 0 0 1 0-56zm0 20a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M100 30a70 70 0 0 0-70 70h10a60 60 0 0 1 60-60z" fill="#030603"/>',
+  disc: '<path fill-rule="evenodd" d="M100 16a84 84 0 1 0 0 168 84 84 0 0 0 0-168zm0 56a28 28 0 1 1 0 56 28 28 0 0 1 0-56zm0 20a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M100 30a70 70 0 0 0-70 70h10a60 60 0 0 1 60-60z" fill="rgb(var(--cb))"/>',
   bars: '<rect x="22" y="96" width="22" height="80"/><rect x="56" y="52" width="22" height="124"/><rect x="90" y="24" width="22" height="152"/><rect x="124" y="74" width="22" height="102"/><rect x="158" y="112" width="22" height="64"/>',
 };
 function artFor(st) {
@@ -317,7 +348,7 @@ function gearSvg(dot) {
     const pts = [[a - 0.26, 34], [a - 0.17, 47], [a + 0.17, 47], [a + 0.26, 34]];
     for (const [ang, r] of pts) d += `${d ? 'L' : 'M'}${(50 + Math.sin(ang) * r).toFixed(1)} ${(50 - Math.cos(ang) * r).toFixed(1)}`;
   }
-  return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d}Z" fill="#232622" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="17" fill="#181a17" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="8" fill="#2c302b"/><circle cx="50" cy="9" r="3.2" fill="${dot}"/></svg>`;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d}Z" fill="#232622" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="17" fill="#181a17" stroke="#0b0c0b" stroke-width="1.5"/><circle cx="50" cy="50" r="8" fill="#2c302b"/><circle cx="50" cy="9" r="3.2" style="fill:${dot}"/></svg>`;
 }
 
 function load(key, fallback) {
@@ -546,8 +577,7 @@ function mountRadio(root) {
   }
 
   // ---------- Mostrador ----------
-  const dial = el.dial; const dctx = dial.getContext('2d');
-  const scope = el.scope; const sctx = scope.getContext('2d');
+  const dial = el.dial; const dctx = themedCtx(dial.getContext('2d'));
   let W = 0; let H = 0; let needsDraw = true;
   const FONT = "'Share Tech Mono', 'VT323', ui-monospace, monospace";
 
@@ -557,9 +587,6 @@ function mountRadio(root) {
     W = r.width; H = r.height;
     dial.width = Math.round(W * dpr); dial.height = Math.round(H * dpr);
     dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const s = scope.getBoundingClientRect();
-    scope.width = Math.round(s.width * dpr); scope.height = Math.round(s.height * dpr);
-    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     needsDraw = true;
   }
   const pad = () => (W < 420 ? 40 : 56);
@@ -569,9 +596,9 @@ function mountRadio(root) {
     dctx.clearRect(0, 0, W, H);
     const fmOn = state.band === 'FM';
     const small = W < 420;
-    const INK = '#04260f';
+    const INK = 'rgb(var(--cb))';
     const bg = dctx.createRadialGradient(W / 2, H * 0.45, 10, W / 2, H * 0.45, W * 0.7);
-    bg.addColorStop(0, '#3df272'); bg.addColorStop(1, '#1ba843');
+    bg.addColorStop(0, 'rgb(var(--c) / 0.95)'); bg.addColorStop(1, 'rgb(var(--c) / 0.62)');
     dctx.fillStyle = bg; dctx.fillRect(0, 0, W, H);
 
     const fmY = H * 0.2; const fmLine = H * 0.29; const trackY = H * 0.4; const trackH = H * 0.17; const amLine = H * 0.7; const amY = H * 0.87;
@@ -599,67 +626,17 @@ function mountRadio(root) {
 
     // Faixa de sintonia, marcas das emissoras e cursor preto
     const tx0 = xOf(band().min, state.band); const tx1 = xOf(band().max, state.band);
-    dctx.fillStyle = 'rgba(2,60,22,0.5)'; dctx.fillRect(12, trackY, W - 24, trackH);
+    dctx.fillStyle = 'rgb(var(--cb) / 0.45)'; dctx.fillRect(12, trackY, W - 24, trackH);
     if (fmOn) {
-      dctx.fillStyle = 'rgba(4,38,15,0.75)';
+      dctx.fillStyle = 'rgb(var(--cb) / 0.8)';
       for (const st of stations()) dctx.fillRect(xOf(st.freq, 'FM') - 1, trackY + 3, 2, trackH - 6);
     }
     const nx = clamp(xOf(state.freq[state.band], state.band), tx0, tx1);
-    dctx.fillStyle = '#020503';
+    dctx.fillStyle = 'rgb(var(--cb))';
     const tw = small ? 10 : 13;
     dctx.beginPath();
     if (dctx.roundRect) dctx.roundRect(nx - tw / 2, trackY - 4, tw, trackH + 8, 2); else dctx.rect(nx - tw / 2, trackY - 4, tw, trackH + 8);
     dctx.fill();
-  }
-
-  // Medidor de agulha (decibéis de saída)
-  let vuLevel = 0;
-  function drawScope(t) {
-    const w = scope.clientWidth; const h = scope.clientHeight;
-    sctx.clearRect(0, 0, w, h);
-    const small = w < 420;
-    const G = '#22ff66';
-    // nível: estática medida no ruído; emissora com oscilação animada (o áudio do stream não pode ser lido pelo browser)
-    let target = 0;
-    if (state.on) {
-      const v = volume();
-      const live = state.status === 'live' ? state.gain : 0;
-      let rms = 0;
-      if (analyser) { analyser.getByteTimeDomainData(scopeData); let sum = 0; for (let i = 0; i < scopeData.length; i += 4) { const n = (scopeData[i] - 128) / 128; sum += n * n; } rms = Math.sqrt(sum / (scopeData.length / 4)); }
-      const stat = clamp(rms * 14, 0, 1) * 0.5 + (1 - live) * v * 0.28;
-      const music = live * v * (0.62 + 0.14 * Math.sin(t * 6.3) + 0.1 * Math.sin(t * 15.1) + 0.06 * Math.sin(t * 2.2));
-      target = clamp(Math.max(stat * (1 - live), music), 0, 1);
-    }
-    vuLevel += (target - vuLevel) * 0.12;
-
-    const px = w / 2; const py = h * 2.6; // pivô abaixo do painel
-    const spread = Math.atan((w * 0.42) / (py - h * 0.5));
-    const yTop = h * 0.3; const yA = h * 0.58; const yB = h * 0.68; const yBot = h * 0.9;
-    const ray = (a, y) => px + Math.tan(a) * (py - y);
-    const labels = ['-60', '-50', '-40', '-30', '-20', '-10', '0', '+4', '+6'];
-    sctx.fillStyle = G; sctx.strokeStyle = G; sctx.lineWidth = small ? 1.5 : 2.5; sctx.lineCap = 'round';
-    sctx.shadowColor = 'rgba(34,255,102,0.6)'; sctx.shadowBlur = 5;
-    sctx.font = `${small ? 10 : 13}px ${FONT}`; sctx.textAlign = 'right'; sctx.textBaseline = 'alphabetic';
-    sctx.fillText('DECIBÉIS', w - 8, h * 0.12);
-    sctx.textAlign = 'center';
-    const N = 16;
-    for (let i = 0; i <= N; i++) {
-      const a = -spread + (i / N) * spread * 2;
-      const major = i % 2 === 0;
-      const y0 = major ? yTop : yTop + (yA - yTop) * 0.5;
-      const y1 = major ? yBot : yBot - (yBot - yB) * 0.4;
-      sctx.beginPath(); sctx.moveTo(ray(a, y0), y0); sctx.lineTo(ray(a, yA), yA); sctx.stroke();
-      sctx.beginPath(); sctx.moveTo(ray(a, yB), yB); sctx.lineTo(ray(a, y1), y1); sctx.stroke();
-      if (major) sctx.fillText(labels[i / 2], ray(a, yTop - 8), yTop - 8);
-    }
-    sctx.beginPath(); sctx.moveTo(ray(-spread, yA), yA); sctx.lineTo(ray(spread, yA), yA); sctx.stroke();
-    sctx.beginPath(); sctx.moveTo(ray(-spread, yB), yB); sctx.lineTo(ray(spread, yB), yB); sctx.stroke();
-    sctx.fillText('OUTPUT', w / 2, h * 0.99);
-    // agulha
-    const an = -spread + vuLevel * spread * 2;
-    sctx.strokeStyle = '#ff2a2a'; sctx.shadowColor = 'rgba(255,42,42,0.8)'; sctx.shadowBlur = 8; sctx.lineWidth = small ? 2.5 : 3.5;
-    sctx.beginPath(); sctx.moveTo(ray(an, h + 4), h + 4); sctx.lineTo(ray(an, yTop - 2), yTop - 2); sctx.stroke();
-    sctx.shadowBlur = 0;
   }
 
   // ---------- Estado e interface ----------
@@ -885,6 +862,17 @@ function mountRadio(root) {
   });
 
   on(window, 'resize', resize);
+  // Relógio: hora local do dispositivo, atualizada a cada segundo
+  const tick = () => {
+    const d = new Date();
+    el.clock.textContent = d.toLocaleTimeString('pt-PT', { hour12: false });
+    el.date.textContent = d.toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
+  };
+  tick();
+  const clockTimer = setInterval(tick, 1000);
+  // Quando o tema muda, o mostrador tem de ser redesenhado com as cores novas
+  const themeWatch = new MutationObserver(() => { needsDraw = true; });
+  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
   on(window, 'online', () => { if (state.on && state.station && state.status !== 'live') { retryDelay = 3000; startStream(state.station); } });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { needsDraw = true; });
 
@@ -902,11 +890,10 @@ function mountRadio(root) {
     } else if (!drag) state.vel = 0;
     updateAudio();
     if (needsDraw) { drawDial(); needsDraw = false; }
-    drawScope(now / 1000);
     raf = requestAnimationFrame(frame);
   }
 
-  el.volcap.innerHTML = gearSvg('#22ff66'); el.tunecap.innerHTML = gearSvg('#22ff66');
+  el.volcap.innerHTML = gearSvg('rgb(var(--c))'); el.tunecap.innerHTML = gearSvg('rgb(var(--c))');
   renderPresets(); renderCustom();
   {
     const first = stations().find((x) => Math.abs(x.freq - state.freq.FM) <= LOCK);
@@ -919,6 +906,7 @@ function mountRadio(root) {
   return function destroy() {
     destroyed = true;
     cancelAnimationFrame(raf);
+    clearInterval(clockTimer); themeWatch.disconnect();
     offs.forEach((f) => f());
     stopStream();
     if (ctx) ctx.close().catch(() => {});

@@ -1,0 +1,55 @@
+// Temas de cor e preferências da barra de navegação, guardados no browser.
+// As cores da app são variáveis CSS (--c cor principal, --cd fundo de painéis, --cb fundo do ecrã),
+// por isso mudar de tema muda tudo de uma vez, sem recarregar.
+import { useSyncExternalStore } from 'react';
+
+export const THEMES = [
+  { id: 'green', label: 'Verde (clássico)', c: '0 255 65', cd: '0 26 0', cb: '0 10 0' },
+  { id: 'white', label: 'Branco', c: '226 238 232', cd: '20 23 22', cb: '7 8 8' },
+  { id: 'amber', label: 'Laranja / Âmbar', c: '255 176 0', cd: '28 18 0', cb: '10 6 0' },
+  { id: 'blue', label: 'Azul', c: '46 207 255', cd: '0 20 30', cb: '0 7 11' },
+  { id: 'red', label: 'Vermelho', c: '255 70 56', cd: '30 5 3', cb: '11 2 1' },
+];
+
+const KEY = 'pb_settings';
+const DEFAULTS = { theme: 'green', order: [], hidden: [], compact: false };
+
+function read() {
+  try { return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY)) || {}) }; } catch { return { ...DEFAULTS }; }
+}
+let state = read();
+const listeners = new Set();
+
+export function applyTheme(id = state.theme) {
+  const t = THEMES.find((x) => x.id === id) || THEMES[0];
+  const s = document.documentElement.style;
+  s.setProperty('--c', t.c); s.setProperty('--cd', t.cd); s.setProperty('--cb', t.cb);
+  document.documentElement.dataset.pb = t.id;
+}
+
+export function getSettings() { return state; }
+export function setSettings(patch) {
+  state = { ...state, ...patch };
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* sem armazenamento */ }
+  if (patch.theme) applyTheme(state.theme);
+  listeners.forEach((l) => l());
+}
+export function resetSettings() { setSettings({ ...DEFAULTS }); }
+const subscribe = (l) => { listeners.add(l); return () => listeners.delete(l); };
+export function useSettings() { return useSyncExternalStore(subscribe, getSettings); }
+
+// Ordena os separadores pela preferência guardada; separadores novos ficam no fim.
+export function orderTabs(tabs, order) {
+  const pos = (id) => { const i = order.indexOf(id); return i < 0 ? 1000 + tabs.findIndex((t) => t.id === id) : i; };
+  return tabs.slice().sort((a, b) => pos(a.id) - pos(b.id));
+}
+
+// Junta transparência a uma cor: aceita '#rrggbb' ou as cores do tema 'rgb(var(--c))'.
+export function alpha(color, hex) {
+  const a = (parseInt(hex, 16) / 255).toFixed(2);
+  if (typeof color !== 'string') return color;
+  if (color.startsWith('#')) return color.slice(0, 7) + hex;
+  return color.replace(/rgb\((var\(--\w+\))(?:\s*\/\s*[\d.]+)?\)/, `rgb($1 / ${a})`);
+}
+
+export { resolveColor, themedCtx } from './radio/canvasTheme';

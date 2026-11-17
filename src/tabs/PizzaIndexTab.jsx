@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Loader2, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import ThreatGauge from '../pipboy/ThreatGauge';
+import { alpha } from '../theme';
 
 const CACHE_KEY = 'pipboy_pizza_index_v1';
 const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
@@ -104,9 +105,9 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
     return (
       <div className="flex flex-col items-center py-12">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
-          <Loader2 size={24} style={{ color: '#00ff41' }} />
+          <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
         </motion.div>
-        <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: '#00ff4166' }}>
+        <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
           A CALCULAR ÍNDICE PIZZA...
         </p>
       </div>
@@ -118,7 +119,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       <div className="p-4">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-lg">🍕</span>
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
             Índice Pizza
           </h2>
         </div>
@@ -129,7 +130,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
           <button
             onClick={() => fetchData(true)}
             className="px-3 py-2 rounded-sm text-[10px] uppercase tracking-wider inline-flex items-center gap-2"
-            style={{ background: '#00ff4122', border: '1px solid #00ff4144', color: '#00ff41' }}
+            style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.27)', color: 'rgb(var(--c))' }}
           >
             <RefreshCw size={12} /> Tentar novamente
           </button>
@@ -140,18 +141,18 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
 
   const TrendIcon = getTrendIcon();
   const level = data?.current_level || 0;
-  const levelColor = level >= 8 ? '#ff0000' : level >= 6 ? '#ff6600' : level >= 4 ? '#ffaa00' : '#00ff41';
+  const levelColor = level >= 8 ? '#ff0000' : level >= 6 ? '#ff6600' : level >= 4 ? '#ffaa00' : 'rgb(var(--c))';
 
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-lg">🍕</span>
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
             Índice Pizza
           </h2>
         </div>
-        <button onClick={() => fetchData(true)} className="p-2 rounded-sm hover:bg-white/5" style={{ color: '#00ff4188' }}>
+        <button onClick={() => fetchData(true)} className="p-2 rounded-sm hover:bg-white/5" style={{ color: 'rgb(var(--c) / 0.53)' }}>
           <RefreshCw size={14} />
         </button>
       </div>
@@ -167,14 +168,14 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="p-6 rounded-sm mb-4 text-center"
-        style={{ background: '#001a0066', border: `1px solid ${levelColor}33` }}
+        style={{ background: 'rgb(var(--cd) / 0.4)', border: `1px solid ${alpha(levelColor, '33')}` }}
       >
-        <div className="text-6xl font-bold mb-2" style={{ color: levelColor, textShadow: `0 0 20px ${levelColor}44` }}>
+        <div className="text-6xl font-bold mb-2" style={{ color: levelColor, textShadow: `0 0 20px ${alpha(levelColor, '44')}` }}>
           {level.toFixed(1)}
         </div>
         <div className="flex items-center justify-center gap-2 mb-3">
           <TrendIcon size={16} style={{ color: levelColor }} />
-          <span className="text-xs uppercase tracking-wider" style={{ color: `${levelColor}cc` }}>
+          <span className="text-xs uppercase tracking-wider" style={{ color: `${alpha(levelColor, 'cc')}` }}>
             {data?.trend === 'subindo' ? 'A SUBIR' : data?.trend === 'descendo' ? 'A DESCER' : 'ESTÁVEL'}
           </span>
         </div>
@@ -182,11 +183,11 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       </motion.div>
 
       {/* Explanation */}
-      <div className="p-3 rounded-sm mb-4" style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
-        <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: '#00ff4188' }}>
+      <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+        <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
           O que é o Índice Pizza?
         </h3>
-        <p className="text-xs leading-relaxed" style={{ color: '#00ff4177' }}>
+        <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.47)' }}>
           {data?.explanation}
         </p>
       </div>
@@ -194,7 +195,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       {/* Current indicators */}
       {data?.current_indicators?.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: '#00ff4188' }}>
+          <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             Indicadores Atuais
           </h3>
           {data.current_indicators.map((ind, i) => (
@@ -204,10 +205,10 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
               className="flex items-start gap-2 p-2 mb-1 rounded-sm"
-              style={{ background: '#001a0022' }}
+              style={{ background: 'rgb(var(--cd) / 0.13)' }}
             >
-              <span style={{ color: '#00ff41' }}>›</span>
-              <span className="text-xs" style={{ color: '#00ff4199' }}>{ind}</span>
+              <span style={{ color: 'rgb(var(--c))' }}>›</span>
+              <span className="text-xs" style={{ color: 'rgb(var(--c) / 0.6)' }}>{ind}</span>
             </motion.div>
           ))}
         </div>
@@ -216,17 +217,17 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       {/* Historical events */}
       {data?.historical_events?.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: '#00ff4188' }}>
+          <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             Histórico de Crises
           </h3>
           {data.historical_events.map((evt, i) => (
             <div key={i} className="flex items-center justify-between p-2 mb-1 rounded-sm"
-              style={{ background: '#001a0022', borderLeft: `2px solid ${evt.pizza_level >= 8 ? '#ff0000' : evt.pizza_level >= 5 ? '#ff6600' : '#00ff41'}33` }}>
+              style={{ background: 'rgb(var(--cd) / 0.13)', borderLeft: `2px solid ${alpha(evt.pizza_level >= 8 ? '#ff0000' : evt.pizza_level >= 5 ? '#ff6600' : 'rgb(var(--c))', '33')}` }}>
               <div>
-                <span className="text-xs font-bold" style={{ color: '#00ff41cc' }}>{evt.event}</span>
-                <span className="text-[10px] ml-2" style={{ color: '#00ff4155' }}>{evt.year}</span>
+                <span className="text-xs font-bold" style={{ color: 'rgb(var(--c) / 0.8)' }}>{evt.event}</span>
+                <span className="text-[10px] ml-2" style={{ color: 'rgb(var(--c) / 0.33)' }}>{evt.year}</span>
               </div>
-              <span className="text-xs font-bold" style={{ color: evt.pizza_level >= 8 ? '#ff0000' : evt.pizza_level >= 5 ? '#ff6600' : '#00ff41' }}>
+              <span className="text-xs font-bold" style={{ color: evt.pizza_level >= 8 ? '#ff0000' : evt.pizza_level >= 5 ? '#ff6600' : 'rgb(var(--c))' }}>
                 🍕 {evt.pizza_level}/10
               </span>
             </div>

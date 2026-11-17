@@ -124,7 +124,7 @@ export default function CatastropheTab() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <AlertTriangle size={16} style={{ color: '#ff6600' }} />
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
             Catástrofes & Desastres
           </h2>
         </div>
@@ -132,7 +132,7 @@ export default function CatastropheTab() {
           onClick={() => fetchData(true)}
           disabled={refreshing}
           className="p-2 rounded-sm transition-all hover:bg-white/5"
-          style={{ color: '#00ff4188' }}
+          style={{ color: 'rgb(var(--c) / 0.53)' }}
         >
           {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
         </button>
@@ -141,9 +141,9 @@ export default function CatastropheTab() {
       {loading && articles.length === 0 ? (
         <div className="flex flex-col items-center py-12">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
-            <Loader2 size={24} style={{ color: '#00ff41' }} />
+            <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
           </motion.div>
-          <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: '#00ff4166' }}>
+          <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
             A MONITORIZAR EVENTOS...
           </p>
         </div>
@@ -153,13 +153,13 @@ export default function CatastropheTab() {
           <p className="mt-3 text-xs uppercase tracking-wider text-center" style={{ color: '#ff6600' }}>
             ERRO AO CARREGAR DADOS
           </p>
-          <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: '#00ff4188' }}>
+          <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             {error}
           </p>
           <button
             onClick={() => fetchData()}
             className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
-            style={{ background: '#00ff4122', border: '1px solid #00ff4133', color: '#00ff41' }}
+            style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
           >
             Tentar Novamente
           </button>
@@ -170,7 +170,7 @@ export default function CatastropheTab() {
             <NewsCard key={i} article={article} index={i} />
           ))}
           {articles.length === 0 && (
-            <p className="text-center text-xs py-8" style={{ color: '#00ff4155' }}>
+            <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.33)' }}>
               Sem dados disponíveis
             </p>
           )}

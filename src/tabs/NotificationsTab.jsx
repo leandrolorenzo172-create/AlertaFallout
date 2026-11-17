@@ -89,19 +89,19 @@ export default function NotificationsTab() {
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Bell size={16} style={{ color: '#00ff41' }} />
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+          <Bell size={16} style={{ color: 'rgb(var(--c))' }} />
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
             Notificações
           </h2>
         </div>
         <span className="text-[10px] px-2 py-1 rounded-sm"
-          style={{ background: '#00ff4122', color: '#00ff41', border: '1px solid #00ff4133' }}>
+          style={{ background: 'rgb(var(--c) / 0.13)', color: 'rgb(var(--c))', border: '1px solid rgb(var(--c) / 0.2)' }}>
           {enabledCount}/{notifications.length} ativas
         </span>
       </div>
 
-      <div className="p-3 rounded-sm mb-4" style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
-        <p className="text-[10px]" style={{ color: '#00ff4177' }}>
+      <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+        <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.47)' }}>
           🔔 Configure quais notificações deseja receber. Os dados são atualizados diariamente às 4:00 AM.
         </p>
       </div>
@@ -115,18 +115,18 @@ export default function NotificationsTab() {
             transition={{ delay: i * 0.05 }}
             className="flex items-center justify-between p-3 rounded-sm transition-all"
             style={{
-              background: settings[notif.key] ? '#001a0066' : '#001a0022',
-              border: `1px solid ${settings[notif.key] ? notif.color + '33' : '#00ff4111'}`,
-              borderLeft: `3px solid ${settings[notif.key] ? notif.color : '#00ff4122'}`,
+              background: settings[notif.key] ? 'rgb(var(--cd) / 0.4)' : 'rgb(var(--cd) / 0.13)',
+              border: `1px solid ${settings[notif.key] ? notif.color + '33' : 'rgb(var(--c) / 0.07)'}`,
+              borderLeft: `3px solid ${settings[notif.key] ? notif.color : 'rgb(var(--c) / 0.13)'}`,
             }}
           >
             <div className="flex items-start gap-3">
               <span className="text-lg">{notif.icon}</span>
               <div>
-                <h3 className="text-xs font-bold" style={{ color: settings[notif.key] ? '#00ff41cc' : '#00ff4155' }}>
+                <h3 className="text-xs font-bold" style={{ color: settings[notif.key] ? 'rgb(var(--c) / 0.8)' : 'rgb(var(--c) / 0.33)' }}>
                   {notif.label}
                 </h3>
-                <p className="text-[10px] mt-0.5" style={{ color: '#00ff4155' }}>{notif.desc}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgb(var(--c) / 0.33)' }}>{notif.desc}</p>
               </div>
             </div>
             <Switch
@@ -142,9 +142,9 @@ export default function NotificationsTab() {
         disabled={saving}
         className="w-full flex items-center justify-center gap-2 p-3 rounded-sm text-xs uppercase tracking-wider font-bold transition-all"
         style={{
-          background: saved ? '#00ff4122' : '#00ff4111',
-          border: `1px solid ${saved ? '#00ff4166' : '#00ff4133'}`,
-          color: '#00ff41',
+          background: saved ? 'rgb(var(--c) / 0.13)' : 'rgb(var(--c) / 0.07)',
+          border: `1px solid ${saved ? 'rgb(var(--c) / 0.4)' : 'rgb(var(--c) / 0.2)'}`,
+          color: 'rgb(var(--c))',
         }}
       >
         {saving ? (
@@ -189,9 +189,9 @@ export default function NotificationsTab() {
                   disabled={deleting}
                   className="flex-1 px-3 py-2 rounded-sm text-xs uppercase tracking-wider"
                   style={{
-                    background: '#001a0033',
-                    border: '1px solid #00ff4133',
-                    color: '#00ff4188',
+                    background: 'rgb(var(--cd) / 0.2)',
+                    border: '1px solid rgb(var(--c) / 0.2)',
+                    color: 'rgb(var(--c) / 0.53)',
                   }}
                 >
                   Cancelar

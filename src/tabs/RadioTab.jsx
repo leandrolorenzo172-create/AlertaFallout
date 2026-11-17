@@ -27,7 +27,7 @@ export default function RadioTab() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mt-2 px-4 py-2 rounded-sm text-xs uppercase tracking-wider font-bold"
-            style={{ background: '#00ff41', color: '#001a00' }}
+            style={{ background: 'rgb(var(--c))', color: 'rgb(var(--cd))' }}
           >
             ▶ Abrir o rádio com som ↗
           </a>

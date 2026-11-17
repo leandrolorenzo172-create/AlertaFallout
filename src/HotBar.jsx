@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3 } from 'lucide-react';
+import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings } from 'lucide-react';
 import { usePipBoySound } from './usePipBoySound';
+import { useSettings, orderTabs } from './theme';
+
+// Separadores visíveis, pela ordem escolhida nas Definições
+export function useVisibleTabs() {
+  const s = useSettings();
+  return orderTabs(TABS, s.order).filter((t) => !s.hidden.includes(t.id));
+}
 
 export const TABS = [
   { id: 'dashboard', path: '/dashboard', label: 'Painel', icon: Shield, alert: true },
@@ -16,7 +23,7 @@ export const TABS = [
   { id: 'conhecimento', path: '/conhecimento', label: 'Ficheiros IA', icon: BrainCircuit },
   { id: 'manual', path: '/manual', label: 'Manual', icon: Book },
   { id: 'mapa', path: '/mapa', label: 'Mapa', icon: MapPin },
-  { id: 'alertas', path: '/alertas', label: 'Alertas', icon: Bell },
+  { id: 'definicoes', path: '/definicoes', label: 'Definições', icon: Settings },
 ];
 
 export default function HotBar() {
@@ -24,6 +31,7 @@ export default function HotBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { playTabSound, playSelectSound } = usePipBoySound();
+  const tabs = useVisibleTabs();
 
   const activeTab = TABS.find(tab => location.pathname === tab.path)?.id || 'dashboard';
 
@@ -65,7 +73,7 @@ export default function HotBar() {
             className="fixed z-50 right-4 flex flex-col gap-1.5 no-scrollbar"
             style={{ bottom: '136px', maxHeight: '62vh', overflowY: 'auto' }}
           >
-            {TABS.map((tab, index) => (
+            {tabs.map((tab, index) => (
               <motion.button
                 key={tab.id}
                 initial={{ opacity: 0, x: 20 }}
@@ -74,9 +82,9 @@ export default function HotBar() {
                 onClick={() => handleSelect(tab)}
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded whitespace-nowrap transition-all"
                 style={{
-                  background: activeTab === tab.id ? '#00ff4122' : '#001a00ee',
-                  border: `1px solid ${activeTab === tab.id ? '#00ff41' : '#00ff4133'}`,
-                  color: activeTab === tab.id ? '#00ff41' : '#00ff41aa',
+                  background: activeTab === tab.id ? 'rgb(var(--c) / 0.13)' : 'rgb(var(--cd) / 0.93)',
+                  border: `1px solid ${activeTab === tab.id ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.2)'}`,
+                  color: activeTab === tab.id ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.67)',
                   backdropFilter: 'blur(10px)',
                   minWidth: '140px',
                 }}
@@ -104,11 +112,11 @@ export default function HotBar() {
           width: '48px',
           height: '48px',
           borderRadius: '50%',
-          background: '#001a00dd',
-          border: '1px solid #00ff4166',
-          color: '#00ff41',
+          background: 'rgb(var(--cd) / 0.87)',
+          border: '1px solid rgb(var(--c) / 0.4)',
+          color: 'rgb(var(--c))',
           backdropFilter: 'blur(10px)',
-          boxShadow: '0 0 14px #00ff4144',
+          boxShadow: '0 0 14px rgb(var(--c) / 0.27)',
         }}
       >
         <AnimatePresence mode="wait">

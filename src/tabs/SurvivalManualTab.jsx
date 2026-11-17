@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Shield } from 'lucide-react';
 import { manualSections } from '@/data/survivalManual';
+import DocLibrary from '../pipboy/DocLibrary';
 
 function ManualSection({ section }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,18 +14,18 @@ function ManualSection({ section }) {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-3 p-3 rounded-sm transition-all text-left"
         style={{
-          background: isOpen ? '#00ff4110' : '#001a0033',
-          border: `1px solid ${isOpen ? '#00ff4133' : '#00ff4111'}`,
+          background: isOpen ? 'rgb(var(--c) / 0.06)' : 'rgb(var(--cd) / 0.2)',
+          border: `1px solid ${isOpen ? 'rgb(var(--c) / 0.2)' : 'rgb(var(--c) / 0.07)'}`,
         }}
       >
-        <Icon size={16} style={{ color: '#00ff41' }} />
-        <span className="text-xs uppercase tracking-wider font-bold flex-1" style={{ color: '#00ff41cc' }}>
+        <Icon size={16} style={{ color: 'rgb(var(--c))' }} />
+        <span className="text-xs uppercase tracking-wider font-bold flex-1" style={{ color: 'rgb(var(--c) / 0.8)' }}>
           {section.title}
         </span>
         {isOpen ? (
-          <ChevronDown size={14} style={{ color: '#00ff4188' }} />
+          <ChevronDown size={14} style={{ color: 'rgb(var(--c) / 0.53)' }} />
         ) : (
-          <ChevronRight size={14} style={{ color: '#00ff4188' }} />
+          <ChevronRight size={14} style={{ color: 'rgb(var(--c) / 0.53)' }} />
         )}
       </button>
 
@@ -38,9 +39,9 @@ function ManualSection({ section }) {
             className="overflow-hidden"
           >
             <div className="p-4 text-xs leading-relaxed whitespace-pre-line"
-              style={{ color: '#00ff4199', borderLeft: '2px solid #00ff4122', marginLeft: '8px' }}>
+              style={{ color: 'rgb(var(--c) / 0.6)', borderLeft: '2px solid rgb(var(--c) / 0.13)', marginLeft: '8px' }}>
               {section.image && (
-                <div className="mb-3 rounded-sm overflow-hidden" style={{ border: '1px solid #00ff4133', background: '#0a0a0a' }}>
+                <div className="mb-3 rounded-sm overflow-hidden" style={{ border: '1px solid rgb(var(--c) / 0.2)', background: '#0a0a0a' }}>
                   <img
                     src={section.image}
                     alt={`Diagrama ilustrativo: ${section.title}`}
@@ -48,13 +49,13 @@ function ManualSection({ section }) {
                     className="w-full h-auto"
                     style={{ display: 'block', filter: 'brightness(0.95)' }}
                   />
-                  <p className="text-[9px] uppercase tracking-wider p-1.5 text-center" style={{ color: '#00ff4166' }}>
+                  <p className="text-[9px] uppercase tracking-wider p-1.5 text-center" style={{ color: 'rgb(var(--c) / 0.4)' }}>
                     📐 Diagrama Técnico — {section.title}
                   </p>
                 </div>
               )}
               {section.content.split('**').map((part, i) =>
-                i % 2 === 0 ? part : <strong key={i} style={{ color: '#00ff41' }}>{part}</strong>
+                i % 2 === 0 ? part : <strong key={i} style={{ color: 'rgb(var(--c))' }}>{part}</strong>
               )}
             </div>
           </motion.div>
@@ -68,8 +69,8 @@ export default function SurvivalManualTab() {
   return (
     <div className="p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Shield size={16} style={{ color: '#00ff41' }} />
-        <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+        <Shield size={16} style={{ color: 'rgb(var(--c))' }} />
+        <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
           Manual de Sobrevivência Tático
         </h2>
       </div>
@@ -80,11 +81,13 @@ export default function SurvivalManualTab() {
         </p>
       </div>
 
-      <div className="p-2 rounded-sm mb-4" style={{ background: '#00ff4110', border: '1px solid #00ff4133' }}>
-        <p className="text-[10px]" style={{ color: '#00ff4199' }}>
+      <div className="p-2 rounded-sm mb-4" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
+        <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.6)' }}>
           📚 {manualSections.length} secções táticas | 📐 Diagramas ilustrativos em secções-chave
         </p>
       </div>
+
+      <DocLibrary />
 
       {manualSections.map(section => (
         <ManualSection key={section.id} section={section} />

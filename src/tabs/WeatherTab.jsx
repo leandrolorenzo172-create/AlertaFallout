@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Cloud, RefreshCw, Loader2, Thermometer, Wind, Droplets, Eye, Sun, CloudRain, Waves, Anchor, Compass, SunMedium } from 'lucide-react';
+import { alpha } from '../theme';
 
 export default function WeatherTab() {
   const [weather, setWeather] = useState(null);
@@ -123,9 +124,9 @@ Inclui:
     return (
       <div className="flex flex-col items-center py-12">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
-          <Loader2 size={24} style={{ color: '#00ff41' }} />
+          <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
         </motion.div>
-        <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: '#00ff4166' }}>
+        <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
           A RECEBER DADOS METEOROLÓGICOS...
         </p>
       </div>
@@ -139,7 +140,7 @@ Inclui:
         <button
           onClick={fetchWeather}
           className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
-          style={{ background: '#00ff4122', border: '1px solid #00ff4133', color: '#00ff41' }}
+          style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
         >
           Tentar Novamente
         </button>
@@ -152,11 +153,11 @@ Inclui:
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Cloud size={16} style={{ color: '#00aaff' }} />
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
             Meteorologia Portugal
           </h2>
         </div>
-        <button onClick={fetchWeather} className="p-2 rounded-sm hover:bg-white/5" style={{ color: '#00ff4188' }}>
+        <button onClick={fetchWeather} className="p-2 rounded-sm hover:bg-white/5" style={{ color: 'rgb(var(--c) / 0.53)' }}>
           <RefreshCw size={14} />
         </button>
       </div>
@@ -196,34 +197,34 @@ Inclui:
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
               className="p-3 rounded-sm"
-              style={{ background: '#001a0044', border: '1px solid #00ff4122' }}
+              style={{ background: 'rgb(var(--cd) / 0.27)', border: '1px solid rgb(var(--c) / 0.13)' }}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase" style={{ color: '#00ff41cc' }}>{city.name}</span>
+                <span className="text-xs font-bold uppercase" style={{ color: 'rgb(var(--c) / 0.8)' }}>{city.name}</span>
                 <WeatherIcon size={16} style={{ color: '#00aaff88' }} />
               </div>
-              <div className="text-2xl font-bold mb-1" style={{ color: '#00ff41' }}>{city.temp}°C</div>
-              <p className="text-[10px] mb-2 capitalize" style={{ color: '#00ff4188' }}>{city.condition}</p>
+              <div className="text-2xl font-bold mb-1" style={{ color: 'rgb(var(--c))' }}>{city.temp}°C</div>
+              <p className="text-[10px] mb-2 capitalize" style={{ color: 'rgb(var(--c) / 0.53)' }}>{city.condition}</p>
               <div className="flex gap-3 flex-wrap">
                 <div className="flex items-center gap-1">
                   <Droplets size={10} style={{ color: '#00aaff66' }} />
-                  <span className="text-[10px]" style={{ color: '#00ff4166' }}>{city.humidity}%</span>
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.humidity}%</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Wind size={10} style={{ color: '#00ff4166' }} />
-                  <span className="text-[10px]" style={{ color: '#00ff4166' }}>{city.wind_kmh} km/h</span>
+                  <Wind size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.wind_kmh} km/h</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Compass size={10} style={{ color: '#00ff4166' }} />
-                  <span className="text-[10px]" style={{ color: '#00ff4166' }}>{city.wind_direction || '-'}</span>
+                  <Compass size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.wind_direction || '-'}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <SunMedium size={10} style={{ color: city.uv_index >= 8 ? '#ff0000' : city.uv_index >= 6 ? '#ff6600' : city.uv_index >= 3 ? '#ffaa00' : '#00ff41' }} />
-                  <span className="text-[10px]" style={{ color: '#00ff4166' }}>UV {city.uv_index ?? '-'}</span>
+                  <SunMedium size={10} style={{ color: city.uv_index >= 8 ? '#ff0000' : city.uv_index >= 6 ? '#ff6600' : city.uv_index >= 3 ? '#ffaa00' : 'rgb(var(--c))' }} />
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>UV {city.uv_index ?? '-'}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Thermometer size={10} style={{ color: '#00ff4166' }} />
-                  <span className="text-[10px]" style={{ color: '#00ff4166' }}>{city.min_temp}°/{city.max_temp}°</span>
+                  <Thermometer size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.min_temp}°/{city.max_temp}°</span>
                 </div>
               </div>
             </motion.div>
@@ -234,16 +235,16 @@ Inclui:
       {/* 5-day forecast */}
       {weather?.forecast_days?.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-xs uppercase tracking-wider mb-3 font-bold" style={{ color: '#00ff4188' }}>
+          <h3 className="text-xs uppercase tracking-wider mb-3 font-bold" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             Previsão Próximos Dias
           </h3>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {weather.forecast_days.map((day, i) => (
               <div key={i} className="flex-shrink-0 p-3 rounded-sm text-center min-w-[80px]"
-                style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
-                <p className="text-[10px] uppercase mb-1" style={{ color: '#00ff4188' }}>{day.day}</p>
-                <p className="text-xs mb-1 capitalize" style={{ color: '#00ff4166' }}>{day.condition}</p>
-                <p className="text-sm font-bold" style={{ color: '#00ff41cc' }}>
+                style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+                <p className="text-[10px] uppercase mb-1" style={{ color: 'rgb(var(--c) / 0.53)' }}>{day.day}</p>
+                <p className="text-xs mb-1 capitalize" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.condition}</p>
+                <p className="text-sm font-bold" style={{ color: 'rgb(var(--c) / 0.8)' }}>
                   {day.min_temp}° / {day.max_temp}°
                 </p>
               </div>
@@ -271,7 +272,7 @@ Inclui:
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
                 className="p-3 mb-2 rounded-sm"
-                style={{ background: `${sevColor}08`, border: `1px solid ${sevColor}33`, borderLeft: `3px solid ${sevColor}` }}
+                style={{ background: `${alpha(sevColor, '08')}`, border: `1px solid ${alpha(sevColor, '33')}`, borderLeft: `3px solid ${sevColor}` }}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -280,7 +281,7 @@ Inclui:
                   </div>
                   {storm.is_active && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-sm uppercase font-bold animate-pulse"
-                      style={{ background: `${sevColor}22`, color: sevColor }}>
+                      style={{ background: `${alpha(sevColor, '22')}`, color: sevColor }}>
                       ● ATIVO
                     </span>
                   )}
@@ -288,15 +289,15 @@ Inclui:
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <div className="flex items-center gap-1">
                     <Waves size={10} style={{ color: '#00aaff66' }} />
-                    <span className="text-[10px]" style={{ color: '#00ff4188' }}>Ondas: {storm.wave_height_m}m</span>
+                    <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>Ondas: {storm.wave_height_m}m</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Wind size={10} style={{ color: '#00ff4166' }} />
-                    <span className="text-[10px]" style={{ color: '#00ff4188' }}>{storm.wind_intensity}</span>
+                    <Wind size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+                    <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>{storm.wind_intensity}</span>
                   </div>
                 </div>
-                <p className="text-[10px] mb-1" style={{ color: '#00ff4166' }}>Direção: {storm.wind_direction}</p>
-                <p className="text-xs leading-relaxed" style={{ color: '#00ff4199' }}>{storm.description}</p>
+                <p className="text-[10px] mb-1" style={{ color: 'rgb(var(--c) / 0.4)' }}>Direção: {storm.wind_direction}</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>{storm.description}</p>
               </motion.div>
             );
           })}
@@ -307,43 +308,43 @@ Inclui:
       {weather?.braga_15day_forecast?.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Cloud size={14} style={{ color: '#00ff41' }} />
-            <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: '#00ff41' }}>
+            <Cloud size={14} style={{ color: 'rgb(var(--c))' }} />
+            <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
               Previsão 15 Dias - Braga (IPMA)
             </h3>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {weather.braga_15day_forecast.map((day, i) => {
               const DayIcon = getWeatherIcon(day.condition);
-              const precipColor = day.precipitation_prob >= 70 ? '#00aaff' : day.precipitation_prob >= 40 ? '#00aaff88' : '#00ff4166';
+              const precipColor = day.precipitation_prob >= 70 ? '#00aaff' : day.precipitation_prob >= 40 ? '#00aaff88' : 'rgb(var(--c) / 0.4)';
               return (
                 <div key={i} className="flex-shrink-0 p-3 rounded-sm min-w-[110px]"
-                  style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
-                  <p className="text-[10px] uppercase mb-0.5" style={{ color: '#00ff4188' }}>{day.day_name}</p>
-                  <p className="text-[9px] mb-2" style={{ color: '#00ff4155' }}>{day.date}</p>
+                  style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+                  <p className="text-[10px] uppercase mb-0.5" style={{ color: 'rgb(var(--c) / 0.53)' }}>{day.day_name}</p>
+                  <p className="text-[9px] mb-2" style={{ color: 'rgb(var(--c) / 0.33)' }}>{day.date}</p>
                   <div className="flex justify-center mb-2">
                     <DayIcon size={20} style={{ color: '#00aaff88' }} />
                   </div>
-                  <p className="text-[10px] mb-2 capitalize text-center" style={{ color: '#00ff4166' }}>{day.condition}</p>
-                  <p className="text-sm font-bold text-center mb-2" style={{ color: '#00ff41cc' }}>
+                  <p className="text-[10px] mb-2 capitalize text-center" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.condition}</p>
+                  <p className="text-sm font-bold text-center mb-2" style={{ color: 'rgb(var(--c) / 0.8)' }}>
                     {day.min_temp}° / {day.max_temp}°
                   </p>
                   <div className="space-y-1">
                     <div className="flex items-center gap-1">
                       <Droplets size={9} style={{ color: '#00aaff66' }} />
-                      <span className="text-[9px]" style={{ color: '#00ff4166' }}>{day.humidity}%</span>
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.humidity}%</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Wind size={9} style={{ color: '#00ff4166' }} />
-                      <span className="text-[9px]" style={{ color: '#00ff4166' }}>{day.wind_kmh}km/h</span>
+                      <Wind size={9} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.wind_kmh}km/h</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Compass size={9} style={{ color: '#00ff4166' }} />
-                      <span className="text-[9px]" style={{ color: '#00ff4166' }}>{day.wind_direction || '-'}</span>
+                      <Compass size={9} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.wind_direction || '-'}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <SunMedium size={9} style={{ color: day.uv_index >= 8 ? '#ff0000' : day.uv_index >= 6 ? '#ff6600' : day.uv_index >= 3 ? '#ffaa00' : '#00ff41' }} />
-                      <span className="text-[9px]" style={{ color: '#00ff4166' }}>UV {day.uv_index ?? '-'}</span>
+                      <SunMedium size={9} style={{ color: day.uv_index >= 8 ? '#ff0000' : day.uv_index >= 6 ? '#ff6600' : day.uv_index >= 3 ? '#ffaa00' : 'rgb(var(--c))' }} />
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>UV {day.uv_index ?? '-'}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <CloudRain size={9} style={{ color: precipColor }} />

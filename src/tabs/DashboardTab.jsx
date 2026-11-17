@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Loader2, Shield, Skull, AlertTriangle, Globe, TrendingUp } from 'lucide-react';
 import ThreatGauge from '../pipboy/ThreatGauge';
+import PipBoyHero from '../pipboy/PipBoyHero';
+import { alpha } from '../theme';
 
 export default function DashboardTab({ onThreatLevelChange }) {
   const [data, setData] = useState(null);
@@ -125,11 +127,11 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
           animate={{ rotate: 360 }}
           transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
         >
-          <Shield size={40} style={{ color: '#00ff41' }} />
+          <Shield size={40} style={{ color: 'rgb(var(--c))' }} />
         </motion.div>
         <motion.p
           className="mt-4 text-xs uppercase tracking-[0.3em]"
-          style={{ color: '#00ff4188' }}
+          style={{ color: 'rgb(var(--c) / 0.53)' }}
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -146,13 +148,13 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
         <p className="mt-4 text-xs uppercase tracking-wider text-center" style={{ color: '#ff6600' }}>
           ERRO AO CARREGAR DADOS
         </p>
-        <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: '#00ff4188' }}>
+        <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: 'rgb(var(--c) / 0.53)' }}>
           {error}
         </p>
         <button
           onClick={fetchOverview}
           className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
-          style={{ background: '#00ff4122', border: '1px solid #00ff4133', color: '#00ff41' }}
+          style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
         >
           Tentar Novamente
         </button>
@@ -183,51 +185,25 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
         </div>
       )}
       
-      {/* Global Threat Level */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="text-center mb-6 p-6 rounded-sm"
-        style={{ background: '#001a0044', border: '1px solid #00ff4122' }}
-      >
-        <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: '#00ff4166' }}>
-          NÍVEL DE AMEAÇA GLOBAL
-        </p>
-        <div className="text-6xl md:text-7xl font-bold mb-3" style={{ 
-          color: data?.global_threat_level >= 8 ? '#ff0000' : data?.global_threat_level >= 6 ? '#ff6600' : data?.global_threat_level >= 4 ? '#ffaa00' : '#00ff41',
-          textShadow: `0 0 30px ${data?.global_threat_level >= 8 ? '#ff000044' : data?.global_threat_level >= 6 ? '#ff660044' : '#00ff4144'}`,
-        }}>
-          {(data?.global_threat_level || 0).toFixed(1)}
-        </div>
-        <ThreatGauge label="Composto Global" value={data?.global_threat_level || 0} />
-      </motion.div>
+      <PipBoyHero data={data} />
 
-      {/* Individual Gauges */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="p-4 rounded-sm" style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
-          <ThreatGauge label="⚔️ Risco de Guerra" value={data?.war_risk || 0} />
-          <ThreatGauge label="🌍 Tensão Geopolítica" value={data?.geopolitical_tension || 0} />
-          <ThreatGauge label="🌋 Catástrofes Naturais" value={data?.natural_disaster_risk || 0} />
-        </div>
-        <div className="p-4 rounded-sm" style={{ background: '#001a0033', border: '1px solid #00ff4111' }}>
-          <ThreatGauge label="📉 Instab. Económica" value={data?.economic_instability || 0} />
-          <ThreatGauge label="💻 Risco Cibernético" value={data?.cyber_risk || 0} />
-          <div className="mt-4 p-3 rounded-sm" style={{ background: '#001a0022' }}>
-            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#00ff4155' }}>Resumo</p>
-            <p className="text-xs leading-relaxed" style={{ color: '#00ff4199' }}>{data?.summary}</p>
-          </div>
+      <div className="p-4 rounded-sm mb-6" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+        <ThreatGauge label="📉 Instab. Económica" value={data?.economic_instability || 0} />
+        <div className="mt-4 p-3 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.13)' }}>
+          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.33)' }}>Resumo</p>
+          <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>{data?.summary}</p>
         </div>
       </div>
 
       {/* Critical Events */}
       {data?.critical_events?.length > 0 && (
         <div>
-          <h3 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: '#00ff4188' }}>
+          <h3 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             ⚠️ Eventos Críticos Ativos
           </h3>
           {data.critical_events.map((event, i) => {
             const Icon = getSeverityIcon(event.type);
-            const color = event.severity >= 8 ? '#ff0000' : event.severity >= 6 ? '#ff6600' : event.severity >= 4 ? '#ffaa00' : '#00ff41';
+            const color = event.severity >= 8 ? '#ff0000' : event.severity >= 6 ? '#ff6600' : event.severity >= 4 ? '#ffaa00' : 'rgb(var(--c))';
             
             return (
               <motion.div
@@ -236,12 +212,12 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
                 className="flex items-center gap-3 p-3 mb-2 rounded-sm"
-                style={{ background: `${color}08`, border: `1px solid ${color}22`, borderLeft: `3px solid ${color}` }}
+                style={{ background: `${alpha(color, '08')}`, border: `1px solid ${alpha(color, '22')}`, borderLeft: `3px solid ${color}` }}
               >
                 <Icon size={16} style={{ color }} />
                 <div className="flex-1">
-                  <h4 className="text-xs font-bold" style={{ color: '#00ff41cc' }}>{event.title}</h4>
-                  {event.region && <span className="text-[10px]" style={{ color: '#00ff4155' }}>{event.region}</span>}
+                  <h4 className="text-xs font-bold" style={{ color: 'rgb(var(--c) / 0.8)' }}>{event.title}</h4>
+                  {event.region && <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.33)' }}>{event.region}</span>}
                 </div>
                 <span className="text-sm font-bold" style={{ color }}>{event.severity}/10</span>
               </motion.div>

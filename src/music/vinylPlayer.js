@@ -29,7 +29,7 @@ const TEMPLATE = `
         <circle class="st" cx="130" cy="135" r="34"/>
         <path class="st" d="M108 127h44M112 143h36"/>
         <path class="st thin" d="M130 104v10M130 156v10"/>
-        <circle cx="130" cy="135" r="3.5" fill="#00ff41"/>
+        <circle cx="130" cy="135" r="3.5" style="fill:rgb(var(--c))"/>
       </g>
       <g class="vp-arm" data-vp="arm">
         <path class="st" d="M270 50V168" stroke-width="3.2"/>
@@ -38,7 +38,7 @@ const TEMPLATE = `
         <rect class="st fillbg" x="262" y="20" width="16" height="16" rx="2"/>
       </g>
       <circle class="st fillbg" cx="270" cy="50" r="13"/>
-      <circle cx="270" cy="50" r="4" fill="#00ff41"/>
+      <circle cx="270" cy="50" r="4" style="fill:rgb(var(--c))"/>
       <path class="st" d="M286 196v8" stroke-width="5" opacity=".6"/>
       <circle class="st" cx="34" cy="232" r="9"/><circle class="st" cx="62" cy="232" r="9"/>
       <rect class="st" x="244" y="222" width="52" height="18" rx="3"/>
@@ -67,6 +67,7 @@ const TEMPLATE = `
       <button type="button" data-vp="next">[ PRÓXIMA ]</button>
       <button type="button" class="wide" data-vp="stop">[ STOP ]</button>
     </div>
+    <div class="vp-clock">HORA ATUAL: <b data-vp="clock">--:--:--</b></div>
     <div class="vp-msg" data-vp="msg" role="status"></div>
   </div>
 </div>`;
@@ -244,6 +245,11 @@ export function mountVinylPlayer(root) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 5); }
   });
 
+  // Relógio: hora local do dispositivo, a cada segundo
+  const tick = () => { el.clock.textContent = new Date().toLocaleTimeString('pt-PT', { hour12: false }); };
+  tick();
+  const clockTimer = setInterval(tick, 1000);
+
   // ---- carregar a lista guardada ----
   renderList(); renderState();
   (async () => {
@@ -260,6 +266,7 @@ export function mountVinylPlayer(root) {
 
   return function destroy() {
     destroyed = true;
+    clearInterval(clockTimer);
     offs.forEach((f) => f());
     audio.pause(); audio.removeAttribute('src'); audio.load();
     tracks.forEach((t) => URL.revokeObjectURL(t.url));

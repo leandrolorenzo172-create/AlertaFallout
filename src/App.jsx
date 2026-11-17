@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import HotBar, { TABS } from './HotBar';
+import HotBar, { TABS, useVisibleTabs } from './HotBar';
+import { useSettings } from './theme';
 import PipBoyStartup from './PipBoyStartup';
 import StatusBar from './pipboy/StatusBar';
 import TabBar from './pipboy/TabBar';
@@ -16,7 +17,7 @@ import SurvivalAITab from './tabs/SurvivalAITab';
 import KnowledgeFilesTab from './tabs/KnowledgeFilesTab';
 import SurvivalManualTab from './tabs/SurvivalManualTab';
 import BragaMapTab from './tabs/BragaMapTab';
-import NotificationsTab from './tabs/NotificationsTab';
+import SettingsTab from './tabs/SettingsTab';
 
 // Separadores cujos dados vêm da IA sem acesso à internet (não são dados reais)
 const SIMULATED = ['dashboard', 'guerra', 'catastrofes', 'meteo', 'pizza'];
@@ -25,6 +26,8 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [booting, setBooting] = useState(true);
+  const visibleTabs = useVisibleTabs();
+  const { compact } = useSettings();
   const [threatLevel, setThreatLevel] = useState(0);
   // useCallback: o efeito do PipBoyStartup depende de onComplete,
   // por isso a função tem de ser estável para a animação não reiniciar.
@@ -46,7 +49,7 @@ export default function App() {
     conhecimento: <KnowledgeFilesTab />,
     manual: <SurvivalManualTab />,
     mapa: <BragaMapTab />,
-    alertas: <NotificationsTab />,
+    definicoes: <SettingsTab />,
   };
 
   return (
@@ -65,11 +68,12 @@ export default function App() {
           {TABS.map((tab) => (
             <Route key={tab.id} path={tab.path} element={elements[tab.id]} />
           ))}
+          <Route path="/alertas" element={<Navigate to="/definicoes" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
       <HotBar />
-      <TabBar tabs={TABS} activeTab={activeTab} onTabChange={(id) => navigate(TABS.find((t) => t.id === id).path)} />
+      <TabBar tabs={visibleTabs} compact={compact} activeTab={activeTab} onTabChange={(id) => navigate(TABS.find((t) => t.id === id).path)} />
     </div>
   );
 }

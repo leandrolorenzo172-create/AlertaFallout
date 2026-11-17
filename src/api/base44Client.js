@@ -2,7 +2,8 @@
 // - Dados (ficheiros, definições): guardados no browser (localStorage).
 // - IA (InvokeLLM, askMestre): usa o Claude quando a app corre como artefacto no claude.ai.
 // - Rádio: API pública radio-browser.info (só funciona fora do artefacto).
-import { SYSTEM_IDENTITY } from '@/data/survivalKnowledge';
+import { getInstructions } from '@/lib/aiInstructions';
+import { searchDocs, getDoc, refOf } from '@/lib/kb';
 import { fetchWeather, fetchCatastrophes, fetchWarNews, fetchDashboard, fetchPizza } from './liveData';
 
 export const IS_ARTIFACT = typeof window !== 'undefined' && !!window.claude?.use;
@@ -73,19 +74,13 @@ async function invokeLLM({ prompt, add_context_from_internet, response_json_sche
 async function askMestre({ question }) {
   const sample = await getSample();
   if (!sample) throw new Error('IA indisponível');
-  const files = (await entities.KnowledgeFile.list({ sort: '-created_date', limit: 30 }))
-    .filter((f) => f.enabled !== false && f.extracted_text);
-  let budget = 40000;
-  const used = [];
-  let filesText = '';
-  for (const f of files) {
-    if (budget <= 0) break;
-    const t = f.extracted_text.slice(0, budget);
-    budget -= t.length;
-    filesText += `\n\n### Ficheiro: ${f.name}\n${t}`;
-    used.push(f.name);
-  }
-  const rules = `Assume esta identidade e responde sempre em português de Portugal, de forma prática, direta e segura:\n${SYSTEM_IDENTITY}\n\nSe os ficheiros do utilizador abaixo forem relevantes, usa-os e diz de que ficheiro veio a informação.${filesText ? `\n\nFICHEIROS DO UTILIZADOR:${filesText}` : ''}`;
+  // RAG: só as páginas/secções mais relevantes dos documentos ativos, com a referência de cada uma
+  const hits = await searchDocs(question, { limit: 8 }).catch(() => []);
+  const full = await Promise.all(hits.map((h) => getDoc(h.docId)));
+  const used = [...new Set(hits.map((h) => h.name))];
+  const filesText = hits.map((h, k) => `\n\n### [${refOf(h)}]\n${(full[k]?.pages?.[h.page - 1] || h.excerpt).slice(0, 4000)}`).join('');
+  const telemetry = `Hora local do dispositivo: ${new Date().toLocaleString('pt-PT')}. Ligação à internet: ${navigator.onLine ? 'sim' : 'não'}.`;
+  const rules = `${getInstructions()}\n\nTELEMETRIA DO DISPOSITIVO: ${telemetry}\n\n${filesText ? `MANUAIS E DOCUMENTOS DO UTILIZADOR (cita sempre o nome do documento e a página ou secção de onde tiraste a informação):${filesText}` : 'Não há documentos do utilizador carregados.'}`;
   const { text } = await sample(
     [{ role: 'user', content: rules }, { role: 'assistant', content: 'Entendido. Pronto.' }, { role: 'user', content: question }],
     { cache: false },

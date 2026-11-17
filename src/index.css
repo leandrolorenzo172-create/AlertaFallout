@@ -2,11 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root { --c: 0 255 65; --cd: 0 26 0; --cb: 0 10 0; }
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: #000a00;
-  color: #00ff41;
+  background: rgb(var(--cb));
+  color: rgb(var(--c));
   font-family: 'Courier New', ui-monospace, monospace;
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -18,4 +19,10 @@ body {
   position: fixed; inset: 0; pointer-events: none; z-index: 60;
   background: repeating-linear-gradient(0deg, #00000033 0px, #00000033 1px, transparent 1px, transparent 3px);
 }
-.glow { text-shadow: 0 0 6px #00ff4188; }
+.glow { text-shadow: 0 0 6px rgb(var(--c) / 0.53); }
+
+/* Chuva dentro do painel "Alertas e clima" (fica cortada pelos limites da caixa) */
+.pb-rain { position: absolute; inset: 0; pointer-events: none; }
+.pb-rain i { position: absolute; top: -12%; width: 2px; height: 12px; border-radius: 1px; background: rgb(var(--c) / 0.7); transform: rotate(14deg); animation: pb-fall 1s linear infinite; }
+@keyframes pb-fall { to { top: 108%; margin-left: -34px; } }
+@media (prefers-reduced-motion: reduce) { .pb-rain i { animation: none; top: 30%; } }

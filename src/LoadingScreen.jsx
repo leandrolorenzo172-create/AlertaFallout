@@ -9,22 +9,22 @@ export default function LoadingScreen({ message = 'A CARREGAR DADOS...' }) {
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
       >
-        <Loader2 size={32} style={{ color: '#00ff41' }} />
+        <Loader2 size={32} style={{ color: 'rgb(var(--c))' }} />
       </motion.div>
       
       <motion.p
         className="mt-4 text-xs uppercase tracking-widest"
-        style={{ color: '#00ff4188' }}
+        style={{ color: 'rgb(var(--c) / 0.53)' }}
         animate={{ opacity: [0.3, 1, 0.3] }}
         transition={{ duration: 1.5, repeat: Infinity }}
       >
         {message}
       </motion.p>
       
-      <div className="mt-4 w-48 h-1 rounded overflow-hidden" style={{ background: '#001a00' }}>
+      <div className="mt-4 w-48 h-1 rounded overflow-hidden" style={{ background: 'rgb(var(--cd))' }}>
         <motion.div
           className="h-full"
-          style={{ background: '#00ff41' }}
+          style={{ background: 'rgb(var(--c))' }}
           animate={{ x: ['-100%', '200%'] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />
