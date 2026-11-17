@@ -10,7 +10,7 @@ npm run dev
 ```
 
 ## Publicar
-
+https://leandrolorenzo172-create.github.io/AlertaFallout/#/dashboard
 Cada envio para o ramo `main` compila a app e publica-a no GitHub Pages (ver `.github/workflows/pages.yml`).
 Em Settings → Pages, a origem ("Source") tem de estar em "GitHub Actions".
 
