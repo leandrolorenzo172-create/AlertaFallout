@@ -10,6 +10,7 @@ import WarNewsTab from './tabs/WarNewsTab';
 import CatastropheTab from './tabs/CatastropheTab';
 import WeatherTab from './tabs/WeatherTab';
 import RadioTab from './tabs/RadioTab';
+import MusicTab from './tabs/MusicTab';
 import PizzaIndexTab from './tabs/PizzaIndexTab';
 import SurvivalAITab from './tabs/SurvivalAITab';
 import KnowledgeFilesTab from './tabs/KnowledgeFilesTab';
@@ -39,6 +40,7 @@ export default function App() {
     catastrofes: <CatastropheTab />,
     meteo: <WeatherTab />,
     radio: <RadioTab />,
+    musica: <MusicTab />,
     pizza: <PizzaIndexTab />,
     assistente: <SurvivalAITab />,
     conhecimento: <KnowledgeFilesTab />,
