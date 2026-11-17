@@ -14,6 +14,7 @@ function grooves() {
 
 const TEMPLATE = `
 <div class="vp-head"><h2>Música local</h2><span data-vp="count">0 faixas</span></div>
+<div class="vp-clock">HORA ATUAL: <b data-vp="clock">--:--:--</b></div>
 <div class="vp-grid">
   <div class="vp-box vp-deck">
     <svg viewBox="0 0 320 262" role="img" aria-label="Gira-discos">
@@ -67,7 +68,6 @@ const TEMPLATE = `
       <button type="button" data-vp="next">[ PRÓXIMA ]</button>
       <button type="button" class="wide" data-vp="stop">[ STOP ]</button>
     </div>
-    <div class="vp-clock">HORA ATUAL: <b data-vp="clock">--:--:--</b></div>
     <div class="vp-msg" data-vp="msg" role="status"></div>
   </div>
 </div>`;

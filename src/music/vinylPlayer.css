@@ -56,7 +56,7 @@
 .vp-ctrl button:active, .vp-ctrl button.act { background: rgb(var(--c) / 0.13); border-color: var(--vp-g); }
 .vp-ctrl button:disabled { opacity: .35; cursor: default; }
 .vp-ctrl button:focus-visible, .vp-track:focus-visible, .vp-del:focus-visible, .vp-prog:focus-visible { outline: 2px solid var(--vp-g); outline-offset: -2px; }
-.vp-clock { margin-top: 10px; padding: 10px; text-align: center; font-size: 12px; letter-spacing: .1em; border: 1px dashed var(--vp-line); color: var(--vp-g2); }
+.vp-clock { margin: 0 0 12px; padding: 10px; text-align: center; font-size: 12px; letter-spacing: .1em; border: 1px dashed var(--vp-line); color: var(--vp-g2); }
 .vp-clock b { font-weight: normal; font-size: 15px; color: var(--vp-g); font-variant-numeric: tabular-nums; text-shadow: 0 0 8px rgb(var(--c) / 0.5); }
 .vp-msg { margin-top: 8px; font-size: 11px; color: var(--vp-amber); min-height: 1em; }
 
