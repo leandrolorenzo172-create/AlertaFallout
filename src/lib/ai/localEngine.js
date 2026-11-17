@@ -22,6 +22,10 @@ export function tokens(text) {
   return norm(text).split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOP.has(w)).map(stem);
 }
 const clean = (t) => String(t || '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
+// Texto de documentos importados (muitas vezes de OCR) mostrado tal como está: sem que "~", "*", "_" ou "#" virem
+// riscados, negrito ou títulos por acaso. O manual incluído é Markdown a sério e não passa por aqui.
+const plain = (t) => clean(t).replace(/[\\`*_~[\]<>|]/g, (c) => `\\${c}`).replace(/^(\s*)(#{1,6}|[-+])(\s)/gm, '$1\\$2$3').replace(/^(\s*\d+)([.)])(\s)/gm, '$1\\$2$3');
+const shown = (u, t = u.text) => (u.source === 'kb' ? plain(t) : clean(t));
 
 // Divide textos longos em passagens (por parágrafos), para a resposta ser precisa
 function passages(text, size = 900) {
@@ -170,7 +174,7 @@ export async function answerLocally(question, { reason = 'offline' } = {}) {
     const parts = idx.units.filter((u) => u.title === more[1].trim());
     if (parts.length) {
       const u0 = parts[0];
-      let body = ''; for (const u of parts) { if (body.length > 3500) break; body += `${clean(u.text)}\n\n`; }
+      let body = ''; for (const u of parts) { if (body.length > 3500) break; body += `${shown(u)}\n\n`; }
       const related = (await search(u0.title, 8)).hits.map((h) => h.u.title).filter((t, i, a) => t !== u0.title && a.indexOf(t) === i).slice(0, 2);
       return { text: `**${SOURCE_NAME[u0.source]} — ${u0.title}**\n\n${body.trim()}${body.length > 3500 ? '\n\n_(Continua no documento original.)_' : ''}`, refs: [refOfUnit(u0)], followups: related.map((t) => `Fala-me de: ${t}`), found: true };
     }
@@ -192,10 +196,10 @@ export async function answerLocally(question, { reason = 'offline' } = {}) {
   // Junta a passagem seguinte do mesmo documento se também for relevante (resposta mais completa)
   const extra = hits.slice(1).find((h) => h.u.ref === main.ref && h.score > best.score * 0.6);
   const other = hits.slice(1).find((h) => h.u.title !== main.title && h.score > best.score * 0.55);
-  let text = `**${SOURCE_NAME[main.source]} — ${main.title}**\n\n${clean(main.text)}`;
-  if (extra) text += `\n\n${clean(extra.u.text)}`;
+  let text = `**${SOURCE_NAME[main.source]} — ${main.title}**\n\n${shown(main)}`;
+  if (extra) text += `\n\n${shown(extra.u)}`;
   if (other) {
-    const snippet = clean(other.u.text).split(/\n{2,}/)[0].slice(0, 420);
+    const snippet = shown(other.u, clean(other.u.text).split(/\n{2,}/)[0].slice(0, 420));
     text += `\n\n---\n\n**Também relacionado — ${other.u.title}** (${SOURCE_NAME[other.u.source].toLowerCase()})\n\n${snippet}${snippet.length >= 420 ? '…' : ''}`;
   }
   const refs = [refOfUnit(main), ...(other ? [refOfUnit(other.u)] : [])];

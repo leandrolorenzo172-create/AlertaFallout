@@ -20,7 +20,7 @@ export const ANTHROPIC_MODELS = [
 
 // ---------- Erros: o mesmo formato para todos ----------
 export class AiError extends Error {
-  constructor(kind, message, status) { super(message); this.kind = kind; this.status = status; } // kind: auth | permission | rate | network | abort | other
+  constructor(kind, message, status) { super(message); this.kind = kind; this.status = status; } // kind: auth | permission | rate | busy | network | abort | other
 }
 async function normalize(provider, e) {
   if (e instanceof AiError) return e;
@@ -50,6 +50,8 @@ async function normalize(provider, e) {
       if (e.status === 403) return new AiError('permission', 'sem permissão (confirma a chave e o modelo)', 403);
       if (e.status === 429) return new AiError('rate', 'limite de pedidos atingido', 429);
       if (e.status === 404) return new AiError('other', 'modelo não encontrado', 404);
+      if (e.status === 503 || e.status === 502 || e.status === 504) return new AiError('busy', `o Gemini está sobrecarregado neste momento (erro ${e.status})`, e.status);
+      if (e.status >= 500) return new AiError('busy', `erro do servidor do Gemini (${e.status})`, e.status);
       return new AiError('other', `erro ${e.status}`, e.status);
     }
   }
@@ -70,7 +72,29 @@ async function openaiClient(cfg, provider) {
 }
 async function geminiClient(cfg) {
   const { GoogleGenAI } = await import('@google/genai');
-  return new GoogleGenAI({ apiKey: cfg.key });
+  const opts = { apiKey: cfg.key };
+  if (cfg.fetch) opts.httpOptions = { fetch: cfg.fetch }; // só usado nos testes
+  return new GoogleGenAI(opts);
+}
+
+// ---------- Gemini: tentativas e modelos de recurso ----------
+// O Gemini responde muitas vezes 503 ("model is overloaded") ou 500 em horas de ponta, sobretudo nos modelos mais recentes.
+// Em vez de desistir à primeira: repete com espera crescente e, se o modelo escolhido continuar indisponível,
+// passa para outros modelos de conversa da mesma conta (primeiro os estáveis "Flash").
+const GEMINI_RETRY = new Set([500, 502, 503, 504]);
+const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-pro-latest', 'gemini-2.5-pro'];
+const sleep = (ms, signal) => new Promise((res, rej) => {
+  const t = setTimeout(res, ms);
+  signal?.addEventListener('abort', () => { clearTimeout(t); rej(new AiError('abort', 'cancelado')); }, { once: true });
+});
+const geminiStatus = (e) => (typeof e?.status === 'number' ? e.status : 0);
+// Ordem de modelos a tentar: o escolhido, depois os da lista da conta (guardada no "Testar") e os de recurso conhecidos
+export function geminiCandidates(cfg) {
+  const known = (cfg.models || []).map((m) => (typeof m === 'string' ? m : m.id)).filter(Boolean);
+  const rank = (id) => (/preview|exp/i.test(id) ? 2 : 0) + (/pro/i.test(id) ? 1 : 0); // estáveis e Flash primeiro
+  const fromAccount = known.filter((id) => id !== cfg.model).sort((a, b) => rank(a) - rank(b));
+  const fallbacks = known.length ? GEMINI_FALLBACKS.filter((id) => known.includes(id)) : GEMINI_FALLBACKS;
+  return [...new Set([cfg.model, ...fallbacks, ...fromAccount].filter(Boolean))].slice(0, 5);
 }
 
 // ---------- Lista de modelos (também serve para testar a chave) ----------
@@ -147,13 +171,41 @@ export async function streamChat(provider, cfg, { system, messages, onText, sign
     if (provider === 'gemini') {
       const ai = await geminiClient(cfg);
       const contents = messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
-      const stream = await ai.models.generateContentStream({ model: cfg.model, contents, config: { systemInstruction: system, abortSignal: signal } });
-      for await (const chunk of stream) {
-        if (signal?.aborted) throw new AiError('abort', 'cancelado');
-        const piece = chunk.text;
-        if (piece) { raw += piece; onText(raw); }
+      const config = { systemInstruction: system, abortSignal: signal };
+      let lastErr;
+      for (const model of geminiCandidates(cfg)) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (signal?.aborted) throw new AiError('abort', 'cancelado');
+          try {
+            if (attempt === 0) {
+              // 1.ª tentativa: em streaming (o texto aparece aos poucos)
+              const stream = await ai.models.generateContentStream({ model, contents, config });
+              for await (const chunk of stream) {
+                if (signal?.aborted) throw new AiError('abort', 'cancelado');
+                const piece = chunk.text;
+                if (piece) { raw += piece; onText(raw); }
+              }
+            } else {
+              // 2.ª tentativa: pedido normal, sem streaming (às vezes passa quando o streaming falha)
+              const r = await ai.models.generateContent({ model, contents, config });
+              raw = r.text || ''; if (raw) onText(raw);
+            }
+            if (!raw) throw new AiError('other', 'o Gemini devolveu uma resposta vazia');
+            return model === cfg.model ? { text: raw } : { text: raw, note: `O modelo ${cfg.model} estava indisponível; respondeu o ${model}.`, model };
+          } catch (e) {
+            if (e instanceof AiError && e.kind === 'abort') throw e;
+            if (signal?.aborted || e?.name === 'AbortError') throw new AiError('abort', 'cancelado');
+            if (raw) throw e; // já chegou parte da resposta: não repetir por cima
+            lastErr = e;
+            const st = geminiStatus(e);
+            const tryOtherModel = st === 404 || st === 429 || (st === 400 && !/api key/i.test(e?.message || ''));
+            if (tryOtherModel) break; // este modelo não serve ou esgotou a quota gratuita: passa ao seguinte
+            if (!GEMINI_RETRY.has(st) && !(e instanceof AiError && e.kind === 'other')) throw e; // chave, limites, rede: não adianta repetir
+            if (attempt === 0) await sleep(800 + Math.random() * 700, signal);
+          }
+        }
       }
-      return { text: raw };
+      throw lastErr || new AiError('other', 'nenhum modelo do Gemini respondeu');
     }
   } catch (e) {
     const err = await normalize(provider, e);

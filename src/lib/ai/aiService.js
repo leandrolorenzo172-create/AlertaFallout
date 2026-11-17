@@ -91,6 +91,7 @@ function describeError(e) {
     auth: 'a chave da API foi recusada — confirma-a nas Definições',
     permission: e.message,
     rate: e.message,
+    busy: e.message,
     network: e.message || 'sem ligação ao serviço de IA',
   };
   if (e && e.code === 'not_granted') return { msg: 'o acesso à IA do claude.ai não foi autorizado' };

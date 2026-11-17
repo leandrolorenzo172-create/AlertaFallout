@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bot, KeyRound, Trash2, RefreshCw } from 'lucide-react';
 import { useAiConfig, setProvider, setProviderConfig } from '@/lib/ai/config';
-import { PROVIDERS, ANTHROPIC_MODELS, listModels } from '@/lib/ai/providers';
+import { PROVIDERS, ANTHROPIC_MODELS, listModels, streamChat } from '@/lib/ai/providers';
 import { IS_ARTIFACT } from '@/lib/ai/aiService';
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
@@ -11,6 +11,7 @@ const ERR = {
   permission: 'A chave não tem acesso a este serviço ou modelo.',
   rate: 'Limite de pedidos ou de saldo atingido nesta conta.',
   network: 'Sem ligação ao serviço.',
+  busy: 'O serviço está sobrecarregado neste momento. Tenta daqui a pouco ou escolhe outro modelo.',
 };
 
 // Definições da IA online: escolher o serviço (Claude, ChatGPT, Gemini ou outro compatível com OpenAI),
@@ -28,11 +29,19 @@ export default function AiSettings() {
     if (p === 'custom' && !c.baseUrl) { setMsg({ c: '#ffaa00', t: 'Indica o endereço do serviço.' }); return; }
     setTesting(true); setMsg({ c: '#ffaa00', t: 'A testar a ligação...' });
     try {
-      const list = await listModels(p, c); // não gasta tokens
+      const list = await listModels(p, c); // valida a chave sem gastar tokens
       setModels((m) => ({ ...m, [p]: list }));
       // se o modelo guardado não existe nesta conta, escolhe o primeiro disponível
-      if (list.length && !list.some((x) => x.id === c.model)) setProviderConfig(p, { model: list[0].id });
-      setMsg({ c: 'rgb(var(--c))', t: `Ligação válida${list.length ? ` · ${list.length} modelos disponíveis` : ''}. A IA completa está ligada.` });
+      let model = c.model;
+      if (list.length && !list.some((x) => x.id === model)) model = list[0].id;
+      setProviderConfig(p, { model, models: list.map((x) => x.id) });
+      // Pergunta-teste muito curta: confirma que o modelo responde mesmo (listar modelos não chega)
+      setMsg({ c: '#ffaa00', t: `Chave válida. A confirmar que o modelo ${model} responde...` });
+      const r = await streamChat(p, { ...c, model, models: list.map((x) => x.id) }, {
+        system: 'Responde apenas com a palavra OK.', messages: [{ role: 'user', content: 'Teste de ligação. Responde só OK.' }], onText: () => {},
+      });
+      if (r.model && r.model !== model) { model = r.model; setProviderConfig(p, { model }); }
+      setMsg({ c: 'rgb(var(--c))', t: `Ligação válida${list.length ? ` · ${list.length} modelos disponíveis` : ''} · ${model} respondeu${r.model ? ' (o modelo anterior estava indisponível e foi trocado)' : ''}. A IA completa está ligada.` });
     } catch (e) {
       setMsg({ c: '#ff6666', t: ERR[e.kind] ? `${ERR[e.kind]}${e.kind === 'network' && p === 'custom' ? ' Confirma o endereço e se o servidor aceita pedidos do browser (CORS).' : ''}` : `Não foi possível validar (${e.message}).` });
     } finally { setTesting(false); }
@@ -116,7 +125,7 @@ export default function AiSettings() {
             <RefreshCw size={12} /> Testar
           </button>
         </div>
-        <span style={{ color: 'rgb(var(--c) / 0.55)' }}>&ldquo;Testar&rdquo; confirma a ligação e mostra os modelos da tua conta. Não gasta créditos.</span>
+        <span style={{ color: 'rgb(var(--c) / 0.55)' }}>&ldquo;Testar&rdquo; confirma a chave, mostra os modelos da tua conta e faz uma pergunta-teste de uma palavra (custo ínfimo).</span>
       </label>
       {msg && <p className="text-[11px] mt-2" role="status" style={{ color: msg.c }}>{msg.t}</p>}
     </section>
