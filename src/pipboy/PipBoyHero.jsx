@@ -24,6 +24,25 @@ function Metric({ label, value, align = 'left' }) {
   );
 }
 
+// Efeitos animados de cada estado do tempo. Ficam dentro da caixa do painel, que os corta nos limites.
+const seq = (n) => Array.from({ length: n }, (_, i) => i);
+function WeatherFx({ mode }) {
+  let fx = null;
+  if (mode === 'rain') {
+    fx = seq(26).map((i) => <i key={i} className="fx-drop" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.137) % 1.2}s`, animationDuration: `${0.7 + ((i * 7) % 5) / 10}s` }} />);
+  } else if (mode === 'wind') {
+    fx = seq(14).map((i) => <i key={i} className="fx-gust" style={{ top: `${6 + ((i * 29) % 88)}%`, width: `${18 + ((i * 13) % 30)}px`, animationDelay: `${(i * 0.23) % 1.6}s`, animationDuration: `${0.8 + ((i * 5) % 7) / 10}s` }} />);
+  } else if (mode === 'fog') {
+    fx = seq(4).map((i) => <i key={i} className="fx-fog" style={{ top: `${8 + i * 23}%`, animationDelay: `${i * -3.5}s`, animationDuration: `${13 + i * 3}s` }} />);
+  } else if (mode === 'cold') {
+    fx = seq(16).map((i) => <i key={i} className="fx-snow" style={{ left: `${(i * 41 + 5) % 100}%`, fontSize: `${10 + ((i * 3) % 8)}px`, animationDelay: `${(i * 0.61) % 6}s`, animationDuration: `${5 + ((i * 7) % 5)}s` }}>✱</i>);
+  } else if (mode === 'sun') {
+    fx = <i className="fx-sunglow" />;
+  }
+  // a chave faz o efeito novo entrar com uma transição suave sempre que o modo muda
+  return <div key={mode} className="pb-fx" aria-hidden="true">{fx}</div>;
+}
+
 // Escolhe o estado do painel a partir do tempo real em Braga
 function modeFromWeather(city) {
   if (!city) return 'base';
@@ -101,16 +120,10 @@ export default function PipBoyHero({ data }) {
 
       {/* Alertas e clima */}
       <div className="pb-wx relative overflow-hidden rounded-xl p-3" style={{ background: 'linear-gradient(rgb(var(--c) / 0.16), rgb(var(--cd) / 0.7))', border: '1px solid rgb(var(--c) / 0.35)' }}>
-        {mode === 'rain' && (
-          <div className="pb-rain" aria-hidden="true">
-            {Array.from({ length: 26 }, (_, i) => (
-              <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.137) % 1.2}s`, animationDuration: `${0.7 + ((i * 7) % 5) / 10}s` }} />
-            ))}
-          </div>
-        )}
+        <WeatherFx mode={mode} />
         <h3 className="relative text-base font-bold uppercase tracking-wider mb-2" style={{ textShadow: '0 0 8px rgb(var(--c) / 0.5)' }}>Alertas e clima</h3>
         <div className="relative flex gap-3 items-center">
-          <Mascot mode={mode} className="shrink-0" style={{ width: 96 }} />
+          <Mascot key={mode} mode={mode} className="shrink-0 pb-swap" style={{ width: 96 }} />
           <div className="min-w-0 flex-1 text-xs leading-snug">
             <p className="font-bold uppercase" style={{ color: 'rgb(var(--c))' }}>Alertas de última hora (Braga):</p>
             {wxError && !weather ? (

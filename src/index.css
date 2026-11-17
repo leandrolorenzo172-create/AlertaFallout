@@ -21,8 +21,53 @@ body {
 }
 .glow { text-shadow: 0 0 6px rgb(var(--c) / 0.53); }
 
-/* Chuva dentro do painel "Alertas e clima" (fica cortada pelos limites da caixa) */
-.pb-rain { position: absolute; inset: 0; pointer-events: none; }
-.pb-rain i { position: absolute; top: -12%; width: 2px; height: 12px; border-radius: 1px; background: rgb(var(--c) / 0.7); transform: rotate(14deg); animation: pb-fall 1s linear infinite; }
-@keyframes pb-fall { to { top: 108%; margin-left: -34px; } }
-@media (prefers-reduced-motion: reduce) { .pb-rain i { animation: none; top: 30%; } }
+/* ---- Painel "Alertas e clima": efeitos por estado do tempo (cortados pelos limites da caixa) ---- */
+.pb-fx { position: absolute; inset: 0; pointer-events: none; animation: pb-fade .5s ease-out both; }
+.pb-fx i { position: absolute; font-style: normal; }
+.pb-swap { animation: pb-fade .45s ease-out both; }
+@keyframes pb-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* chuva: pingos diagonais de cima para baixo */
+.fx-drop { top: -12%; width: 2px; height: 12px; border-radius: 1px; background: rgb(var(--c) / 0.7); transform: rotate(14deg); animation: fx-fall 1s linear infinite; }
+@keyframes fx-fall { to { top: 108%; margin-left: -34px; } }
+
+/* vento: rajadas tracejadas da esquerda para a direita */
+.fx-gust { left: -20%; height: 2px; background: repeating-linear-gradient(90deg, rgb(var(--c) / 0.75) 0 7px, transparent 7px 11px); animation: fx-blow 1s linear infinite; }
+@keyframes fx-blow { to { left: 115%; } }
+
+/* nevoeiro: camadas difusas que passam devagar e aparecem/desaparecem */
+.fx-fog { left: -60%; width: 90%; height: 26%; border-radius: 50%; filter: blur(14px); opacity: 0;
+  background: radial-gradient(ellipse at center, rgb(var(--c) / 0.34), transparent 70%); animation: fx-drift 14s ease-in-out infinite; }
+@keyframes fx-drift { 0% { left: -70%; opacity: 0; } 25% { opacity: 1; } 75% { opacity: .9; } 100% { left: 80%; opacity: 0; } }
+
+/* frio: flocos em asterisco a cair devagar, em ziguezague */
+.fx-snow { top: -10%; line-height: 1; color: rgb(var(--c)); text-shadow: 0 0 6px rgb(var(--c) / 0.8); animation: fx-snowfall 7s linear infinite; }
+@keyframes fx-snowfall { 0% { top: -10%; transform: translateX(0) rotate(0); } 25% { transform: translateX(12px) rotate(45deg); } 50% { transform: translateX(-10px) rotate(90deg); } 75% { transform: translateX(12px) rotate(135deg); } 100% { top: 108%; transform: translateX(-6px) rotate(180deg); } }
+
+/* sol: clarão quente a pulsar no canto da mascote */
+.fx-sunglow { left: -8%; top: -30%; width: 55%; height: 90%; border-radius: 50%; background: radial-gradient(circle, rgb(var(--c) / 0.3), transparent 65%); animation: fx-pulse 2.6s ease-in-out infinite; }
+@keyframes fx-pulse { 0%, 100% { opacity: .45; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
+
+/* ---- Mascote: animações dos acessórios ---- */
+.mc .mc-sun, .mc .mc-ray, .mc .mc-glasses, .mc .mc-tail, .mc .mc-lamp { transform-box: fill-box; transform-origin: center; }
+.mc .mc-sun { animation: mc-sunpulse 2.6s ease-in-out infinite; }
+@keyframes mc-sunpulse { 0%, 100% { filter: drop-shadow(0 0 3px rgb(var(--c) / 0.5)); } 50% { filter: drop-shadow(0 0 14px rgb(var(--c))); } }
+.mc .mc-ray { animation: mc-ray 2.6s ease-in-out infinite; }
+@keyframes mc-ray { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+/* os óculos descem para o sítio e depois o explorador ajusta-os de vez em quando */
+.mc .mc-glasses { animation: mc-glasses-in .7s cubic-bezier(.3, 1.4, .5, 1) both, mc-glasses-adjust 5s ease-in-out 1.4s infinite; }
+@keyframes mc-glasses-in { from { transform: translateY(-46px) rotate(-10deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mc-glasses-adjust { 0%, 82%, 100% { transform: none; } 88% { transform: translateY(-9px) rotate(-4deg); } 94% { transform: translateY(2px); } }
+.mc .mc-tail { transform-origin: left center; animation: mc-flap .45s ease-in-out infinite alternate; }
+@keyframes mc-flap { from { transform: rotate(-7deg) scaleX(1); } to { transform: rotate(9deg) scaleX(.93); } }
+.mc.mc-lean { animation: pb-fade .45s ease-out both, mc-lean 1.8s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes mc-lean { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(2.5deg); } }
+.mc .mc-lamp { animation: mc-lamp 2.2s ease-in-out infinite; }
+@keyframes mc-lamp { 0%, 100% { opacity: .14; transform: scale(.85); } 50% { opacity: .38; transform: scale(1.1); } }
+.mc.mc-shiver { animation: pb-fade .45s ease-out both, mc-shiver .16s linear infinite; }
+@keyframes mc-shiver { 0%, 100% { transform: translateX(-0.7px); } 50% { transform: translateX(0.7px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-fx i, .mc, .mc * { animation: none !important; }
+  .fx-drop { top: 30%; } .fx-gust { left: 30%; } .fx-fog { left: 5%; opacity: .8; } .fx-snow { top: 30%; }
+}
