@@ -18,6 +18,7 @@
   -webkit-user-select: none; user-select: none;
 }
 .rf-root *, .rf-root *::before, .rf-root *::after { box-sizing: border-box; }
+.rf-root [hidden] { display: none !important; } /* no ficheiro autónomo não há o reset do Tailwind */
 .rf-chassis {
   position: relative; padding: 16px; border-radius: 18px;
   background:
@@ -128,6 +129,40 @@
 .rf-presets small { font-size: 10px; color: var(--rf-green2); font-variant-numeric: tabular-nums; }
 .rf-presets button:focus-visible, .rf-band button:focus-visible, .rf-add:focus-visible, .rf-panel button:focus-visible, .rf-sel button:focus-visible { outline: 2px solid var(--rf-green); outline-offset: 2px; }
 .rf-note { margin-top: 6px; font-size: 9px; letter-spacing: .1em; color: #8d9388; text-align: center; }
+
+/* A tocar agora */
+.rf-np { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: -4px 4px 0; padding: 6px 10px; border-radius: 10px;
+  border: 1px dashed rgb(var(--c) / 0.4); font-size: 13px; letter-spacing: .04em; text-align: center; color: var(--rf-green); }
+.rf-np span { color: var(--rf-amber); }
+.rf-np b { font-weight: normal; min-width: 0; overflow-wrap: anywhere; text-shadow: 0 0 6px rgb(var(--c) / 0.5); }
+
+/* LISTA / PARTILHAR / ADICIONAR */
+.rf-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.rf-actions button { font: inherit; font-size: 11px; letter-spacing: .14em; padding: 8px 12px; cursor: pointer; border-radius: 6px;
+  color: var(--rf-green); background: #020402; border: 1px solid rgb(var(--c) / 0.35); }
+.rf-actions button[aria-expanded="true"] { background: var(--rf-green); color: rgb(var(--cb)); }
+.rf-actions .rf-add { margin: 0; color: #9aa093; border-color: rgb(var(--c) / 0.2); }
+.rf-actions button:focus-visible { outline: 2px solid var(--rf-green); outline-offset: 2px; }
+.rf-sharemsg { min-height: 1.2em; margin-top: 6px; font-size: 11px; letter-spacing: .12em; text-align: center; color: var(--rf-amber); overflow-wrap: anywhere; }
+.rf-list { margin-top: 8px; padding: 12px; border-radius: 14px; background: var(--rf-screen); border: 1px solid rgb(var(--c) / 0.35); }
+.rf-list h3 { margin: 0 0 8px; font-size: 12px; font-weight: normal; letter-spacing: .14em; }
+.rf-list h3 span { color: var(--rf-green2); opacity: .7; }
+.rf-list input { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 4px; color: var(--rf-green); background: #020402;
+  border: 1px solid rgb(var(--c) / 0.35); -webkit-user-select: text; user-select: text; }
+.rf-list input:focus-visible { outline: 1px solid var(--rf-green); }
+.rf-listul { list-style: none; margin: 10px 0 0; padding: 0; max-height: 360px; overflow-y: auto; border: 1px solid rgb(var(--c) / 0.15); border-radius: 4px; }
+.rf-listul li + li { border-top: 1px solid rgb(var(--c) / 0.1); }
+.rf-listitem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; font: inherit; text-align: left; cursor: pointer;
+  color: var(--rf-green); background: transparent; border: 0; }
+.rf-listitem:hover, .rf-listitem:focus-visible { background: rgb(var(--c) / 0.1); outline: none; }
+.rf-listitem.cur { background: var(--rf-green); color: rgb(var(--cb)); }
+.rf-listitem.cur small { color: rgb(var(--cb)); opacity: .8; }
+.rf-listfreq { flex: none; width: 74px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--rf-amber); }
+.rf-listitem.cur .rf-listfreq { color: rgb(var(--cb)); }
+.rf-listtext { display: flex; flex-direction: column; min-width: 0; }
+.rf-listtext b { font-weight: normal; font-size: 13px; overflow-wrap: anywhere; }
+.rf-listtext small { font-size: 10px; color: var(--rf-green2); opacity: .7; overflow-wrap: anywhere; }
+.rf-listempty { padding: 14px; font-size: 12px; text-align: center; color: rgb(var(--c) / 0.6); }
 
 /* Estações personalizadas */
 .rf-add { display: block; margin: 12px auto 0; font: inherit; font-size: 11px; letter-spacing: .14em; background: none; border: 0; color: #9aa093; cursor: pointer; padding: 6px; }

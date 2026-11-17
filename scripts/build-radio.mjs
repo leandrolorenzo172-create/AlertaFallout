@@ -1,9 +1,23 @@
 // Gera o ficheiro autónomo radio-fallout-pt.html a partir do sintonizador da app.
+// Tudo fica dentro do HTML (lista de emissoras e hls.js), para não depender de outros sites.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const css = readFileSync('src/radio/radioTuner.css', 'utf8');
-const strip = (f) => readFileSync(f, 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
-const js = strip('src/radio/canvasTheme.js') + '\n' + strip('src/radio/radioTuner.js');
+const strip = (f) => readFileSync(f, 'utf8')
+  .replace(/^import .*$/gm, '')
+  .replace(/^export \{[^}]*\};?$/gm, '')
+  .replace(/^export /gm, '');
+const stations = JSON.parse(readFileSync('src/data/stationsPT.json', 'utf8'));
+const hlsJs = readFileSync('node_modules/hls.js/dist/hls.min.js', 'utf8');
+const safe = (code) => code.replace(/<\/script/gi, '<\\/script'); // não fechar o <script> antes do tempo
+
+const js = [
+  `const stationsPT = ${JSON.stringify(stations)};`,
+  strip('src/radio/defaultStations.js'),
+  strip('src/radio/canvasTheme.js'),
+  strip('src/radio/nowPlaying.js'),
+  strip('src/radio/radioTuner.js'),
+].join('\n');
 
 const html = `<!DOCTYPE html>
 <html lang="pt">
@@ -25,8 +39,29 @@ ${css}
 <body>
 <div id="radio"></div>
 <script>
-${js}
-mountRadio(document.getElementById('radio'));
+${safe(hlsJs)}
+</script>
+<script>
+${safe(js)}
+// Link partilhado: #f=97.4, #f=1000&b=AM (também aceita #/radio?f=97.4)
+function readHash() {
+  const h = location.hash.replace(/^#/, '');
+  const p = new URLSearchParams(h.includes('?') ? h.slice(h.indexOf('?') + 1) : h);
+  const f = Number(p.get('f'));
+  return { initialFreq: p.get('f') && Number.isFinite(f) ? f : undefined, band: p.get('b') === 'AM' ? 'AM' : (p.get('f') ? 'FM' : undefined) };
+}
+const linkHash = (f, b) => '#f=' + f + (b === 'AM' ? '&b=AM' : '');
+let destroyRadio = null;
+function start() {
+  if (destroyRadio) destroyRadio();
+  destroyRadio = mountRadio(document.getElementById('radio'), Object.assign(readHash(), {
+    onTune: (f, b) => { lastHash = linkHash(f, b); history.replaceState(null, '', location.pathname + location.search + lastHash); },
+    shareUrl: (f, b) => location.href.split('#')[0] + linkHash(f, b),
+  }));
+}
+let lastHash = location.hash;
+window.addEventListener('hashchange', () => { if (location.hash !== lastHash) { lastHash = location.hash; start(); } });
+start();
 </script>
 </body>
 </html>
@@ -34,4 +69,4 @@ mountRadio(document.getElementById('radio'));
 writeFileSync('radio-fallout-pt.html', html);
 mkdirSync('public', { recursive: true });
 writeFileSync('public/radio-fallout-pt.html', html);
-console.log('radio-fallout-pt.html', html.length, 'bytes');
+console.log('radio-fallout-pt.html', html.length, 'bytes,', stations.stations.length, 'emissoras extra');

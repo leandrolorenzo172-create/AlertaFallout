@@ -1,39 +1,29 @@
 // Sintonizador de rádio analógico (JavaScript puro, sem dependências).
 // Usado no separador Rádio da app e no ficheiro autónomo radio-fallout-pt.html.
 import { themedCtx } from './canvasTheme';
+import { DEFAULT_STATIONS } from './defaultStations';
+import stationsPT from '../data/stationsPT.json';
+import { createNowPlaying } from './nowPlaying';
 
-// url = endereço principal; alt = alternativas tentadas por ordem se o principal falhar; page = site oficial
-export const DEFAULT_STATIONS = [
-  { freq: 89.5, name: 'TSF Rádio Notícias', genre: 'Informação contínua, análise e desporto', url: 'https://tsfdirecto.tsf.pt/tsfdirecto.mp3', alt: ['https://tsfdirecto.tsf.pt/tsfdirecto.aac'], page: 'https://www.tsf.pt/emdireto' },
-  { freq: 90.4, name: 'Rádio Oxigénio', genre: 'Eletrónica, funk, soul e hip-hop', url: 'https://proic1.evsportugal.pt:8000/oxigenio_mp3', alt: ['https://proic1.evsportugal.pt:8000/oxigenio_aac'] },
-  { freq: 92.0, name: 'Rádio Amália', genre: 'Fado', url: 'https://centova.radios.pt/proxy/496?mp=/stream' },
-  { freq: 92.4, name: 'Mega Hits', genre: 'Pop, R&B e dance', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/MEGA_HITS.mp3', alt: ['https://playerservices.streamtheworld.com/api/livestream-redirect/MEGA_HITSAAC.aac'], page: 'https://megahits.fm/ouvir-emissao-mega-hits' },
-  { freq: 93.2, name: 'RFM', genre: 'Êxitos internacionais e nacionais', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/RFM.mp3', alt: ['https://playerservices.streamtheworld.com/api/livestream-redirect/RFMAAC.aac'], page: 'https://rfm.pt/ouvir-emissao-rfm' },
-  { freq: 94.4, name: 'Antena 2 (RTP)', genre: 'Música erudita, jazz, fado e cultura', url: 'https://radiocast.rtp.pt/antena280a.mp3', alt: ['https://streaming-live.rtp.pt/liveradio/antena280a/playlist.m3u8', 'https://streaming-live.rtp.pt/liveradio/antena280a/chunklist.m3u8'] },
-  { freq: 95.7, name: 'Antena 1 (RTP)', genre: 'Informação, desporto e música em português', url: 'https://radiocast.rtp.pt/antena180a.mp3', alt: ['https://streaming-live.rtp.pt/liveradio/antena180a/playlist.m3u8', 'https://streaming-live.rtp.pt/liveradio/antena180a/chunklist.m3u8'], page: 'https://www.rtp.pt/play/direto/antena1' },
-  { freq: 96.6, name: 'Smooth FM', genre: 'Jazz, soul, blues e bossa nova', url: 'https://stream-icy.bauermedia.pt/smooth.mp3', alt: ['https://stream-icy.bauermedia.pt/smooth.aac'] },
-  { freq: 97.4, name: 'Rádio Comercial', genre: 'Pop/rock atual e entretenimento', url: 'https://stream-icy.bauermedia.pt/comercial.mp3', alt: ['https://stream-icy.bauermedia.pt/comercial.aac'], page: 'https://rayo.pt/radio-comercial' },
-  { freq: 98.7, name: 'Rádio Observador', genre: 'Informação, opinião e desporto', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/OBSERVADOR.mp3', alt: ['https://playerservices.streamtheworld.com/api/livestream-redirect/OBSERVADORAAC.aac'] },
-  { freq: 100.3, name: 'Antena 3 (RTP)', genre: 'Música alternativa e novas bandas portuguesas', url: 'https://radiocast.rtp.pt/antena380a.mp3', alt: ['https://streaming-live.rtp.pt/liveradio/antena380a/playlist.m3u8', 'https://streaming-live.rtp.pt/liveradio/antena380a/chunklist.m3u8'] },
-  { freq: 101.3, name: 'Rádio Nova Era', genre: 'Dance music, house e R&B', url: 'https://centova.radios.pt/proxy/478?mp=/stream' },
-  { freq: 101.9, name: 'Estação Orbital', genre: 'Música de dança e êxitos eletrónicos', url: 'https://centova.radios.pt/proxy/401?mp=/stream' },
-  { freq: 103.4, name: 'Rádio Renascença', genre: 'Informação e pop/rock dos anos 70 a 90', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_RENASCENCA.mp3', alt: ['https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_RENASCENCAAAC.aac'] },
-  { freq: 104.3, name: 'M80 Rádio', genre: 'Clássicos dos anos 70, 80, 90 e 2000', url: 'https://stream-icy.bauermedia.pt/m80.mp3', alt: ['https://stream-icy.bauermedia.pt/m80.aac'], page: 'https://rayo.pt/m80' },
-  { freq: 106.2, name: 'Cidade FM', genre: 'Hip-hop, R&B, reggaeton e música urbana', url: 'https://stream-icy.bauermedia.pt/cidade.mp3', alt: ['https://stream-icy.bauermedia.pt/cidade.aac'] },
-];
+export { DEFAULT_STATIONS };
 
+// range = distância a que a emissora começa a ouvir-se; lock = sintonia centrada (luz STEREO / LOCKED)
+const RANGE = 0.3; // MHz
+const LOCK = 0.1; // MHz
 const BANDS = {
-  FM: { min: 88, max: 108, unit: 'MHz', step: 0.1, digits: 1, turn: 2, wheel: 0.05 },
-  AM: { min: 540, max: 1600, unit: 'kHz', step: 10, digits: 0, turn: 100, wheel: 5 },
+  FM: { min: 88, max: 108, unit: 'MHz', step: 0.1, digits: 1, turn: 2, wheel: 0.05, range: RANGE, lock: LOCK },
+  AM: { min: 540, max: 1600, unit: 'kHz', step: 10, digits: 0, turn: 100, wheel: 5, range: 5, lock: 2 },
 };
-const RANGE = 0.3; // MHz: distância a que a emissora começa a ouvir-se
-const LOCK = 0.1; // MHz: sintonia centrada
 const DEFAULT_PRESETS = [92.4, 97.4, 93.2, 104.3, 95.7, 89.5];
-const HLS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js';
+
+// Todas as emissoras: as 16 principais + as do radio-browser.info (src/data/stationsPT.json)
+const ALL_STATIONS = [...DEFAULT_STATIONS, ...((stationsPT && stationsPT.stations) || [])];
+const fmtFreq = (st) => (st.band === 'AM' ? `${Math.round(st.freq)} kHz AM` : `${Number(st.freq).toFixed(1)} MHz`);
+const online = () => typeof navigator === 'undefined' || navigator.onLine !== false;
 
 const TEMPLATE = `
 <div class="rf-chassis rf-off">
-  <button type="button" class="rf-start" data-rf="start"><b>&#9654; TOCA PARA LIGAR O RÁDIO</b><span data-rf="startinfo">O browser só deixa tocar som depois de um toque.</span></button>
+  <button type="button" class="rf-start" data-rf="start"><b data-rf="startlabel">&#9654; TOCA PARA LIGAR O RÁDIO</b><span data-rf="startinfo">O browser só deixa tocar som depois de um toque.</span></button>
   <div class="rf-grid">
     <section class="rf-left rf-panelbox">
       <div class="rf-title">PRESET</div>
@@ -42,6 +32,7 @@ const TEMPLATE = `
         <div class="rf-name" data-rf="name">DESLIGADO</div>
         <button type="button" data-rf="next" aria-label="Emissora seguinte">&rsaquo;</button>
       </div>
+      <div class="rf-np" data-rf="np" hidden><span aria-hidden="true">&#9835;</span><b data-rf="nptext"></b></div>
       <div class="rf-art">
         <div class="rf-artsvg" data-rf="art"></div>
         <div class="rf-artinfo">
@@ -86,7 +77,17 @@ const TEMPLATE = `
   </div>
   <div class="rf-presets" data-rf="presets"></div>
   <div class="rf-note">MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam</div>
-  <button type="button" class="rf-add" data-rf="addbtn">[ + ADICIONAR FREQUÊNCIA ]</button>
+  <div class="rf-actions">
+    <button type="button" data-rf="listbtn" aria-expanded="false">[ LISTA ]</button>
+    <button type="button" data-rf="sharebtn">[ PARTILHAR ]</button>
+    <button type="button" class="rf-add" data-rf="addbtn">[ + ADICIONAR FREQUÊNCIA ]</button>
+  </div>
+  <div class="rf-sharemsg" data-rf="sharemsg" role="status"></div>
+  <div class="rf-list" data-rf="listpanel" hidden>
+    <h3>&gt; EMISSORAS <span data-rf="listcount"></span></h3>
+    <input id="rf-list-search" data-rf="listq" type="search" autocomplete="off" placeholder="Procurar por nome ou género..." aria-label="Procurar emissora por nome ou género" />
+    <ul class="rf-listul" data-rf="listul"></ul>
+  </div>
   <div class="rf-panel" data-rf="panel" hidden>
     <h3>&gt; NOVA ESTAÇÃO</h3>
     <form data-rf="form" novalidate>
@@ -135,31 +136,35 @@ function save(key, value) {
 }
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-let hlsLoading;
+// hls.js só é carregado quando a emissora é HLS. Na app vem do próprio site (import dinâmico);
+// no ficheiro autónomo vem embutido no HTML e já está em window.Hls.
+let hlsLib = null;
 function loadHls() {
-  if (window.Hls) return Promise.resolve(window.Hls);
-  if (!hlsLoading) {
-    hlsLoading = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = HLS_URL;
-      s.onload = () => resolve(window.Hls);
-      s.onerror = () => { hlsLoading = null; reject(new Error('hls')); };
-      document.head.appendChild(s);
-    });
-  }
-  return hlsLoading;
+  if (typeof window !== 'undefined' && window.Hls) return Promise.resolve(window.Hls);
+  if (!hlsLib) hlsLib = import('hls.js').then((m) => m.default || m).catch((e) => { hlsLib = null; throw e; });
+  return hlsLib;
 }
 
-export function mountRadio(root) {
+// opts.initialFreq / opts.band: abrir sintonizado numa frequência (link partilhado)
+// opts.onTune(freq, band): chamado quando a sintonia assenta numa frequência nova (para atualizar o endereço)
+// opts.shareUrl(freq, band): endereço a partilhar
+export function mountRadio(root, opts = {}) {
   root.classList.add('rf-root');
   root.innerHTML = TEMPLATE;
   const el = {};
   root.querySelectorAll('[data-rf]').forEach((n) => { el[n.dataset.rf] = n; });
   const chassis = root.querySelector('.rf-chassis');
 
+  const last = load('rf_last', null);
+  const reqBand = opts.band === 'AM' || opts.band === 'FM' ? opts.band : null;
+  const reqFreq = Number(opts.initialFreq);
+  const startBand = reqBand || (Number.isFinite(reqFreq) && reqFreq >= 540 ? 'AM' : (Number.isFinite(reqFreq) ? 'FM' : (last && last.band === 'AM' ? 'AM' : 'FM')));
   const state = {
-    band: 'FM',
-    freq: { FM: clamp(Number(load('rf_last_fm', 97.4)) || 97.4, 88, 108), AM: 1000 },
+    band: startBand,
+    freq: {
+      FM: clamp(Number(startBand === 'FM' && Number.isFinite(reqFreq) ? reqFreq : (last && last.band === 'FM' ? last.freq : load('rf_last_fm', 97.4))) || 97.4, 88, 108),
+      AM: clamp(Number(startBand === 'AM' && Number.isFinite(reqFreq) ? reqFreq : (last && last.band === 'AM' ? last.freq : 1000)) || 1000, 540, 1600),
+    },
     vel: 0, // unidades da banda por segundo (inércia)
     target: null, // deslizar até uma memória
     on: false,
@@ -168,12 +173,14 @@ export function mountRadio(root) {
     station: null, // emissora ao alcance
     gain: 0, // 0 = só estática, 1 = só emissora
     status: 'off',
-    custom: load('rf_custom', []).filter((s) => s && s.freq && s.name && s.url),
+    custom: load('rf_custom', []).filter((s) => s && s.freq && s.name && s.url).map((s) => ({ band: 'FM', ...s })),
     presets: load('rf_presets_v2', DEFAULT_PRESETS).slice(0, 6),
   };
   while (state.presets.length < 6) state.presets.push(DEFAULT_PRESETS[state.presets.length]);
 
-  const stations = () => [...DEFAULT_STATIONS, ...state.custom];
+  let listOpen = false; // painel LISTA aberto
+  const stations = () => [...ALL_STATIONS, ...state.custom];
+  const stationAt = (b, f) => stations().find((x) => x.band === b && Math.abs(x.freq - f) <= BANDS[b].lock + 1e-6);
   const band = () => BANDS[state.band];
   const volume = () => (state.on ? clamp((state.volAngle + 135) / 270, 0, 1) : 0);
 
@@ -182,6 +189,11 @@ export function mountRadio(root) {
   const audio = new Audio();
   audio.preload = 'none';
   let hls = null; let loadedUrl = null; let connectTimer = null; let destroyed = false;
+  const np = createNowPlaying((info) => {
+    if (!info) { el.np.hidden = true; el.nptext.textContent = ''; return; }
+    el.nptext.textContent = info.artist && info.title ? `${info.artist} — ${info.title}` : (info.title || info.artist);
+    el.np.hidden = false;
+  });
 
   // Safari e iPhone só deixam tocar áudio que tenha sido iniciado dentro de um toque.
   // Ao ligar o rádio toca-se um instante de silêncio, para o leitor ficar desbloqueado.
@@ -226,7 +238,7 @@ export function mountRadio(root) {
   function armWatch(s) {
     clearTimeout(retryTimer); retryTimer = null;
     if (s === 'live') { retryDelay = 3000; return; }
-    if (s !== 'bad' && s !== 'conn') return;
+    if (s !== 'bad' && s !== 'conn') return; // 'nonet': sem internet não se insiste (volta ao recuperar a ligação)
     const st = state.station;
     const wait = s === 'bad' ? retryDelay : 15000;
     retryTimer = setTimeout(() => {
@@ -237,6 +249,8 @@ export function mountRadio(root) {
   }
   function setStatus(s) {
     armWatch(s);
+    if (s === 'live' && loadedUrl) np.start(loadedUrl);
+    else if (s !== 'conn') np.stop();
     if (state.status === s) return;
     state.status = s;
     const map = {
@@ -245,6 +259,7 @@ export function mountRadio(root) {
       conn: ['CONECTANDO...', 'conn'],
       live: ['EM DIRETO', 'live'],
       bad: ['SINAL FRACO / STREAM OFFLINE', 'bad'],
+      nonet: ['SEM SINAL — SEM LIGAÇÃO À INTERNET', 'bad'],
     };
     el.status.textContent = map[s][0];
     el.status.className = `rf-status ${map[s][1]}`;
@@ -254,6 +269,7 @@ export function mountRadio(root) {
     clearTimeout(connectTimer); connectTimer = null;
     attempt++; failNow = null;
     clearTimeout(retryTimer); retryTimer = null;
+    np.stop();
     if (hls) { hls.destroy(); hls = null; }
     if (loadedUrl) { audio.pause(); audio.removeAttribute('src'); audio.load(); loadedUrl = null; }
   }
@@ -262,6 +278,7 @@ export function mountRadio(root) {
   let failNow = null;
   function startStream(st) {
     stopStream();
+    if (!online()) { setStatus('nonet'); return; } // sem internet não vale a pena tentar
     setStatus('conn');
     const urls = [st.url, ...(st.alt || [])];
     const tryUrl = async (n) => {
@@ -281,6 +298,7 @@ export function mountRadio(root) {
         if (isHls && Hls && Hls.isSupported()) {
           hls = new Hls();
           hls.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) fail(); });
+          hls.on(Hls.Events.FRAG_PARSING_METADATA, (_e, data) => np.id3(data && data.samples)); // título/artista em ID3
           hls.loadSource(url);
           hls.attachMedia(audio);
         } else {
@@ -304,8 +322,8 @@ export function mountRadio(root) {
     if (el.art.dataset.key !== key) { el.art.dataset.key = key; el.art.innerHTML = `<svg viewBox="0 0 200 200" fill="currentColor" aria-hidden="true">${ART[key]}</svg>`; }
   }
   function showIdle() {
-    el.name.textContent = state.on ? 'SÓ ESTÁTICA' : 'DESLIGADO';
-    el.genre.textContent = state.on ? 'Sem emissora nesta frequência' : 'Toca no botão de volume para ligar';
+    el.name.textContent = state.on ? (online() ? 'SÓ ESTÁTICA' : 'SEM SINAL') : 'DESLIGADO';
+    el.genre.textContent = state.on ? (online() ? 'Sem emissora nesta frequência' : 'Sem ligação à internet') : 'Toca no botão de volume para ligar';
     showArt(null);
     el.site.hidden = true;
   }
@@ -314,8 +332,9 @@ export function mountRadio(root) {
     state.station = st;
     if (st) {
       el.name.textContent = st.name;
-      el.genre.textContent = `${st.freq.toFixed(1)} MHz · ${st.genre || 'Estação personalizada'}`;
-      save('rf_last_fm', st.freq);
+      el.genre.textContent = `${fmtFreq(st)} · ${st.genre || (state.custom.includes(st) ? 'Estação personalizada' : 'Rádio portuguesa')}`;
+      save('rf_last', { band: st.band, freq: st.freq });
+      if (st.band === 'FM') save('rf_last_fm', st.freq);
       showArt(st);
       el.site.hidden = !st.page;
       if (st.page) el.site.href = st.page;
@@ -323,29 +342,32 @@ export function mountRadio(root) {
     } else {
       stopStream();
       showIdle();
-      setStatus(state.on ? 'static' : 'off');
+      setStatus(state.on ? (online() ? 'static' : 'nonet') : 'off');
     }
+    if (listOpen) markCurrentInList();
   }
 
   function updateAudio() {
     const f = state.freq[state.band];
     let near = null; let dist = Infinity;
-    if (state.on && state.band === 'FM') {
+    const b = band();
+    if (state.on) {
       for (const s of stations()) {
+        if (s.band !== state.band) continue;
         const d = Math.abs(s.freq - f);
         if (d < dist) { dist = d; near = s; }
       }
     }
-    if (!near || dist > RANGE) { near = null; }
+    if (!near || dist > b.range) { near = null; }
     setStation(near);
-    const proximity = near ? clamp(1 - (dist - LOCK) / (RANGE - LOCK), 0, 1) : 0;
+    const proximity = near ? clamp(1 - (dist - b.lock) / (b.range - b.lock), 0, 1) : 0;
     const playing = state.status === 'live';
     const target = playing ? proximity : 0; // enquanto o stream não toca, mantém-se a estática
     state.gain += (target - state.gain) * 0.15;
     const v = volume();
     audio.volume = clamp(v * state.gain, 0, 1);
     if (noiseGain) noiseGain.gain.setTargetAtTime(v * (1 - state.gain) * 0.35, ctx.currentTime, 0.05);
-    el.ledlock.classList.toggle('on', !!near && dist <= LOCK + 1e-6 && playing);
+    el.ledlock.classList.toggle('on', !!near && dist <= b.lock + 1e-6 && playing);
     const sig = `${Math.round(state.gain * 100)}%`;
     const stat = `${state.on ? Math.round((1 - state.gain) * 100) : 0}%`;
     if (el.pillsig.textContent !== sig) el.pillsig.textContent = sig;
@@ -403,10 +425,9 @@ export function mountRadio(root) {
     // Faixa de sintonia, marcas das emissoras e cursor preto
     const tx0 = xOf(band().min, state.band); const tx1 = xOf(band().max, state.band);
     dctx.fillStyle = 'rgb(var(--cb) / 0.45)'; dctx.fillRect(12, trackY, W - 24, trackH);
-    if (fmOn) {
-      dctx.fillStyle = 'rgb(var(--cb) / 0.8)';
-      for (const st of stations()) dctx.fillRect(xOf(st.freq, 'FM') - 1, trackY + 3, 2, trackH - 6);
-    }
+    dctx.fillStyle = 'rgb(var(--cb) / 0.8)';
+    const markW = fmOn ? 2 : 1; // na AM as emissoras estão muito juntas: traços mais finos
+    for (const st of stations()) if (st.band === state.band) dctx.fillRect(xOf(st.freq, st.band) - markW / 2, trackY + 3, markW, trackH - 6);
     const nx = clamp(xOf(state.freq[state.band], state.band), tx0, tx1);
     dctx.fillStyle = 'rgb(var(--cb))';
     const tw = small ? 10 : 13;
@@ -456,7 +477,7 @@ export function mountRadio(root) {
     state.on = on;
     chassis.classList.toggle('rf-off', !on);
     el.ledpwr.classList.toggle('on', on);
-    if (on) { el.start.hidden = true; ensureAudio(); primeAudio(); state.status = ''; setStatus('static'); }
+    if (on) { el.start.hidden = true; ensureAudio(); primeAudio(); state.status = ''; setStatus(online() ? 'static' : 'nonet'); }
     else { setStation(null); state.status = ''; setStatus('off'); state.gain = 0; }
     showIdle();
     needsDraw = true;
@@ -605,18 +626,92 @@ export function mountRadio(root) {
   on(el.freq, 'blur', applyTyped);
   on(el.freq, 'focus', () => el.freq.select());
 
+  // Ordem do dial: FM de baixo para cima, depois AM
+  const pos = (x) => (x.band === 'AM' ? 10000 + x.freq : x.freq * 10);
   const step = (dir) => {
-    const list = stations().slice().sort((x, y) => x.freq - y.freq);
-    const cur = state.target != null ? state.target : state.freq.FM;
-    let st = dir > 0 ? list.find((x) => x.freq > cur + 0.05) : list.slice().reverse().find((x) => x.freq < cur - 0.05);
+    const list = stations().slice().sort((x, y) => pos(x) - pos(y));
+    if (!list.length) return;
+    const cur = pos({ band: state.band, freq: state.target != null ? state.target : state.freq[state.band] });
+    let st = dir > 0 ? list.find((x) => pos(x) > cur + 0.5) : list.slice().reverse().find((x) => pos(x) < cur - 0.5);
     if (!st) st = dir > 0 ? list[0] : list[list.length - 1];
-    if (state.band !== 'FM') setBand('FM');
-    state.vel = 0; state.target = st.freq;
+    tuneTo(st, false);
   };
+  // Sintonizar uma emissora (lista, setas do PRESET). Um toque na lista também liga o rádio.
+  function tuneTo(st, powerOn) {
+    if (state.band !== st.band) setBand(st.band);
+    state.vel = 0; state.target = st.freq;
+    if (powerOn && !state.on) setVolAngle(state.lastVolAngle);
+  }
+
+  // ---------- Lista de todas as emissoras ----------
+  const norm = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function renderList() {
+    const q = norm(el.listq.value).trim();
+    const all = stations().slice().sort((x, y) => pos(x) - pos(y));
+    const shown = q ? all.filter((x) => norm(`${x.name} ${x.genre || ''}`).includes(q)) : all;
+    el.listcount.textContent = q ? `(${shown.length} de ${all.length})` : `(${all.length})`;
+    el.listul.innerHTML = '';
+    if (!shown.length) {
+      const li = document.createElement('li'); li.className = 'rf-listempty'; li.textContent = 'Nenhuma emissora com esse nome ou género.';
+      el.listul.appendChild(li); return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const st of shown) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rf-listitem';
+      const f = document.createElement('span'); f.className = 'rf-listfreq'; f.textContent = st.band === 'AM' ? `${Math.round(st.freq)} AM` : `${Number(st.freq).toFixed(1)} FM`;
+      const t = document.createElement('span'); t.className = 'rf-listtext';
+      const n = document.createElement('b'); n.textContent = st.name;
+      const g = document.createElement('small'); g.textContent = st.genre || '';
+      t.append(n, g); b.append(f, t);
+      b.addEventListener('click', () => { tuneTo(st, true); el.screen.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
+      b._st = st;
+      li.appendChild(b); frag.appendChild(li);
+    }
+    el.listul.appendChild(frag);
+    markCurrentInList();
+  }
+  function markCurrentInList() {
+    for (const b of el.listul.querySelectorAll('.rf-listitem')) {
+      const cur = b._st === state.station;
+      b.classList.toggle('cur', cur);
+      if (cur) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    }
+  }
+  on(el.listbtn, 'click', () => {
+    listOpen = el.listpanel.hidden;
+    el.listpanel.hidden = !listOpen;
+    el.listbtn.setAttribute('aria-expanded', String(listOpen));
+    if (listOpen) { renderList(); el.listq.focus({ preventScroll: true }); }
+  });
+  on(el.listq, 'input', renderList);
+
+  // ---------- Partilhar a emissora ----------
+  const settledFreq = () => Number(state.freq[state.band].toFixed(band().digits));
+  const shareLink = () => (opts.shareUrl ? opts.shareUrl(settledFreq(), state.band) : location.href);
+  let shareTimer = null;
+  const shareMsg = (t) => { el.sharemsg.textContent = t; clearTimeout(shareTimer); shareTimer = setTimeout(() => { el.sharemsg.textContent = ''; }, 4000); };
+  on(el.sharebtn, 'click', async () => {
+    const url = shareLink();
+    const st = state.station || stationAt(state.band, state.freq[state.band]);
+    const title = st ? `${st.name} · ${fmtFreq(st)}` : `${settledFreq()} ${band().unit}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `Rádio — ${title}`, text: `Ouve ${title} no Pip-Boy Terminal`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); shareMsg('LINK COPIADO'); } catch (e) { shareMsg(`Copia o link: ${url}`); }
+  });
   on(el.prev, 'click', () => step(-1));
   on(el.next, 'click', () => step(1));
 
   on(el.start, 'click', () => { el.start.hidden = true; if (!state.on) setVolAngle(state.lastVolAngle); });
+  function updateStartLabel() {
+    const st = stationAt(state.band, state.freq[state.band]);
+    el.startlabel.textContent = st ? `\u25B6 TOCA PARA OUVIR ${st.name.toUpperCase()}` : '\u25B6 TOCA PARA LIGAR O RÁDIO';
+    el.startinfo.textContent = !online() ? 'SEM SINAL — SEM LIGAÇÃO À INTERNET'
+      : st ? `${fmtFreq(st)} · o browser só deixa tocar som depois de um toque.` : 'O browser só deixa tocar som depois de um toque.';
+  }
   on(el.fm, 'click', () => setBand('FM'));
   on(el.am, 'click', () => setBand('AM'));
 
@@ -629,9 +724,9 @@ export function mountRadio(root) {
     if (!Number.isFinite(f) || f < 88 || f > 108) msg = 'Frequência entre 88.0 e 108.0 MHz.';
     else if (!name) msg = 'Falta o nome.';
     else if (!/^https:\/\/\S+$/i.test(url)) msg = 'O URL tem de começar por https://';
-    else if (stations().some((s) => Math.abs(s.freq - f) < 0.35)) msg = 'Já existe uma estação junto a essa frequência.';
+    else if (stations().some((s) => s.band === 'FM' && Math.abs(s.freq - f) < 0.35)) msg = 'Já existe uma estação junto a essa frequência.';
     if (msg) { el.msg.textContent = msg; return; }
-    state.custom.push({ freq: f, name: name.slice(0, 40), url, genre: '' });
+    state.custom.push({ band: 'FM', freq: f, name: name.slice(0, 40), url, genre: '' });
     save('rf_custom', state.custom);
     el.form.reset(); el.msg.textContent = `Guardada em ${f.toFixed(1)} MHz.`;
     renderCustom(); needsDraw = true;
@@ -649,40 +744,53 @@ export function mountRadio(root) {
   // Quando o tema muda, o mostrador tem de ser redesenhado com as cores novas
   const themeWatch = new MutationObserver(() => { needsDraw = true; });
   themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
-  on(window, 'online', () => { if (state.on && state.station && state.status !== 'live') { retryDelay = 3000; startStream(state.station); } });
+  on(window, 'online', () => {
+    updateStartLabel();
+    if (!state.on) return;
+    if (state.station && state.status !== 'live') { retryDelay = 3000; startStream(state.station); } else if (!state.station) { setStatus('static'); showIdle(); }
+  });
+  on(window, 'offline', () => {
+    updateStartLabel();
+    if (!state.on) return;
+    stopStream(); setStatus('nonet'); if (!state.station) showIdle();
+  });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { needsDraw = true; });
 
   // ---------- Ciclo ----------
-  let raf = 0; let lastT = performance.now();
+  let raf = 0; let lastT = performance.now(); let lastTuneKey = '';
   function frame(now) {
     if (destroyed) return;
     const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
     if (state.target != null) {
-      const diff = state.target - state.freq.FM;
-      if (Math.abs(diff) < 0.004) { setFreq(state.target); state.target = null; } else setFreq(state.freq.FM + diff * Math.min(1, dt * 7));
+      const cur = state.freq[state.band];
+      const diff = state.target - cur;
+      if (Math.abs(diff) < band().step * 0.04) { setFreq(state.target); state.target = null; } else setFreq(cur + diff * Math.min(1, dt * 7));
     } else if (!drag && Math.abs(state.vel) > band().step * 0.05) {
       setFreq(state.freq[state.band] + state.vel * dt, true);
       state.vel *= Math.exp(-4.5 * dt);
     } else if (!drag) state.vel = 0;
     updateAudio();
     if (needsDraw) { drawDial(); needsDraw = false; }
+    // Endereço partilhável: só quando a sintonia assenta, e só se mudou
+    if (!drag && state.target == null && state.vel === 0) {
+      const key = `${state.band}|${settledFreq()}`;
+      if (key !== lastTuneKey) { lastTuneKey = key; if (opts.onTune) opts.onTune(settledFreq(), state.band); if (!state.on) updateStartLabel(); }
+    }
     raf = requestAnimationFrame(frame);
   }
 
   el.volcap.innerHTML = gearSvg('rgb(var(--c))'); el.tunecap.innerHTML = gearSvg('rgb(var(--c))');
   renderPresets(); renderCustom();
-  {
-    const first = stations().find((x) => Math.abs(x.freq - state.freq.FM) <= LOCK);
-    if (first) el.startinfo.textContent = `Começa em ${first.name} · ${first.freq.toFixed(1)} MHz`;
-  }
-  setBand('FM'); setVolAngle(-135);
+  setBand(state.band); setVolAngle(-135);
+  lastTuneKey = `${state.band}|${settledFreq()}`; // não mexer no endereço ao abrir
+  updateStartLabel();
   resize();
   raf = requestAnimationFrame(frame);
 
   return function destroy() {
     destroyed = true;
     cancelAnimationFrame(raf);
-    clearInterval(clockTimer); themeWatch.disconnect();
+    clearInterval(clockTimer); clearTimeout(shareTimer); themeWatch.disconnect();
     offs.forEach((f) => f());
     stopStream();
     if (ctx) ctx.close().catch(() => {});
