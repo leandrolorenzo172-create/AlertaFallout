@@ -1,203 +1,244 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Send, User, Trash2, Shield, Wifi, WifiOff, Paperclip } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
-import { SYSTEM_IDENTITY, aiSuggestions, findBestAnswer } from '@/data/survivalKnowledge';
-import { searchDocs, refOf } from '@/lib/kb';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowUp, Square, Trash2, Copy, Check, FileText, BookOpen, LayoutGrid, Settings } from 'lucide-react';
+import { ask, onlineProvider } from '@/lib/ai/aiService';
+import { useNetwork } from '@/lib/ai/net';
+import { useAiConfig } from '@/lib/ai/config';
+import { topics } from '@/lib/ai/localEngine';
+import { renderMarkdown } from '@/lib/ai/markdown';
+import { requestOpen } from '@/lib/kb';
+import { aiSuggestions } from '@/data/survivalKnowledge';
+import Mascot from '../pipboy/Mascot';
+
+// Histórico guardado no dispositivo, para consulta mesmo sem rede
+const STORE = 'pb_ai_chat_v2';
+const loadChat = () => { try { const v = JSON.parse(localStorage.getItem(STORE)); return Array.isArray(v) ? v : []; } catch { return []; } };
+const saveChat = (msgs) => { try { localStorage.setItem(STORE, JSON.stringify(msgs.slice(-200))); } catch { /* sem armazenamento */ } };
+const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+const SOURCE_PILL = {
+  online: { label: 'IA online', color: 'rgb(var(--c))' },
+  local: { label: 'Base local', color: '#ffaa00' },
+  offline: { label: 'Offline · base local', color: '#ffaa00' },
+};
+
+function StatusBadge({ net, provider }) {
+  const navigate = useNavigate();
+  let dot = '#22cc55'; let text = 'Online (IA Completa)'; let action = null;
+  if (net !== 'online') { dot = '#ff9900'; text = 'Offline (Base de Conhecimento Local)'; } else if (!provider) {
+    dot = '#e6c200'; text = 'Online · IA não configurada (respostas locais)';
+    action = <button type="button" onClick={() => navigate('/definicoes')} className="underline ml-1" style={{ color: 'rgb(var(--c))' }}>Configurar</button>;
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-wide" role="status" aria-live="polite"
+      style={{ border: '1px solid rgb(var(--c) / 0.25)', background: 'rgb(var(--cd) / 0.5)', color: 'rgb(var(--c) / 0.9)' }}>
+      <i className="w-2 h-2 rounded-full shrink-0" style={{ background: dot, boxShadow: `0 0 6px ${dot}` }} />
+      {text}{action}
+    </span>
+  );
+}
+
+function RefChip({ r }) {
+  const navigate = useNavigate();
+  const Icon = r.source === 'kb' ? FileText : r.source === 'app' ? LayoutGrid : BookOpen;
+  const open = () => {
+    if (r.source === 'kb' && r.docId) { requestOpen(r.docId, r.page || 1); navigate('/manual'); } else if (r.route) navigate(r.route);
+  };
+  const clickable = (r.source === 'kb' && r.docId) || r.route;
+  return (
+    <button type="button" onClick={open} disabled={!clickable} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-left max-w-full"
+      style={{ border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c) / 0.8)', background: 'transparent' }}>
+      <Icon size={11} className="shrink-0" /><span className="truncate">{r.label}</span>
+    </button>
+  );
+}
+
+function AiMessage({ m, streaming }) {
+  const [copied, setCopied] = useState(false);
+  const html = useMemo(() => renderMarkdown(m.text || ''), [m.text]);
+  const pill = SOURCE_PILL[m.source];
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(m.text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* sem acesso */ }
+  };
+  return (
+    <div className="ai-msg">
+      <div className="flex items-center gap-2 mb-1.5 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>
+        <span style={{ color: 'rgb(var(--c))' }}>◆ Assistente</span>
+        {pill && <span style={{ color: pill.color }}>· {pill.label}</span>}
+      </div>
+      {m.notice && <p className="text-[11px] mb-2" style={{ color: '#ffaa00' }}>{m.notice}</p>}
+      {m.text ? (
+        <div className={`md ${streaming ? 'md-streaming' : ''}`} dangerouslySetInnerHTML={{ __html: html }} />
+      ) : (
+        <div className="ai-typing" aria-label="A escrever"><i /><i /><i /><span>{m.source === 'online' ? 'A pensar…' : 'A consultar a base local…'}</span></div>
+      )}
+      {!streaming && m.refs?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">{m.refs.map((r, i) => <RefChip key={i} r={r} />)}</div>
+      )}
+      {!streaming && m.text && (
+        <button type="button" onClick={copy} className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.5)' }} aria-label="Copiar resposta">
+          {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? 'Copiado' : 'Copiar'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function SurvivalAITab() {
-  const [messages, setMessages] = useState([{ role: 'ai', text: SYSTEM_IDENTITY }]);
+  const navigate = useNavigate();
+  const net = useNetwork();
+  const cfg = useAiConfig(); // volta a desenhar quando a chave muda
+  const provider = useMemo(() => onlineProvider(), [cfg.apiKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [messages, setMessages] = useState(loadChat);
   const [input, setInput] = useState(() => { try { const q = sessionStorage.getItem('ai_prefill') || ''; sessionStorage.removeItem('ai_prefill'); return q; } catch { return ''; } });
-  const [isTyping, setIsTyping] = useState(false);
-  const [mode, setMode] = useState('online');
-  const scrollRef = useRef(null);
+  const [busyId, setBusyId] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [starters, setStarters] = useState([]);
+  const ctrlRef = useRef(null);
+  const endRef = useRef(null);
+  const taRef = useRef(null);
 
+  // Sugestões iniciais: documentos da aba Conhecimento primeiro, depois temas do núcleo do assistente
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
+    let alive = true;
+    topics(6, true).then((t) => {
+      if (!alive) return;
+      const fromDocs = t.slice(0, 2).map((x) => (x.source === 'kb'
+        ? { q: `O que diz "${x.title}"?`, sub: 'Da tua base de conhecimento' }
+        : { q: `Resume: ${x.title}`, sub: 'Do manual incluído' }));
+      const fixed = aiSuggestions.slice(0, 4 - Math.min(2, fromDocs.length)).map((q) => ({ q, sub: 'Sobrevivência' }));
+      setStarters([...fromDocs, ...fixed].slice(0, 4));
+    }).catch(() => setStarters(aiSuggestions.slice(0, 4).map((q) => ({ q, sub: 'Sobrevivência' }))));
+    return () => { alive = false; };
+  }, []);
 
-  const handleSend = async (text) => {
-    const userText = (text || input).trim();
-    if (!userText || isTyping) return;
+  useEffect(() => { if (!busyId) saveChat(messages); }, [messages, busyId]);
+  // Ao enviar, a pergunta sobe para o topo e a resposta lê-se desde o início (como no Gemini/Claude)
+  const scrollToMsg = useRef(null);
+  useEffect(() => {
+    if (!scrollToMsg.current) return;
+    const el = document.querySelector(`[data-msg="${scrollToMsg.current}"]`);
+    scrollToMsg.current = null;
+    if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [messages]);
+  useEffect(() => { // ao abrir a aba com conversa guardada, mostrar o fim
+    endRef.current?.scrollIntoView({ block: 'end' });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => ctrlRef.current?.abort(), []);
+  // a caixa de texto cresce com o conteúdo
+  useEffect(() => { const t = taRef.current; if (t) { t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 160)}px`; } }, [input]);
 
-    setMessages((prev) => [...prev, { role: 'user', text: userText }]);
+  const patch = (id, p) => setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...p } : m)));
+
+  async function send(text) {
+    const q = (text ?? input).trim();
+    if (!q || busyId) return;
+    const history = messages;
+    const userMsg = { id: uid(), role: 'user', text: q, ts: Date.now() };
+    const aiId = uid();
+    const willBeOnline = net === 'online' && !!provider;
+    scrollToMsg.current = userMsg.id;
+    setMessages((prev) => [...prev, userMsg, { id: aiId, role: 'assistant', text: '', source: willBeOnline ? 'online' : (net === 'online' ? 'local' : 'offline'), ts: Date.now() }]);
     setInput('');
-    setIsTyping(true);
-
+    setBusyId(aiId);
+    const ctrl = new AbortController();
+    ctrlRef.current = ctrl;
+    const started = Date.now();
     try {
-      const res = await base44.functions.invoke('askMestre', { question: userText });
-      const data = res?.data || {};
-      const answer = (data.answer || '').trim();
-      if (!answer) throw new Error('sem resposta');
-
-      setMode('online');
-      setMessages((prev) => [
-        ...prev,
-        { role: 'ai', text: answer, source: 'online', files: data.filesUsed || [] },
-      ]);
+      const r = await ask({ question: q, history, signal: ctrl.signal, onText: (t) => patch(aiId, { text: t }) });
+      if (r.source !== 'online') { const wait = 450 - (Date.now() - started); if (wait > 0) await new Promise((res) => setTimeout(res, wait)); } // indicador de leitura breve
+      patch(aiId, { text: r.text, followups: r.followups || [], refs: r.refs || [], source: r.source, notice: r.notice });
     } catch (e) {
-      setMode('offline');
-      let text = findBestAnswer(userText);
-      let files = [];
-
-      try {
-        // Procura nos documentos importados e cita o documento e a página/secção
-        const hits = await searchDocs(userText, { limit: 2 });
-        if (hits.length) {
-          const blocks = hits.map((h) => `📄 **${refOf(h)}:**\n${h.excerpt}`).join('\n\n');
-          text = `**DOS TEUS DOCUMENTOS:**\n${blocks}\n\n— — —\n\n**DO MANUAL INCLUÍDO NA APP:**\n${text}`;
-          files = [...new Set(hits.map((h) => h.name))];
-        }
-      } catch (err) {
-        // sem acesso aos documentos: responde só com o manual embarcado
-      }
-
-      setMessages((prev) => [...prev, { role: 'ai', text, source: 'offline', files }]);
+      setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: m.text ? `${m.text}\n\n_Interrompido._` : '_Interrompido._', followups: [] } : m)));
     } finally {
-      setIsTyping(false);
+      setBusyId(null);
+      ctrlRef.current = null;
     }
-  };
+  }
 
-  const handleClear = () => {
-    setMessages([{ role: 'ai', text: SYSTEM_IDENTITY }]);
-  };
-
-  const renderText = (text) => {
-    return text.split('**').map((part, j) =>
-      j % 2 === 0 ? part : <strong key={j} style={{ color: 'rgb(var(--c))' }}>{part}</strong>
-    );
-  };
+  const lastAi = [...messages].reverse().find((m) => m.role === 'assistant');
+  const empty = messages.length === 0;
 
   return (
-    <div className="p-4 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
-      <div className="flex items-center justify-between mb-4">
+    <div className="ai-tab px-4 pt-3 flex flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <Shield size={16} style={{ color: 'rgb(var(--c))' }} />
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Sobrevivência IA Mestre
-          </h2>
+          <h2 className="text-sm uppercase tracking-wider font-bold">Assistente</h2>
+          <StatusBadge net={net} provider={provider} />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-[9px] uppercase tracking-wider" style={{ color: mode === 'online' ? 'rgb(var(--c) / 0.67)' : '#ffaa00aa' }}>
-            {mode === 'online' ? <Wifi size={10} /> : <WifiOff size={10} />}
-            {mode === 'online' ? 'Online' : 'Offline'}
+        {!empty && (confirmClear ? (
+          <span className="flex items-center gap-2 text-[11px]">
+            Apagar a conversa?
+            <button type="button" onClick={() => { ctrlRef.current?.abort(); setMessages([]); saveChat([]); setConfirmClear(false); }} className="px-2 py-1 rounded-sm" style={{ border: '1px solid #ff6666', color: '#ff8888' }}>Apagar</button>
+            <button type="button" onClick={() => setConfirmClear(false)} className="px-2 py-1 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.3)' }}>Cancelar</button>
           </span>
-          <button onClick={handleClear} className="p-1.5 hover:bg-white/5 rounded-sm" aria-label="Limpar conversa">
-            <Trash2 size={12} style={{ color: 'rgb(var(--c) / 0.4)' }} />
+        ) : (
+          <button type="button" onClick={() => setConfirmClear(true)} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>
+            <Trash2 size={12} /> Nova conversa
           </button>
-        </div>
-      </div>
-
-      <div className="p-2 rounded-sm mb-3" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
-        <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          ⚡ Ficheiros locais + conhecimento externo · fallback tático offline (FM 21-76)
-        </p>
-      </div>
-
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1" style={{ maxHeight: '50vh' }}>
-        {messages.map((msg, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-          >
-            <div className="flex-shrink-0 w-7 h-7 rounded-sm flex items-center justify-center"
-              style={{ background: msg.role === 'user' ? '#00aaff22' : 'rgb(var(--c) / 0.13)', border: `1px solid ${msg.role === 'user' ? '#00aaff44' : 'rgb(var(--c) / 0.27)'}` }}>
-              {msg.role === 'user' ? <User size={14} style={{ color: '#00aaff' }} /> : <Shield size={14} style={{ color: 'rgb(var(--c))' }} />}
-            </div>
-            <div className="flex-1 max-w-[85%]">
-              {msg.role === 'ai' && msg.source && (
-                <span className="text-[8px] uppercase tracking-wider block mb-1" style={{ color: msg.source === 'online' ? 'rgb(var(--c) / 0.4)' : '#ffaa0088' }}>
-                  {msg.source === 'online' ? 'IA · ficheiros + web' : 'modo offline · manual embarcado'}
-                  {msg.files && msg.files.length > 0 ? ` · ${msg.files.length} ficheiro(s)` : ''}
-                </span>
-              )}
-              <div className="p-3 rounded-sm text-xs leading-relaxed whitespace-pre-line"
-                style={{
-                  background: msg.role === 'user' ? '#00aaff11' : 'rgb(var(--cd) / 0.27)',
-                  border: `1px solid ${msg.role === 'user' ? '#00aaff22' : 'rgb(var(--c) / 0.13)'}`,
-                  color: msg.role === 'user' ? '#00aaffcc' : 'rgb(var(--c) / 0.6)',
-                }}>
-                {renderText(msg.text)}
-              </div>
-            </div>
-          </motion.div>
         ))}
+      </div>
 
-        {isTyping && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2">
-            <div className="flex-shrink-0 w-7 h-7 rounded-sm flex items-center justify-center"
-              style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.27)' }}>
-              <Shield size={14} style={{ color: 'rgb(var(--c))' }} />
+      <div className="ai-thread flex-1">
+        {empty ? (
+          <div className="ai-empty">
+            <Mascot mode="base" style={{ width: 64 }} />
+            <p className="text-lg mt-2">Em que posso ajudar?</p>
+            <p className="text-[11px] mt-1 mb-4" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+              {net !== 'online' ? 'Sem internet: respondo com o manual, os dados da app e os documentos da aba Conhecimento.'
+                : provider ? 'Pergunta o que quiseres. Uso também os teus documentos e os dados da app.'
+                  : 'Sem chave de IA configurada respondo com a base local. Podes ligar a IA completa nas Definições.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+              {starters.map((s) => (
+                <button key={s.q} type="button" onClick={() => send(s.q)} className="ai-card text-left">
+                  <span className="block text-sm">{s.q}</span>
+                  <span className="block text-[10px] mt-1 uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.5)' }}>{s.sub}</span>
+                </button>
+              ))}
             </div>
-            <div className="p-3 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.27)', border: '1px solid rgb(var(--c) / 0.13)' }}>
-              <div className="flex gap-1">
-                {[0, 1, 2].map((d) => (
-                  <motion.span
-                    key={d}
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: 'rgb(var(--c))' }}
-                    animate={{ opacity: [0.3, 1, 0.3] }}
-                    transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }}
-                  />
-                ))}
+            {net === 'online' && !provider && (
+              <button type="button" onClick={() => navigate('/definicoes')} className="mt-4 inline-flex items-center gap-1.5 text-[11px] underline" style={{ color: 'rgb(var(--c) / 0.8)' }}>
+                <Settings size={12} /> Ligar a IA completa nas Definições
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5 pb-4">
+            {messages.map((m) => (m.role === 'user' ? (
+              <div key={m.id} data-msg={m.id} className="user-msg">{m.text}</div>
+            ) : (
+              <div key={m.id} data-msg={m.id}>
+                <AiMessage m={m} streaming={busyId === m.id} />
+                {m.id === lastAi?.id && busyId !== m.id && m.followups?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3" aria-label="Sugestões de seguimento">
+                    {m.followups.map((f) => <button key={f} type="button" className="ai-chip" onClick={() => send(f)}>{f}</button>)}
+                  </div>
+                )}
               </div>
-            </div>
-          </motion.div>
+            )))}
+          </div>
         )}
+        <div ref={endRef} style={{ scrollMarginBottom: 170 }} />
       </div>
 
-      {/* Suggestions */}
-      {messages.length <= 1 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {aiSuggestions.slice(0, 4).map((s) => (
-            <button
-              key={s}
-              onClick={() => handleSend(s)}
-              className="px-2.5 py-1.5 rounded-sm text-[10px] uppercase tracking-wider transition-all hover:bg-white/5"
-              style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.13)', color: 'rgb(var(--c) / 0.53)' }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center gap-1.5 mb-2">
-        <Paperclip size={10} style={{ color: 'rgb(var(--c) / 0.33)' }} />
-        <a href="/conhecimento" className="text-[9px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-          Gerir ficheiros da IA
-        </a>
-      </div>
-
-      {/* Input */}
-      <div className="flex gap-2">
-        <input
-          type="text"
+      <form className="ai-composer" onSubmit={(e) => { e.preventDefault(); send(); }}>
+        <textarea
+          id="ai-input"
+          ref={taRef}
+          rows={1}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Indique o cenário de sobrevivência..."
-          className="flex-1 p-2.5 rounded-sm text-xs outline-none"
-          style={{ background: '#0a0a0a', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder={net !== 'online' ? 'Pergunta à base local...' : 'Escreve a tua pergunta...'}
+          aria-label="Mensagem para o assistente"
         />
-        <button
-          onClick={() => handleSend()}
-          disabled={!input.trim() || isTyping}
-          className="px-3 rounded-sm transition-all"
-          style={{
-            background: input.trim() && !isTyping ? 'rgb(var(--c) / 0.13)' : 'rgb(var(--cd) / 0.2)',
-            border: `1px solid ${input.trim() && !isTyping ? 'rgb(var(--c) / 0.27)' : 'rgb(var(--c) / 0.07)'}`,
-            color: input.trim() && !isTyping ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.27)',
-          }}
-        >
-          <Send size={14} />
-        </button>
-      </div>
+        {busyId ? (
+          <button type="button" onClick={() => ctrlRef.current?.abort()} className="ai-send" aria-label="Parar a resposta"><Square size={14} fill="currentColor" /></button>
+        ) : (
+          <button type="submit" disabled={!input.trim()} className="ai-send" aria-label="Enviar"><ArrowUp size={18} /></button>
+        )}
+      </form>
     </div>
   );
 }

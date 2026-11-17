@@ -3,6 +3,7 @@ import { Settings, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateC
 import { THEMES, useSettings, setSettings, resetSettings, orderTabs } from '../theme';
 import { TABS } from '../HotBar';
 import NotificationsTab from './NotificationsTab';
+import AiSettings from '../pipboy/AiSettings';
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c))' };
@@ -87,6 +88,8 @@ export default function SettingsTab() {
           <RotateCcw size={13} /> Repor tema e barra originais
         </button>
       </section>
+
+      <AiSettings />
 
       {/* Notificações (antigo separador Alertas) */}
       <section className="rounded-sm" style={box}>

@@ -9,12 +9,17 @@ const FONTS = 'pipboy-fontes';
 const PRECACHE = __PRECACHE__;
 const BASE = new URL('./', self.location).href; // funciona em /AlertaFallout/ ou na raiz
 
+// Primeiro o essencial para a app abrir (rápido, para a instalação não falhar se a rede cair logo a seguir);
+// depois o resto (leitor de PDF, hls.js, dados), sem bloquear a instalação.
+const CORE = /^(\.\/|index\.html|app\.js|app\.css|manifest\.webmanifest|icons\/.*)$/;
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE)
-      .then((c) => c.addAll(PRECACHE.map((p) => new Request(BASE + p, { cache: 'reload' }))))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    const req = (p) => new Request(BASE + p, { cache: 'reload' });
+    await c.addAll(PRECACHE.filter((p) => CORE.test(p)).map(req));
+    await self.skipWaiting();
+    Promise.all(PRECACHE.filter((p) => !CORE.test(p)).map((p) => c.add(req(p)).catch(() => {}))); // o resto em segundo plano
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -36,14 +41,15 @@ async function networkFirst(req, key, ms) {
     if (res && res.ok) cache.put(key || req, res.clone());
     return res;
   } catch (e) {
-    const hit = await cache.match(key || req, { ignoreSearch: true });
+    // ignoreVary: a cópia guardada na instalação não traz os mesmos cabeçalhos que o pedido da página (ex.: Origin)
+    const hit = await cache.match(key || req, { ignoreSearch: true, ignoreVary: true });
     if (hit) return hit;
     throw e;
   }
 }
 async function cacheFirst(req, cacheName) {
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(req);
+  const hit = await cache.match(req, { ignoreVary: true });
   if (hit) return hit;
   const res = await fetch(req);
   if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());

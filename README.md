@@ -35,9 +35,19 @@ O artista e a música aparecem por baixo do nome da emissora só quando a emisso
 | Comercial, M80, Smooth, Cidade (Bauer) | Não | O servidor não publica o estado em JSON e o título vem dentro do stream, que o browser não deixa ler |
 | Nova Era, Orbital, Amália e outras em Centova | Não | Sem página de estado pública com CORS |
 
+## Assistente (aba IA)
+
+Conversa ao estilo Gemini/Claude, com respostas em Markdown (listas, tabelas, código), sugestões iniciais e perguntas de seguimento depois de cada resposta. O histórico fica guardado no dispositivo e pode ser lido sem rede. No topo, um indicador mostra o modo em que está:
+
+- **🟢 Online (IA Completa):** responde com a IA da Anthropic, em streaming. Recebe também os excertos mais relevantes dos teus documentos, do manual e dos dados guardados da app, e cita a origem. No site é preciso guardar uma chave da API da Anthropic em **Definições → Assistente IA**: a chave fica só nesse browser, só é enviada para api.anthropic.com e os pedidos são cobrados na conta de quem a guardou. Dentro do claude.ai usa a IA do próprio claude.ai, sem chave.
+- **🟠 Offline (Base de Conhecimento Local):** sem internet, responde com um motor de pesquisa local (BM25) sobre os documentos da aba Conhecimento, o manual incluído, o núcleo do assistente e os últimos dados guardados dos separadores. Se não encontrar nada, diz que está sem rede e sugere temas que tem guardados.
+- **🟡 Online sem chave:** responde com a base local e indica onde ligar a IA completa.
+
+A rede é verificada em tempo real (eventos do browser e um pedido de teste ao próprio site a cada 30 segundos). Se a IA online falhar a meio (rede, chave recusada, limite de pedidos), a resposta vem da base local com um aviso.
+
 ## Funciona sem o claude.ai
 
-Fora do claude.ai os separadores usam dados reais de fontes públicas: meteorologia e avisos do IPMA, catástrofes do GDACS e do USGS, e notícias recolhidas de hora a hora de jornais portugueses (`scripts/fetch-news.mjs`). O Painel e o Índice Pizza são calculados a partir dessas notícias e alertas. O assistente responde com o manual incluído e com os documentos importados na base de conhecimento; a IA online só existe dentro do claude.ai.
+Fora do claude.ai os separadores usam dados reais de fontes públicas: meteorologia e avisos do IPMA, catástrofes do GDACS e do USGS, e notícias recolhidas de hora a hora de jornais portugueses (`scripts/fetch-news.mjs`). O Painel e o Índice Pizza são calculados a partir dessas notícias e alertas. O assistente responde com a base local ou, com uma chave da API guardada nas Definições, com a IA completa (ver acima).
 
 ## Correr no computador
 
