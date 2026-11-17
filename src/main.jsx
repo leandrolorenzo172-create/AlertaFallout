@@ -14,7 +14,26 @@ const Router = IS_ARTIFACT ? MemoryRouter : HashRouter;
 
 // App instalável e com arranque sem internet. Dentro do claude.ai não se regista (o artefacto não o permite).
 if (!IS_ARTIFACT && import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+  const hadController = !!navigator.serviceWorker.controller;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      // App instalada fica aberta muito tempo: procurar versões novas quando volta a ficar visível
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    }).catch(() => {});
+  });
+  // Uma versão nova acabou de ser instalada: avisar e atualizar com um toque
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || document.getElementById('pb-update')) return;
+    const b = document.createElement('button');
+    b.id = 'pb-update';
+    b.type = 'button';
+    b.textContent = 'NOVA VERSÃO INSTALADA — TOCA PARA ATUALIZAR';
+    b.style.cssText = 'position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9999;'
+      + 'padding:10px 14px;font:inherit;font-size:12px;letter-spacing:.1em;cursor:pointer;border-radius:4px;'
+      + 'color:rgb(var(--cb));background:rgb(var(--c));border:0;box-shadow:0 0 16px rgb(var(--c) / .6);max-width:calc(100% - 32px)';
+    b.addEventListener('click', () => window.location.reload());
+    document.body.appendChild(b);
+  });
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

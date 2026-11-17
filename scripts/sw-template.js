@@ -27,10 +27,12 @@ self.addEventListener('activate', (event) => {
 
 const AUDIO = /\.(m3u8|m3u|pls|aac|mp3|ogg|oga|opus|m4a|flac|ts)(\?|$)/i;
 
+// Rede primeiro (validando com o servidor, sem usar a cache HTTP do browser), cópia guardada sem internet.
+// Assim uma versão nova aparece logo na próxima abertura da app.
 async function networkFirst(req, key, ms) {
   const cache = await caches.open(CACHE);
   try {
-    const res = await Promise.race([fetch(req), new Promise((_, rej) => setTimeout(() => rej(new Error('lento')), ms))]);
+    const res = await Promise.race([fetch(req, { cache: 'no-cache' }), new Promise((_, rej) => setTimeout(() => rej(new Error('lento')), ms))]);
     if (res && res.ok) cache.put(key || req, res.clone());
     return res;
   } catch (e) {
@@ -62,8 +64,10 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(networkFirst(req, null, 6000)); // notícias recolhidas de hora a hora: rede primeiro, cópia sem internet
     } else if (url.pathname.endsWith('/sw.js')) {
       return;
+    } else if (/\/(assets|icons)\//.test(url.pathname)) {
+      event.respondWith(cacheFirst(req, CACHE)); // nomes com hash ou que não mudam: cache primeiro
     } else {
-      event.respondWith(cacheFirst(req, CACHE));
+      event.respondWith(networkFirst(req, null, 4000)); // app.js, app.css, manifest...: rede primeiro
     }
     return;
   }
