@@ -1,10 +1,11 @@
 // AIService: decide quem responde a cada pergunta, com recurso automático online -> offline.
 //  - Dentro do claude.ai: a IA do próprio claude.ai (capacidade "sample" do artefacto).
-//  - No site: a API da Anthropic com a chave que o utilizador guardou nas Definições (SDK oficial, no browser).
+//  - No site: o fornecedor escolhido nas Definições (Claude, ChatGPT, Gemini ou outro compatível com OpenAI),
+//    com a chave do próprio utilizador (src/lib/ai/providers.js).
 //  - Sem internet, sem chave ou se a IA online falhar: o motor local (src/lib/ai/localEngine.js).
-import Anthropic from '@anthropic-ai/sdk';
 import { getInstructions } from '@/lib/aiInstructions';
-import { getAiConfig } from './config';
+import { activeProvider } from './config';
+import { streamChat, PROVIDERS } from './providers';
 import { getNetwork, checkNow } from './net';
 import { contextFor, answerLocally } from './localEngine';
 
@@ -20,7 +21,12 @@ const getSample = () => {
 // Modo atual, para o indicador no topo da aba
 export function onlineProvider() {
   if (IS_ARTIFACT) return 'claude.ai';
-  return getAiConfig().apiKey ? 'anthropic' : null;
+  const a = activeProvider();
+  return a ? a.id : null;
+}
+export function providerName(id) {
+  if (id === 'claude.ai') return 'Claude (claude.ai)';
+  return PROVIDERS[id] ? PROVIDERS[id].short : '';
 }
 
 // Contexto da app para a IA online: passagens relevantes da base de conhecimento, do manual e dos dados guardados
@@ -57,33 +63,18 @@ const toTurns = (history) => history
   .slice(-20)
   .map((m) => ({ role: m.role, content: m.text }));
 
-// --- IA online: API da Anthropic (SDK oficial) ---
-async function askAnthropic({ question, history, onText, signal }) {
-  const { apiKey, model } = getAiConfig();
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true }); // a chave é do próprio utilizador e fica no browser dele
-  const params = {
-    model,
-    max_tokens: 64000,
+// --- IA online: fornecedor escolhido nas Definições ---
+async function askProvider({ question, history, onText, signal }) {
+  const a = activeProvider();
+  const r = await streamChat(a.id, a.cfg, {
     system: await buildSystem(question),
-    output_config: { effort: 'medium' },
     messages: [...toTurns(history), { role: 'user', content: question }],
-  };
-  // Se o modelo recusar por política de segurança, a API tenta outro modelo na mesma chamada (o Haiku 5.5 não tem esta opção)
-  if (model !== 'claude-haiku-5-5') Object.assign(params, { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
-  const stream = client.beta.messages.stream(params, { signal });
-  let raw = '';
-  for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-      raw += event.delta.text;
-      onText(splitFollowups(raw).text);
-    }
-  }
-  const final = await stream.finalMessage();
-  if (final.stop_reason === 'refusal') {
-    return { text: raw ? `${splitFollowups(raw).text}\n\n_A resposta foi interrompida por razões de segurança._` : 'Não posso ajudar com esse pedido.', followups: [] };
-  }
-  if (final.stop_reason === 'max_tokens') raw += '\n\n_A resposta ficou cortada por ser demasiado longa._';
-  return splitFollowups(raw);
+    onText: (raw) => onText(splitFollowups(raw).text),
+    signal,
+  });
+  const out = splitFollowups(r.text || '');
+  if (r.note) out.text = out.text ? `${out.text}\n\n_${r.note}_` : r.note;
+  return out;
 }
 
 // --- IA online: dentro do claude.ai ---
@@ -96,13 +87,14 @@ async function askClaudeAi({ question, history, onText, signal }) {
 }
 
 function describeError(e) {
-  if (e instanceof Anthropic.AuthenticationError) return { msg: 'a chave da API foi recusada — confirma-a nas Definições', fatal: false };
-  if (e instanceof Anthropic.PermissionDeniedError) return { msg: 'a chave não tem permissão para este modelo', fatal: false };
-  if (e instanceof Anthropic.RateLimitError) return { msg: 'limite de pedidos atingido — tenta daqui a pouco', fatal: false };
-  if (e instanceof Anthropic.APIConnectionError) return { msg: 'sem ligação ao serviço de IA', fatal: false, network: true };
-  if (e instanceof Anthropic.APIError) return { msg: `erro ${e.status || ''} do serviço de IA`.trim(), fatal: false };
-  if (e && e.code === 'not_granted') return { msg: 'o acesso à IA do claude.ai não foi autorizado', fatal: false };
-  return { msg: 'a IA online não respondeu', fatal: false, network: true };
+  const map = {
+    auth: 'a chave da API foi recusada — confirma-a nas Definições',
+    permission: e.message,
+    rate: e.message,
+    network: e.message || 'sem ligação ao serviço de IA',
+  };
+  if (e && e.code === 'not_granted') return { msg: 'o acesso à IA do claude.ai não foi autorizado' };
+  return { msg: map[e && e.kind] || (e && e.message) || 'a IA online não respondeu', network: !e || e.kind === 'network' || !e.kind };
 }
 
 /**
@@ -114,14 +106,14 @@ export async function ask({ question, history = [], onText = () => {}, signal })
   const net = getNetwork();
   if (net === 'online' && provider) {
     try {
-      const fn = provider === 'anthropic' ? askAnthropic : askClaudeAi;
+      const fn = provider === 'claude.ai' ? askClaudeAi : askProvider;
       const r = await fn({ question, history, onText, signal });
       const refs = (await contextFor(question, 6).catch(() => []))
         .filter((c) => r.text.includes(c.ref) || r.text.includes(c.title))
         .map((c) => ({ label: c.ref, source: c.source, docId: c.docId, page: c.page, route: c.route }));
-      return { ...r, refs, source: 'online' };
+      return { ...r, refs, source: 'online', provider: providerName(provider) };
     } catch (e) {
-      if (signal?.aborted || e instanceof Anthropic.APIUserAbortError || e?.name === 'AbortError' || e?.code === 'cancelled') throw e;
+      if (signal?.aborted || e?.kind === 'abort' || e?.name === 'AbortError' || e?.code === 'cancelled') throw e;
       const { msg, network } = describeError(e);
       if (network) checkNow(); // talvez a rede tenha caído: atualiza o indicador
       const local = await answerLocally(question, { reason: 'error' });

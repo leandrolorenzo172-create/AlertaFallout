@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUp, Square, Trash2, Copy, Check, FileText, BookOpen, LayoutGrid, Settings } from 'lucide-react';
-import { ask, onlineProvider } from '@/lib/ai/aiService';
+import { ask, onlineProvider, providerName } from '@/lib/ai/aiService';
 import { useNetwork } from '@/lib/ai/net';
 import { useAiConfig } from '@/lib/ai/config';
 import { topics } from '@/lib/ai/localEngine';
@@ -24,7 +24,7 @@ const SOURCE_PILL = {
 
 function StatusBadge({ net, provider }) {
   const navigate = useNavigate();
-  let dot = '#22cc55'; let text = 'Online (IA Completa)'; let action = null;
+  let dot = '#22cc55'; let text = `Online (IA Completa · ${providerName(provider)})`; let action = null;
   if (net !== 'online') { dot = '#ff9900'; text = 'Offline (Base de Conhecimento Local)'; } else if (!provider) {
     dot = '#e6c200'; text = 'Online · IA não configurada (respostas locais)';
     action = <button type="button" onClick={() => navigate('/definicoes')} className="underline ml-1" style={{ color: 'rgb(var(--c))' }}>Configurar</button>;
@@ -64,7 +64,7 @@ function AiMessage({ m, streaming }) {
     <div className="ai-msg">
       <div className="flex items-center gap-2 mb-1.5 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>
         <span style={{ color: 'rgb(var(--c))' }}>◆ Assistente</span>
-        {pill && <span style={{ color: pill.color }}>· {pill.label}</span>}
+        {pill && <span style={{ color: pill.color }}>· {pill.label}{m.source === 'online' && m.provider ? ` · ${m.provider}` : ''}</span>}
       </div>
       {m.notice && <p className="text-[11px] mb-2" style={{ color: '#ffaa00' }}>{m.notice}</p>}
       {m.text ? (
@@ -88,7 +88,7 @@ export default function SurvivalAITab() {
   const navigate = useNavigate();
   const net = useNetwork();
   const cfg = useAiConfig(); // volta a desenhar quando a chave muda
-  const provider = useMemo(() => onlineProvider(), [cfg.apiKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const provider = useMemo(() => onlineProvider(), [cfg]); // eslint-disable-line react-hooks/exhaustive-deps
   const [messages, setMessages] = useState(loadChat);
   const [input, setInput] = useState(() => { try { const q = sessionStorage.getItem('ai_prefill') || ''; sessionStorage.removeItem('ai_prefill'); return q; } catch { return ''; } });
   const [busyId, setBusyId] = useState(null);
@@ -147,7 +147,7 @@ export default function SurvivalAITab() {
     try {
       const r = await ask({ question: q, history, signal: ctrl.signal, onText: (t) => patch(aiId, { text: t }) });
       if (r.source !== 'online') { const wait = 450 - (Date.now() - started); if (wait > 0) await new Promise((res) => setTimeout(res, wait)); } // indicador de leitura breve
-      patch(aiId, { text: r.text, followups: r.followups || [], refs: r.refs || [], source: r.source, notice: r.notice });
+      patch(aiId, { text: r.text, followups: r.followups || [], refs: r.refs || [], source: r.source, notice: r.notice, provider: r.provider });
     } catch (e) {
       setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: m.text ? `${m.text}\n\n_Interrompido._` : '_Interrompido._', followups: [] } : m)));
     } finally {
