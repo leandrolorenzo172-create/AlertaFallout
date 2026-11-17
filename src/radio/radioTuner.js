@@ -14,7 +14,12 @@ const BANDS = {
   FM: { min: 88, max: 108, unit: 'MHz', step: 0.1, digits: 1, turn: 2, wheel: 0.05, range: RANGE, lock: LOCK },
   AM: { min: 540, max: 1600, unit: 'kHz', step: 10, digits: 0, turn: 100, wheel: 5, range: 5, lock: 2 },
 };
-const DEFAULT_PRESETS = [92.4, 97.4, 93.2, 104.3, 95.7, 89.5];
+const DEFAULT_PRESETS = [92.4, 97.4, 93.2, 104.3, 95.7, 89.5].map((freq) => ({ band: 'FM', freq }));
+// Memórias guardadas antes eram só números (FM); agora guardam a banda e a frequência
+const toPreset = (v) => (v && typeof v === 'object' && (v.band === 'FM' || v.band === 'AM') && Number.isFinite(Number(v.freq))
+  ? { band: v.band, freq: Number(v.freq) }
+  : Number.isFinite(Number(v)) ? { band: Number(v) >= 540 ? 'AM' : 'FM', freq: Number(v) } : null);
+const presetLabel = (p) => (p.band === 'AM' ? `${Math.round(p.freq)} AM` : Number(p.freq).toFixed(1));
 
 // Todas as emissoras: as 16 principais + as do radio-browser.info (src/data/stationsPT.json)
 const ALL_STATIONS = [...DEFAULT_STATIONS, ...((stationsPT && stationsPT.stations) || [])];
@@ -76,7 +81,7 @@ const TEMPLATE = `
     </section>
   </div>
   <div class="rf-presets" data-rf="presets"></div>
-  <div class="rf-note">MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam</div>
+  <div class="rf-note" data-rf="note">MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam</div>
   <div class="rf-actions">
     <button type="button" data-rf="listbtn" aria-expanded="false">[ LISTA ]</button>
     <button type="button" data-rf="sharebtn">[ PARTILHAR ]</button>
@@ -174,9 +179,9 @@ export function mountRadio(root, opts = {}) {
     gain: 0, // 0 = só estática, 1 = só emissora
     status: 'off',
     custom: load('rf_custom', []).filter((s) => s && s.freq && s.name && s.url).map((s) => ({ band: 'FM', ...s })),
-    presets: load('rf_presets_v2', DEFAULT_PRESETS).slice(0, 6),
+    presets: (load('rf_presets_v2', DEFAULT_PRESETS) || []).map(toPreset).slice(0, 6),
   };
-  while (state.presets.length < 6) state.presets.push(DEFAULT_PRESETS[state.presets.length]);
+  for (let i = 0; i < 6; i++) if (!state.presets[i]) state.presets[i] = DEFAULT_PRESETS[i];
 
   let listOpen = false; // painel LISTA aberto
   const stations = () => [...ALL_STATIONS, ...state.custom];
@@ -483,32 +488,50 @@ export function mountRadio(root, opts = {}) {
     needsDraw = true;
   }
 
+  const NOTE = 'MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam';
+  let noteTimer = null;
+  function savePreset(i) {
+    const f = Number(state.freq[state.band].toFixed(band().digits));
+    state.presets[i] = { band: state.band, freq: f };
+    save('rf_presets_v2', state.presets);
+    renderPresets();
+    const nb = el.presets.children[i];
+    nb.classList.add('saved'); setTimeout(() => nb.classList.remove('saved'), 900);
+    try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) { /* sem vibração */ }
+    const st = stationAt(state.band, f);
+    el.note.textContent = `MEMÓRIA ${i + 1} GUARDADA: ${st ? `${st.name} · ` : ''}${f} ${band().unit}`;
+    el.note.classList.add('ok');
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { el.note.textContent = NOTE; el.note.classList.remove('ok'); }, 3500);
+  }
   function renderPresets() {
     el.presets.innerHTML = '';
-    state.presets.forEach((f, i) => {
+    state.presets.forEach((p, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.innerHTML = `<b>${i + 1}</b><small>${Number(f).toFixed(1)}</small>`;
-      b.setAttribute('aria-label', `Memória ${i + 1}: ${Number(f).toFixed(1)} MHz`);
-      let timer = null; let held = false;
-      b.addEventListener('pointerdown', () => {
-        held = false;
-        timer = setTimeout(() => {
-          held = true;
-          if (state.band !== 'FM') return;
-          state.presets[i] = Math.round(state.freq.FM * 10) / 10;
-          save('rf_presets_v2', state.presets);
-          renderPresets();
-          const nb = el.presets.children[i];
-          nb.classList.add('saved'); setTimeout(() => nb.classList.remove('saved'), 700);
-        }, 650);
+      b.innerHTML = `<b>${i + 1}</b><small>${presetLabel(p)}</small>`;
+      b.setAttribute('aria-label', `Memória ${i + 1}: ${p.band === 'AM' ? `${Math.round(p.freq)} kHz AM` : `${Number(p.freq).toFixed(1)} MHz`}. Mantém premido para gravar a frequência atual.`);
+      // Toque longo grava. Alguns telemóveis cancelam o toque (pointercancel) ou abrem o menu de contexto
+      // ao fim de meio segundo; por isso só se desiste se o dedo se mexer ou largar antes do tempo.
+      let timer = null; let held = false; let start = null;
+      const cancel = () => { clearTimeout(timer); timer = null; };
+      b.addEventListener('pointerdown', (e) => {
+        held = false; start = { x: e.clientX, y: e.clientY };
+        cancel();
+        timer = setTimeout(() => { timer = null; held = true; savePreset(i); }, 600);
       });
-      const cancel = () => clearTimeout(timer);
-      b.addEventListener('pointerup', cancel); b.addEventListener('pointerleave', cancel); b.addEventListener('pointercancel', cancel);
+      // Se o dedo se mexe mais de 12 px é um deslize da página, não um toque longo.
+      // Os eventos de toque continuam a chegar mesmo depois de o browser cancelar o ponteiro.
+      const moved = (x, y) => { if (timer && start && Math.hypot(x - start.x, y - start.y) > 12) cancel(); };
+      b.addEventListener('pointermove', (e) => moved(e.clientX, e.clientY));
+      b.addEventListener('touchmove', (e) => { const t = e.touches[0]; if (t) moved(t.clientX, t.clientY); }, { passive: true });
+      b.addEventListener('pointerup', () => { if (timer) cancel(); });
+      b.addEventListener('contextmenu', (e) => e.preventDefault()); // não abrir o menu do browser
       b.addEventListener('click', () => {
-        if (held) return;
-        if (state.band !== 'FM') setBand('FM');
-        state.vel = 0; state.target = state.presets[i];
+        if (held) { held = false; return; }
+        const p2 = state.presets[i];
+        if (state.band !== p2.band) setBand(p2.band);
+        state.vel = 0; state.target = p2.freq;
       });
       el.presets.appendChild(b);
     });
@@ -790,7 +813,7 @@ export function mountRadio(root, opts = {}) {
   return function destroy() {
     destroyed = true;
     cancelAnimationFrame(raf);
-    clearInterval(clockTimer); clearTimeout(shareTimer); themeWatch.disconnect();
+    clearInterval(clockTimer); clearTimeout(shareTimer); clearTimeout(noteTimer); themeWatch.disconnect();
     offs.forEach((f) => f());
     stopStream();
     if (ctx) ctx.close().catch(() => {});
