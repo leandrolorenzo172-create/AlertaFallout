@@ -76,7 +76,19 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
 
 Dois jogos simples no separador **Mini Jogo**, num ecrã LCD de 84×48 píxeis a preto sobre verde, com moldura nas cores do tema e um comando no ecrã (`src/game/lcd/`). No separador, cada cartão mostra o jogo a jogar sozinho:
 
-- **Patrulha Estelar:** nave de rolagem lateral, vagas de inimigos, montanhas com padrão quadriculado, corações de vida, laser especial, bónus e um chefe resistente no fim de cada nível.
+- **Patrulha Estelar:** nave de rolagem lateral, vagas de inimigos, montanhas com padrão quadriculado, corações de vida, laser especial e bónus. Tem 10 níveis, cada um acabado por um chefe diferente e mais difícil do que o anterior:
+  1. Sentinela;
+  2. Medusa;
+  3. Nave-Mãe;
+  4. Caranguejo;
+  5. Escaravelho, que faz investidas;
+  6. Serpente, que se move em oito e dispara balas em onda;
+  7. Fortaleza, que lança drones;
+  8. Vespa, rápida e imprevisível;
+  9. Olho Laser, com um raio anunciado;
+  10. Núcleo, que mistura todos os ataques.
+
+  Os dois últimos ficam mais rápidos com metade da vida. Cada chefe vencido dá uma vida e um laser. Depois do 10.º aparece o ecrã de vitória com a pontuação e A para recomeçar.
 - **Cobra:** o clássico da cobrinha, com 9 níveis de velocidade e um bicho de bónus com contagem. Bater nas paredes ou no corpo acaba o jogo.
 - Os recordes ficam guardados no aparelho.
 - **Controlos:**
