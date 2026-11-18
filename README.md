@@ -91,6 +91,10 @@ Dois jogos simples no separador **Mini Jogo**, num ecrã LCD de 84×48 píxeis a
   Os dois últimos ficam mais rápidos com metade da vida. Cada chefe vencido dá uma vida e um laser. Depois do 10.º aparece o ecrã de vitória com a pontuação e A para recomeçar.
 - **Cobra:** o clássico da cobrinha, com 9 níveis de velocidade e um bicho de bónus com contagem. Bater nas paredes ou no corpo acaba o jogo.
 - Os recordes ficam guardados no aparelho.
+- **Música chiptune** feita com o mesmo sintetizador 8-bit da Guerra das Eras:
+  - Patrulha Estelar: tema espacial rápido que acelera a cada nível e fica tenso nos chefes;
+  - Cobra: melodia saltitante que acelera com a cobra;
+  - pára na pausa, e o botão SOM desliga a música e os bips.
 - **Controlos:**
   - telemóvel: analógico à esquerda; botões à direita (Patrulha: A dispara, B laser; Cobra: A pausa, B som); SAIR, PAUSA e SOM ao centro; na cobra também dá para deslizar o dedo no ecrã;
   - PC: setas/WASD, espaço, X, P, Esc, M para o som (o comando também funciona com o rato).

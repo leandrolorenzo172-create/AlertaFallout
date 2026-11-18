@@ -2,6 +2,8 @@
 // Direção: setas / WASD / 2 4 6 8 ou deslizar o dedo no ecrã · Nível no menu: ◀ ▶ · Pausa: OK / P · Sair: C / Esc
 import { W, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
+import { lcdMusic } from './music';
+
 const MUTE = new Proxy({}, { get: () => () => {} });
 
 const BEST = 'pb_lcd_snake_best';
@@ -12,8 +14,9 @@ const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
 const BUGS = [['# # #', ' ### ', '#####', ' # # '], ['#   #', '#####', ' ### ', '# # #'], [' ### ', '## ##', ' ### ', '# # #']];
 
 // Lógica e desenho do jogo, separados da interface (as pré-visualizações usam o mesmo código a jogar sozinho)
-export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}) {
+export function createSnake(scr, shell, { demo = false, onQuit = () => {}, music = null } = {}) {
   const SFX_ = demo ? MUTE : SFX;
+  const M = music || MUTE; // música chiptune (só no jogo a sério)
   let best = loadBest(BEST);
   let level = 5; try { level = Number(localStorage.getItem(LEVEL_KEY)) || 5; } catch { /* sem armazenamento */ }
   if (demo) level = 7;
@@ -44,9 +47,9 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}
   }
   shell.onSwipe((d) => { if (mode === 'play') turn(d); else if (mode === 'title' && (d === 'left' || d === 'right')) changeLevel(d === 'right' ? 1 : -1); });
   function changeLevel(dv) { level = Math.max(1, Math.min(9, level + dv)); try { localStorage.setItem(LEVEL_KEY, String(level)); } catch { /* sem armazenamento */ } SFX_.key(); }
-  function start() { reset(); mode = 'play'; paused = false; modeT = 0; SFX_.start(); }
+  function start() { reset(); mode = 'play'; paused = false; modeT = 0; SFX_.start(); M.play(level); }
   function die() {
-    st.dead = 1; mode = 'dying'; modeT = 0; SFX_.die();
+    st.dead = 1; mode = 'dying'; modeT = 0; SFX_.die(); M.stop();
     newBest = st.score > best; if (newBest && !demo) { best = st.score; saveBest(BEST, best); }
   }
 
@@ -61,7 +64,7 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}
     st.body.unshift([nx, ny]);
     if (st.grow > 0) st.grow -= 1; else st.body.pop();
     if (st.food && nx === st.food[0] && ny === st.food[1]) {
-      st.score += level + 3; st.eaten += 1; st.grow += 1; SFX_.eat(); placeFood();
+      st.score += level + 3; st.eaten += 1; st.grow += 1; SFX_.eat(); placeFood(); M.speed(level + Math.floor(st.eaten / 6));
       if (st.eaten % 5 === 0 && !st.bug) { const p = randFree(2); if (p) st.bug = { x: p[0], y: p[1], left: 24, kind: Math.floor(Math.random() * BUGS.length) }; }
     } else if (st.bug && ny === st.bug.y && (nx === st.bug.x || nx === st.bug.x + 1)) {
       st.score += 5 * level + st.bug.left * 2; st.grow += 2; st.bug = null; SFX_.bonus();
@@ -87,8 +90,8 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}
   function update(dt) {
     if (demo) { if (mode === 'title') start(); if (mode === 'over' && modeT > 1) start(); if (st.body.length > 40) start(); }
     for (const k of shell.take()) {
-      if (k === 'mute') { setSound(!getSound()); SFX_.key(); continue; }
-      if (k === 'back') { if (mode === 'play' && !paused) { paused = true; SFX_.key(); } else { onQuit(); return; } continue; }
+      if (k === 'mute') { setSound(!getSound()); SFX_.key(); M.sound(getSound()); continue; }
+      if (k === 'back') { if (mode === 'play' && !paused) { paused = true; M.pause(true); SFX_.key(); } else { onQuit(); return; } continue; }
       if (mode === 'title') {
         if (k === 'left' || k === 'down') changeLevel(-1); else if (k === 'right' || k === 'up') changeLevel(1);
         else if (k === 'fire' || k === 'ok' || k === 'tap') start();
@@ -96,7 +99,7 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}
       }
       if (mode === 'over') { if (modeT > 0.6 && (k === 'fire' || k === 'ok' || k === 'tap')) start(); continue; }
       if (mode === 'play') {
-        if (k === 'ok' || (paused && (k === 'fire' || k === 'tap'))) { paused = !paused; SFX_.key(); continue; }
+        if (k === 'ok' || (paused && (k === 'fire' || k === 'tap'))) { paused = !paused; M.pause(paused); SFX_.key(); continue; }
         if (DIRS[k]) turn(k);
       }
     }
@@ -160,7 +163,7 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}
   }
 
   reset();
-  return { update, draw, pause() { if (mode === 'play') paused = true; } };
+  return { update, draw, pause() { if (mode === 'play') { paused = true; M.pause(true); } } };
 }
 
 export function mountSnake(root, { onExit = () => {} } = {}) {
@@ -171,8 +174,9 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
     help: 'PC: setas/WASD mudam a direção · espaço/Enter começa · ◀ ▶ escolhem o nível no menu · P pausa · Esc sai · M som',
   });
   let stopped = false;
-  const cleanup = () => { stopped = true; stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
-  const game = createSnake(createScreen(shell.canvas), shell, { onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
+  const cleanup = () => { stopped = true; music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
+  const music = lcdMusic('snake');
+  const game = createSnake(createScreen(shell.canvas), shell, { music, onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
   const stopLoop = runLoop(game.update, game.draw);
   const onHide = () => { if (document.hidden) game.pause(); };
   document.addEventListener('visibilitychange', onHide);

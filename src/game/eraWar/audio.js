@@ -208,6 +208,24 @@ const BATTLE = {
     45, 45, 57, 45, 45, 45, 57, 45, 41, 41, 53, 41, 41, 41, 53, 41, 43, 43, 55, 43, 43, 43, 55, 43, 40, 40, 52, 40, 44, 44, 56, 44],
   drums: 'k.h.s.h.k.k.s.h.k.h.s.h.k.hks.hh',
 };
+// Patrulha Estelar: tema espacial rápido em mi menor (acelera a cada nível e fica tenso nos chefes)
+const SPACE = {
+  bpm: 148,
+  lead: [64, A, 67, A, 71, A, 76, A, 74, A, 71, A, 72, 71, 69, A, 67, A, 69, A, 71, A, A, A, 64, A, 62, A, 64, A, A, A,
+    64, A, 67, A, 71, A, 76, A, 79, A, 78, A, 76, 74, 72, A, 71, A, 72, A, 74, A, A, A, 76, A, 74, 72, 71, A, A, A],
+  bass: [52, 64, 52, 64, 52, 64, 52, 64, 48, 60, 48, 60, 48, 60, 48, 60, 50, 62, 50, 62, 50, 62, 50, 62, 52, 64, 52, 64, 52, 64, 55, 67],
+  arp: [52, 55, 59, 62], drums: 'k.h.s.hkk.h.s.h.k.h.s.hkk.hss.h.',
+};
+// Cobra: melodia saltitante em dó maior (acelera com a velocidade da cobra)
+const SNAKE = {
+  bpm: 118,
+  lead: [72, A, 76, A, 79, A, 76, A, 77, A, 74, A, 71, A, 74, A, 72, A, 76, 79, 84, A, 79, A, 77, 76, 74, A, 72, A, A, A,
+    69, A, 72, A, 76, A, 72, A, 74, A, 77, A, 76, 74, 72, A, 71, A, 67, A, 71, A, 74, A, 72, A, A, A, A, A, A, A],
+  bass: [48, A, 55, A, 48, A, 55, A, 53, A, 60, A, 53, A, 60, A, 45, A, 52, A, 45, A, 52, A, 43, A, 50, A, 43, A, 47, A],
+  drums: 'k...s.h.k.k.s.h.k...s.h.k.k.s.hh',
+};
+const SONGS = { menu: MENU, battle: BATTLE, space: SPACE, snake: SNAKE };
+const OWN = { space: true, snake: true }; // músicas dos jogos LCD: seguem o botão SOM do próprio jogo
 const ERA_MUSIC = [ // transposição, ritmo e timbre do solo por era
   { tr: 0, bpm: 0, lead: 'triangle' }, { tr: 2, bpm: 6, lead: 'pulse25' }, { tr: -2, bpm: 12, lead: 'pulse25' },
   { tr: 3, bpm: 18, lead: 'pulse12' }, { tr: 5, bpm: 26, lead: 'sawtooth' },
@@ -223,16 +241,21 @@ export function playMusic(which = 'menu', era = 0) {
   const same = seq && seq.which === which;
   if (same) { seq.era = era; return; }
   stopMusic();
-  seq = { which, era, step: 0, next: ctx.currentTime + 0.08, tense: false, timer: null };
+  seq = { which, era, step: 0, next: ctx.currentTime + 0.08, tense: false, timer: null, paused: false, own: !!OWN[which] };
+  if (seq.own) musicBus.gain.setTargetAtTime(0.3, ctx.currentTime, 0.02);
   const tick = () => {
     if (!seq || !ctx) return;
-    const song = seq.which === 'menu' ? MENU : BATTLE;
-    const em = seq.which === 'menu' ? ERA_MUSIC[0] : ERA_MUSIC[seq.era] || ERA_MUSIC[0];
+    if (seq.paused) { seq.next = ctx.currentTime + 0.05; return; }
+    const song = SONGS[seq.which] || MENU;
+    let em;
+    if (seq.which === 'space') em = { tr: 0, bpm: Math.min(30, Math.max(0, seq.era - 1) * 3), lead: 'pulse25' };
+    else if (seq.which === 'snake') em = { tr: 0, bpm: Math.min(44, Math.max(0, seq.era - 1) * 4), lead: 'pulse12' };
+    else em = seq.which === 'menu' ? ERA_MUSIC[0] : ERA_MUSIC[seq.era] || ERA_MUSIC[0];
     const bpm = song.bpm + em.bpm + (seq.tense ? 10 : 0);
     const stepDur = 60 / bpm / 4; // semicolcheias
     while (seq.next < ctx.currentTime + 0.15) {
       const i = seq.step; const t = seq.next - ctx.currentTime;
-      if (prefs.music) {
+      if (prefs.music || seq.own) {
         const n = song.lead[i % song.lead.length];
         if (n != null) tone({ t, f: midi(n + em.tr), dur: stepDur * 1.8, type: em.lead, vol: 0.13, bus: 'music', vib: seq.which === 'menu' ? 3 : 0 });
         const b = song.bass[i % song.bass.length];
@@ -249,7 +272,13 @@ export function playMusic(which = 'menu', era = 0) {
 }
 export function setMusicEra(era) { if (seq) seq.era = era; }
 export function setTension(on) { if (seq) seq.tense = !!on; }
-export function stopMusic() { if (seq) { clearInterval(seq.timer); seq = null; } }
+export function stopMusic() {
+  if (!seq) return;
+  clearInterval(seq.timer);
+  if (seq.own && ctx) musicBus.gain.setTargetAtTime(prefs.music ? 0.32 : 0, ctx.currentTime, 0.02);
+  seq = null;
+}
+export function pauseMusic(p) { if (seq) seq.paused = !!p; }
 export function jingle(won) {
   if (!init()) return;
   stopMusic();

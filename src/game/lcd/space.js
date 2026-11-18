@@ -2,6 +2,8 @@
 // Mover: setas / WASD / 2 4 6 8 · Disparar: espaço / 5 (manter = automático) · Laser: X / 0 · Pausa: OK / P · Sair: C / Esc
 import { W, H, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
+import { lcdMusic } from './music';
+
 const MUTE = new Proxy({}, { get: () => () => {} });
 
 const BEST = 'pb_lcd_space_best';
@@ -66,8 +68,9 @@ export const BOSS_COUNT = BOSSES.length;
 const POWER = { life: ['## ##', '#####', ' ### ', '  #  '], laser: ['#####', '#   #', '# # #', '#   #', '#####'] };
 
 // Lógica e desenho do jogo, separados da interface (as pré-visualizações usam o mesmo código a jogar sozinho)
-export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}) {
+export function createSpace(scr, shell, { demo = false, onQuit = () => {}, music = null } = {}) {
   const SFX_ = demo ? MUTE : SFX;
+  const M = music || MUTE; // música chiptune (só no jogo a sério)
   let best = loadBest(BEST);
   let st; // estado do jogo
   let mode = 'title'; let modeT = 0; let paused = false; let newBest = false;
@@ -90,7 +93,7 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}
   function hitPlayer() {
     if (st.inv > 0 || mode !== 'play') return;
     st.lives -= 1; st.inv = 2; boom(st.x + 4, st.y + 3, 12); SFX_.die();
-    if (st.lives <= 0) { mode = 'over'; modeT = 0; newBest = st.score > best; if (newBest && !demo) { best = st.score; saveBest(BEST, best); } }
+    if (st.lives <= 0) { mode = 'over'; modeT = 0; M.stop(); newBest = st.score > best; if (newBest && !demo) { best = st.score; saveBest(BEST, best); } }
   }
   function spawnWave() {
     const types = ['drone', 'dart', 'spin', 'saucer'];
@@ -108,6 +111,7 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}
     const k = Math.min(BOSSES.length - 1, st.level - 1); const d = BOSSES[k];
     st.boss = { k, x: W + 2, y: Math.round((TOP + H - d.h) / 2), t: 0, hp: d.hp, max: d.hp, shoot: 1.2, flash: 0, w: d.w, h: d.h, ai: 0, queue: [], beamWarn: 0, beamOn: 0, beamY: 0, ty: 20, retarget: 0 };
     st.enemies = [];
+    M.tense(true);
     SFX_.level();
   }
   const overlap = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
@@ -124,9 +128,9 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}
     if (b.hp <= 0) {
       for (let i = 0; i < 5; i++) boom(b.x + rnd(0, b.w), b.y + rnd(0, b.h), 10);
       st.score += 300 * (b.k + 1); st.boss = null; st.shots = []; st.enemies = [];
-      st.lives = Math.min(5, st.lives + 1); st.lasers = Math.min(9, st.lasers + 1);
+      st.lives = Math.min(5, st.lives + 1); st.lasers = Math.min(9, st.lasers + 1); M.tense(false);
       modeT = 0; SFX_.level();
-      if (b.k >= BOSSES.length - 1) { mode = 'win'; newBest = st.score > best; if (newBest && !demo) { best = st.score; saveBest(BEST, best); } } else mode = 'level';
+      if (b.k >= BOSSES.length - 1) { mode = 'win'; M.stop(); newBest = st.score > best; if (newBest && !demo) { best = st.score; saveBest(BEST, best); } } else mode = 'level';
     }
   }
 
@@ -195,11 +199,11 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}
     const pressed = shell.take();
     if (demo) shell.take = () => [];
     for (const k of pressed) {
-      if (k === 'mute') { setSound(!getSound()); SFX_.key(); continue; }
-      if (k === 'back') { if (mode === 'play' && !paused) { paused = true; SFX_.key(); } else { onQuit(); return; } continue; }
-      if (mode === 'title' && (k === 'fire' || k === 'ok' || k === 'tap')) { reset(); mode = 'play'; paused = false; SFX_.start(); continue; }
-      if ((mode === 'over' || mode === 'win') && modeT > 1.2 && (k === 'fire' || k === 'ok' || k === 'tap')) { reset(); mode = 'play'; SFX_.start(); continue; }
-      if (mode === 'play' && (k === 'ok' || (paused && (k === 'tap' || k === 'fire')))) { paused = !paused; SFX_.key(); continue; }
+      if (k === 'mute') { setSound(!getSound()); SFX_.key(); M.sound(getSound()); continue; }
+      if (k === 'back') { if (mode === 'play' && !paused) { paused = true; M.pause(true); SFX_.key(); } else { onQuit(); return; } continue; }
+      if (mode === 'title' && (k === 'fire' || k === 'ok' || k === 'tap')) { reset(); mode = 'play'; paused = false; SFX_.start(); M.play(1); continue; }
+      if ((mode === 'over' || mode === 'win') && modeT > 1.2 && (k === 'fire' || k === 'ok' || k === 'tap')) { reset(); mode = 'play'; SFX_.start(); M.play(1); continue; }
+      if (mode === 'play' && (k === 'ok' || (paused && (k === 'tap' || k === 'fire')))) { paused = !paused; M.pause(paused); SFX_.key(); continue; }
       if (mode === 'play' && !paused && k === 'alt' && st.lasers > 0 && st.beam <= 0) {
         st.lasers -= 1; st.beam = 0.3; st.beamY = st.y + 2; SFX_.power();
         for (const e of st.enemies) { const d = ENEMY[e.type]; if (!e.dead && e.x > st.x && overlap(0, st.beamY, W, 3, e.x, e.y, d.w, d.h)) damageEnemy(e, 6); }
@@ -208,7 +212,7 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}
     }
     modeT += dt;
     if (mode === 'title' || paused) return;
-    if (mode === 'level' && modeT > 2.2) { st.level += 1; st.levelScore = 0; st.spawnT = 1.5; mode = 'play'; }
+    if (mode === 'level' && modeT > 2.2) { st.level += 1; st.levelScore = 0; st.spawnT = 1.5; mode = 'play'; M.speed(st.level); }
 
     // fundo
     st.scroll += dt * 18;
@@ -324,7 +328,7 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {} } = {}
   }
 
   return {
-    update, draw, pause() { if (mode === 'play') paused = true; },
+    update, draw, pause() { if (mode === 'play') { paused = true; M.pause(true); } },
     // para testes: saltar para um nível/chefe e ler o estado
     _test: { boss(l) { reset(); st.level = l; mode = 'play'; startBoss(); }, get state() { return { mode, level: st.level, lives: st.lives, score: st.score, boss: st.boss && { k: st.boss.k, hp: st.boss.hp } }; }, set lives(v) { st.lives = v; } },
   };
@@ -338,8 +342,9 @@ export function mountSpace(root, { onExit = () => {} } = {}) {
     help: 'PC: setas/WASD movem · espaço dispara (manter = automático) · X laser · P pausa · Esc sai · M som',
   });
   let stopped = false;
-  const cleanup = () => { stopped = true; stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
-  const game = createSpace(createScreen(shell.canvas), shell, { onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
+  const cleanup = () => { stopped = true; music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
+  const music = lcdMusic('space');
+  const game = createSpace(createScreen(shell.canvas), shell, { music, onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
   const stopLoop = runLoop(game.update, game.draw);
   const onHide = () => { if (document.hidden) game.pause(); };
   document.addEventListener('visibilitychange', onHide);
