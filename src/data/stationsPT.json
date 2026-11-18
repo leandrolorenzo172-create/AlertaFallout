@@ -129,15 +129,6 @@
    "freq": 540
   },
   {
-   "id": "e1630f99-1069-4555-b28a-cedcd17e6d0a",
-   "name": "Radio Meio Do Mato",
-   "url": "https://radio.meiodomato.com/stream",
-   "genre": "Fallout",
-   "page": "https://radio.meiodomato.com/",
-   "band": "AM",
-   "freq": 550
-  },
-  {
    "id": "29489790-0b8a-47d7-9b9d-630ebd9934fd",
    "name": "Antena 1 Madeira (Portugal)",
    "url": "https://streaming-live.rtp.pt/liveradio/antena1madeira80a/playlist.m3u8",

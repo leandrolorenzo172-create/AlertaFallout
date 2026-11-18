@@ -17,9 +17,11 @@ export const DEFAULT_STATIONS = [
   { band: 'FM', freq: 101.9, name: 'Estação Orbital', genre: 'Música de dança e êxitos eletrónicos', url: 'https://centova.radios.pt/proxy/401?mp=/stream' },
   { band: 'FM', freq: 103.4, name: 'Rádio Renascença', genre: 'Informação e pop/rock dos anos 70 a 90', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_RENASCENCA.mp3', alt: ['https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_RENASCENCAAAC.aac'] },
   { band: 'FM', freq: 104.3, name: 'M80 Rádio', genre: 'Clássicos dos anos 70, 80, 90 e 2000', url: 'https://stream-icy.bauermedia.pt/m80.mp3', alt: ['https://stream-icy.bauermedia.pt/m80.aac'], page: 'https://rayo.pt/m80' },
+  // Favorita do dono da app: fica sempre na lista e sempre nos 520 AM, mesmo que esteja momentaneamente fora do ar
+  { band: 'AM', freq: 520, name: 'Rádio Meio do Mato', genre: 'Variedades · a favorita', url: 'https://radio.meiodomato.com/stream', page: 'https://radio.meiodomato.com/' },
   { band: 'FM', freq: 106.2, name: 'Cidade FM', genre: 'Hip-hop, R&B, reggaeton e música urbana', url: 'https://stream-icy.bauermedia.pt/cidade.mp3', alt: ['https://stream-icy.bauermedia.pt/cidade.aac'] },
 ];
 
 // Limites das bandas e distância mínima entre emissoras (o dobro da zona em que uma emissora se ouve).
-export const BAND_LIMITS = { FM: { min: 88, max: 108 }, AM: { min: 540, max: 1600 } };
+export const BAND_LIMITS = { FM: { min: 88, max: 108 }, AM: { min: 520, max: 1600 } };
 export const SPACING = { FM: 0.6, AM: 10 };

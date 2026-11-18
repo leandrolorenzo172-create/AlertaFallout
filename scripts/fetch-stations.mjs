@@ -98,7 +98,7 @@ const GRID = {
 // a pelo menos 0,6 MHz das principais e das já escolhidas (assim não se desperdiça espaço entre elas).
 function slotsFor(band) {
   const g = GRID[band];
-  const taken = band === 'FM' ? DEFAULT_STATIONS.map((s) => Math.round(s.freq * 10)) : [];
+  const taken = DEFAULT_STATIONS.filter((s) => s.band === band).map((s) => (band === 'FM' ? Math.round(s.freq * 10) : s.freq));
   const out = [];
   for (let p = g.from; p <= g.to; p += g.step) {
     if (taken.every((q) => Math.abs(q - p) >= g.gap) && out.every((q) => Math.abs(q - p) >= g.gap)) out.push(p);
