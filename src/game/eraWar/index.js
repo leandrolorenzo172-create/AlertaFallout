@@ -4,7 +4,7 @@ import {
   createGame, step, unitStats, turretStats, train, canTrain, evolve, canEvolve, nextEraXp,
   special, canSpecial, buyTurret, canBuyTurret, sellTurret, addSlot, canAddSlot,
 } from './logic';
-import { render, themeColors, drawIcon } from './render';
+import { render, themeColors, drawIcon, capIcon, CANVAS } from './render';
 import * as audio from './audio';
 
 const STATS_KEY = 'pb_erawar_stats';
@@ -21,7 +21,7 @@ function saveResult(diff, won) {
 const TEMPLATE = `
 <div class="ew-hud">
   <button type="button" class="ew-btn ew-pause" data-ew="pause" aria-label="Pausa">&#10074;&#10074;</button>
-  <div class="ew-stat"><b>OURO</b><span data-ew="gold">0</span></div>
+  <div class="ew-stat ew-caps"><b>CARICAS</b><span><img class="ew-cap" data-ew="capimg" alt="" width="12" height="12" /><span data-ew="gold">0</span></span></div>
   <div class="ew-stat"><b>XP</b><span data-ew="xp">0</span></div>
   <button type="button" class="ew-btn ew-evolve" data-ew="evolve"><b>EVOLUIR</b><span data-ew="evolveinfo"></span></button>
   <button type="button" class="ew-btn ew-special" data-ew="special"><b data-ew="spname">ESPECIAL</b><span data-ew="spinfo"></span><i data-ew="spbar"></i></button>
@@ -32,8 +32,8 @@ const TEMPLATE = `
   <span class="ew-era" data-ew="eras"></span>
   <span class="ew-audio"><button type="button" data-ew="mus" aria-pressed="true">&#9835; MÚSICA</button><button type="button" data-ew="snd" aria-pressed="true">&#9836; EFEITOS</button></span>
 </div>
-<div class="ew-screen">
-  <canvas data-ew="canvas" width="${WORLD.w}" height="${WORLD.h}" aria-label="Campo de batalha"></canvas>
+<div class="ew-screen" data-ew="screen">
+  <canvas data-ew="canvas" width="${CANVAS.w}" height="${CANVAS.h}" aria-label="Campo de batalha"></canvas>
   <span class="ew-hp l" data-ew="hp0">500 HP</span><span class="ew-hp r" data-ew="hp1">500 HP</span>
   <div class="ew-banner" data-ew="banner" hidden></div>
   <div class="ew-overlay" data-ew="overlay" hidden></div>
@@ -43,7 +43,7 @@ const TEMPLATE = `
   <button type="button" role="tab" aria-selected="false" data-ew="tab1">DEFESAS</button>
 </div>
 <div class="ew-panel" data-ew="panel0">
-  ${[0, 1, 2].map((i) => `<button type="button" class="ew-unit" data-ew="unit${i}"><canvas width="24" height="24" data-ew="icon${i}"></canvas><span class="ew-uname" data-ew="uname${i}"></span><span class="ew-cost" data-ew="ucost${i}"></span><kbd>${i + 1}</kbd></button>`).join('')}
+  ${[0, 1, 2].map((i) => `<button type="button" class="ew-unit" data-ew="unit${i}"><canvas width="50" height="50" data-ew="icon${i}"></canvas><span class="ew-uname" data-ew="uname${i}"></span><span class="ew-cost" data-ew="ucost${i}"></span><kbd>${i + 1}</kbd></button>`).join('')}
 </div>
 <div class="ew-panel" data-ew="panel1" hidden>
   <button type="button" class="ew-unit" data-ew="buyturret"><span class="ew-uname" data-ew="tname"></span><span class="ew-cost" data-ew="tcost"></span></button>
@@ -61,7 +61,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   let C = themeColors();
   let g = createGame({ difficulty });
   let paused = false; let destroyed = false; let raf = 0; let last = performance.now(); let acc = 0;
-  let iconEra = -1; let bannerTimer = null; let recorded = false;
+  let iconEra = -1; let bannerTimer = null; let recorded = false; let sirenDone = false;
 
   const setText = (n, v) => { const s = String(v); if (n.textContent !== s) n.textContent = s; };
   const setDis = (n, d) => { if (n.disabled !== d) n.disabled = d; };
@@ -77,7 +77,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     const me = g.sides[0]; const ai = g.sides[1];
     setText(el.gold, fmt(me.gold)); setText(el.xp, fmt(me.xp));
     const need = nextEraXp(me);
-    setText(el.evolveinfo, need == null ? 'era máxima' : `${ERAS[me.era + 1].name} · ${fmt(need)} XP`);
+    setText(el.evolveinfo, need == null ? 'era máxima' : `${ERAS[me.era + 1].short} · ${fmt(need)} XP`);
     setDis(el.evolve, !canEvolve(g, 0));
     el.evolve.classList.toggle('ready', canEvolve(g, 0));
     setText(el.spname, ERAS[me.era].special.toUpperCase());
@@ -85,7 +85,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     el.spbar.style.width = `${(1 - me.specialCd / SPECIAL_CD) * 100}%`;
     setDis(el.special, !canSpecial(g, 0));
     setText(el.hp0, `${Math.ceil(me.hp)} HP`); setText(el.hp1, `${Math.ceil(ai.hp)} HP`);
-    setText(el.eras, `TU: ${ERAS[me.era].name} · IA (${DIFFICULTY[g.difficulty].label}): ${ERAS[ai.era].name}`);
+    setText(el.eras, `TU: ${ERAS[me.era].short} · IA (${DIFFICULTY[g.difficulty].label}): ${ERAS[ai.era].short}`);
     // fila de treino: 5 casas, a primeira com barra de progresso
     const q = me.queue;
     if (el.queue.childElementCount !== QUEUE_MAX) el.queue.innerHTML = Array.from({ length: QUEUE_MAX }, () => '<i><b></b></i>').join('');
@@ -96,31 +96,38 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     });
     for (let i = 0; i < 3; i++) {
       const st = unitStats(me.era, i);
-      setText(el[`uname${i}`], ERAS[me.era].units[i]); setText(el[`ucost${i}`], `${fmt(st.cost)} ouro`);
+      setText(el[`uname${i}`], ERAS[me.era].units[i]); setText(el[`ucost${i}`], `${fmt(st.cost)} caricas`);
       setDis(el[`unit${i}`], !canTrain(g, 0, i));
     }
     const ts = turretStats(me.era);
-    setText(el.tname, `${ERAS[me.era].turret}`); setText(el.tcost, `${fmt(ts.cost)} ouro · espaços ${me.turrets.slice(0, me.slots).filter(Boolean).length}/${me.slots}`);
+    setText(el.tname, `${ERAS[me.era].turret}`); setText(el.tcost, `${fmt(ts.cost)} caricas · espaços ${me.turrets.slice(0, me.slots).filter(Boolean).length}/${me.slots}`);
     setDis(el.buyturret, !canBuyTurret(g, 0));
     setDis(el.sellturret, !me.turrets.some(Boolean) || !!g.over);
-    setText(el.slotcost, me.slots >= MAX_SLOTS ? 'máximo de espaços' : `${fmt(SLOT_COST[me.slots])} ouro`);
+    setText(el.slotcost, me.slots >= MAX_SLOTS ? 'máximo de espaços' : `${fmt(SLOT_COST[me.slots])} caricas`);
     setDis(el.addslot, !canAddSlot(g, 0));
-    if (iconEra !== me.era) { iconEra = me.era; for (let i = 0; i < 3; i++) drawIcon(el[`icon${i}`], me.era, i, C); }
+    if (iconEra !== me.era) {
+      iconEra = me.era;
+      for (let i = 0; i < 3; i++) drawIcon(el[`icon${i}`], me.era, i, C);
+      const cap = capIcon(C, 12); el.capimg.src = cap; root.style.setProperty('--ew-cap', `url(${cap})`);
+    }
   }
 
   function handleEvents() {
     for (const s of g.sfx) {
       if (s.k === 'atk') audio.attack(s.era, s.type, s.x);
       else if (s.k === 'tur') audio.turret(s.era, s.x);
-      else if (s.k === 'die') audio.death(s.type, s.side, s.x);
+      else if (s.k === 'die') { audio.death(s.type, s.side, s.x); if (s.side === 1) audio.capGain(); }
       else if (s.k === 'base') audio.baseHit(s.side);
       else if (s.k === 'spawn') audio.trained();
     }
     g.sfx.length = 0;
-    audio.setTension(!g.over && (g.sides[0].hp < BASE_HP * 0.3 || g.t > 600));
+    const danger = !g.over && g.sides[0].hp < BASE_HP * 0.3;
+    audio.setTension(danger || (!g.over && g.t > 600));
+    if (danger && !sirenDone) { sirenDone = true; audio.siren(); banner('BASE EM PERIGO!'); }
     for (const e of g.events) {
       if (e.type === 'evolve') { audio.evolveSfx(e.side === 0); if (e.side === 0) audio.setMusicEra(e.era); }
-      if (e.type === 'special') audio.specialSfx(e.kind, e.side);
+      if (e.type === 'special') { audio.specialSfx(e.kind, e.side); if (e.kind === 'nuke' && e.side === 1) banner('ALERTA: MINI NUKE INIMIGA!'); }
+      if (e.type === 'nukeHit') { el.screen.classList.remove('ew-shake'); void el.screen.offsetWidth; el.screen.classList.add('ew-shake'); }
       if (e.type === 'evolve') banner(e.side === 0 ? `NOVA ERA: ${ERAS[e.era].name.toUpperCase()}` : `A IA AVANÇOU PARA: ${ERAS[e.era].name.toUpperCase()}`);
       if (e.type === 'special' && e.side === 1) banner(`IA: ${ERAS[g.sides[1].era].special.toUpperCase()}!`);
     }
@@ -146,7 +153,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     if (!p) last = performance.now();
   }
   function restart() {
-    g = createGame({ difficulty }); recorded = false; iconEra = -1; paused = false; overlay(''); last = performance.now();
+    g = createGame({ difficulty }); recorded = false; sirenDone = false; iconEra = -1; paused = false; overlay(''); last = performance.now();
     audio.pauseAudio(false); audio.ui.start(); audio.playMusic('battle', 0); audio.setMusicEra(0);
   }
 

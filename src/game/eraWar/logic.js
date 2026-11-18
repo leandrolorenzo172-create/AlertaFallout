@@ -14,12 +14,13 @@ const UNIT_BASE = [
   { hp: 230, dmg: 36, rng: 0, spd: 14, rate: 1.5, cost: 100, time: 3.6 },
 ];
 export const ERAS = [
-  { name: 'Idade da Pedra', xp: 0, units: ['Caçador', 'Fundibulário', 'Cavaleiro de dino'], turret: 'Atirador de pedras', special: 'Chuva de meteoros', fx: 'meteor' },
-  { name: 'Idade Média', xp: 1000, units: ['Espadachim', 'Arqueiro', 'Cavaleiro'], turret: 'Balista', special: 'Chuva de flechas', fx: 'arrows' },
-  { name: 'Renascimento', xp: 3600, units: ['Piqueiro', 'Mosqueteiro', 'Canhão'], turret: 'Canhão de muralha', special: 'Barragem de artilharia', fx: 'shells' },
-  { name: 'Era Moderna', xp: 11000, units: ['Soldado', 'Atirador', 'Tanque'], turret: 'Metralhadora', special: 'Bombardeamento aéreo', fx: 'bombs' },
-  { name: 'Era Futurista', xp: 32000, units: ['Ciber-soldado', 'Soldado laser', 'Tanque laser'], turret: 'Canhão de plasma', special: 'Raio orbital', fx: 'laser' },
+  { name: 'Sobreviventes Primitivos', short: 'Primitivos', xp: 0, units: ['Explorador com moca', 'Fundibulário', 'Cavaleiro de javali'], turret: 'Lança-pedras', special: 'Chuva de destroços', fx: 'meteor' },
+  { name: 'Sucateiros Medievais', short: 'Sucateiros', xp: 1000, units: ['Sucateiro de espada', 'Besteiro', 'Cavaleiro de sucata'], turret: 'Balista de sucata', special: 'Barragem de morteiros', fx: 'shells' },
+  { name: 'Milícia Industrial', short: 'Milícia', xp: 3600, units: ['Miliciano', 'Atirador', 'Canhão a vapor'], turret: 'Metralhadora a vapor', special: 'Gás tóxico', fx: 'gas' },
+  { name: 'Tropas Táticas', short: 'Táticas', xp: 11000, units: ['Soldado tático', 'Atirador de elite', 'Blindado'], turret: 'Ninho de metralhadora', special: 'Bombardeamento aéreo', fx: 'bombs' },
+  { name: 'Armadura Futurista', short: 'Futurista', xp: 32000, units: ['Explorador blindado', 'Soldado laser', 'Exo-armadura'], turret: 'Torre laser', special: 'Mini Nuke', fx: 'nuke' },
 ];
+export const CURRENCY = 'caricas';
 export function unitStats(era, type) {
   const b = UNIT_BASE[type]; const m = sc(era);
   return { hp: Math.round(b.hp * m), dmg: Math.round(b.dmg * m), rng: b.rng, spd: b.spd + era * 1.5, rate: b.rate, cost: Math.round(b.cost * m), time: b.time };
@@ -108,12 +109,16 @@ export function special(g, side) {
   const sd = g.sides[side]; sd.specialCd = SPECIAL_CD;
   const kind = ERAS[sd.era].fx; const dmg = Math.round(70 * sc(sd.era));
   const enemies = g.units.filter((u) => u.side !== side);
-  const n = kind === 'laser' ? 5 : kind === 'arrows' ? 14 : 8;
-  for (let i = 0; i < n; i++) {
-    const target = enemies.length && g.rand() < 0.7 ? enemies[Math.floor(g.rand() * enemies.length)].x : null;
-    const lo = side === 0 ? WORLD.w * 0.25 : WORLD.baseW; const hi = side === 0 ? WORLD.w - WORLD.baseW : WORLD.w * 0.75;
-    const x = target != null ? target + (g.rand() - 0.5) * 20 : lo + g.rand() * (hi - lo);
-    g.fx.push({ kind, side, x, y: -10 - i * 14 - g.rand() * 20, vy: kind === 'arrows' ? 160 : 120, dmg: kind === 'arrows' ? dmg * 0.45 : dmg, r: kind === 'arrows' ? 10 : 22, delay: i * 0.12, done: false });
+  const lo = side === 0 ? WORLD.w * 0.25 : WORLD.baseW; const hi = side === 0 ? WORLD.w - WORLD.baseW : WORLD.w * 0.75;
+  const pick = (spread) => (enemies.length && g.rand() < 0.75 ? enemies[Math.floor(g.rand() * enemies.length)].x + (g.rand() - 0.5) * spread : lo + g.rand() * (hi - lo));
+  if (kind === 'nuke') { // uma bomba sobre o maior grupo inimigo: dano enorme e onda de choque
+    const center = enemies.length ? enemies.reduce((best, u) => { const n = enemies.filter((o) => Math.abs(o.x - u.x) < 60).length; return n > best.n ? { x: u.x, n } : best; }, { x: enemies[0].x, n: 0 }).x : (lo + hi) / 2;
+    g.fx.push({ kind: 'nuke', side, x: center, y: -20, vy: 90, dmg: dmg * 2.4, r: 90, delay: 0.9, done: false });
+  } else if (kind === 'gas') { // nuvens de gás que ficam alguns segundos a fazer dano
+    for (let i = 0; i < 4; i++) g.fx.push({ kind: 'gas', side, x: pick(30), y: WORLD.ground - 14, t: 0, life: 4.5, dps: dmg * 0.32, r: 26, delay: i * 0.25, done: false });
+  } else {
+    const n = kind === 'meteor' ? 8 : kind === 'shells' ? 9 : 8;
+    for (let i = 0; i < n; i++) g.fx.push({ kind, side, x: pick(20), y: -10 - i * 14 - g.rand() * 20, vy: kind === 'shells' ? 150 : 120, dmg, r: 22, delay: i * 0.12, done: false });
   }
   g.events.push({ type: 'special', side, kind });
   return true;
@@ -162,7 +167,7 @@ export function step(g, dt) {
       q.t -= dt;
       if (q.t <= 0) {
         const sx = spawnX(i);
-        const blocked = g.units.some((u) => u.side === i && Math.abs(u.x - sx) < 10);
+        const blocked = g.units.some((u) => u.side === i && Math.abs(u.x - sx) < 13);
         if (!blocked) {
           const st = unitStats(q.era, q.type);
           if (i === 0) sound(g, { k: 'spawn' });
@@ -200,12 +205,12 @@ export function step(g, dt) {
       const dist = (o.x - u.x) * d;
       if (dist > 0 && dist < allyDist) allyDist = dist;
     }
-    const reach = Math.max(u.rng, 11);
+    const reach = Math.max(u.rng, 14);
     const baseDist = (baseFront(1 - u.side) - u.x) * d;
     let target = null;
     if (foe && foeDist <= reach) target = foe;
     else if (baseDist <= reach && (!foe || foeDist > baseDist)) target = 'base';
-    const stop = target || allyDist < 12 || (foe && foeDist < 11) || baseDist <= 2;
+    const stop = target || allyDist < 15 || (foe && foeDist < 14) || baseDist <= 2;
     if (!stop) { u.x += d * u.spd * dt; u.walk += dt * u.spd * 0.25; }
     u.cd -= dt;
     if (target && u.cd <= 0) {
@@ -258,9 +263,18 @@ export function step(g, dt) {
   for (const f of g.fx) {
     if (f.kind === 'boom') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
     if (f.delay > 0) { f.delay -= dt; continue; }
-    if (f.kind === 'laser') { f.t = (f.t || 0) + dt; if (f.t > 0.5 && !f.hitDone) hitArea(g, f); if (f.t > 0.9) f.done = true; continue; }
+    if (f.kind === 'gas') { // dano contínuo enquanto a nuvem dura
+      f.t += dt;
+      for (const u of g.units) if (u.side !== f.side && u.hp > 0 && Math.abs(u.x - f.x) <= f.r) damageUnit(g, u, f.dps * dt, f.side);
+      if (f.t >= f.life) f.done = true;
+      continue;
+    }
+    if (f.kind === 'shock') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
     f.y += f.vy * dt;
-    if (f.y >= WORLD.ground - 4) { hitArea(g, f); f.done = true; g.fx.push({ kind: 'boom', x: f.x, y: WORLD.ground - 4, t: 0, life: 0.4, big: f.kind !== 'arrows' }); }
+    if (f.y >= WORLD.ground - 4) {
+      hitArea(g, f); f.done = true;
+      if (f.kind === 'nuke') { g.fx.push({ kind: 'shock', x: f.x, t: 0, life: 1.6 }); g.events.push({ type: 'nukeHit', side: f.side }); } else g.fx.push({ kind: 'boom', x: f.x, y: WORLD.ground - 4, t: 0, life: 0.4, big: true });
+    }
   }
   g.fx = g.fx.filter((f) => !f.done);
   for (const t of g.texts) t.t += dt;
@@ -293,11 +307,18 @@ export function aiStep(g, dt, side = 1, params = g.ai) {
   const d = dirOf(side);
   const nearMyBase = foes.filter((u) => (baseFront(side) - u.x) * -d < 160).length;
   // especial: quando há tropas inimigas suficientes juntas
-  if (canSpecial(g, side) && foes.length >= 4 && g.rand() < params.special) { special(g, side); return; }
+  // especial: o difícil espera por um grupo junto (ou por uma pesada perto da base); os outros usam quando há muitos inimigos
+  if (canSpecial(g, side) && g.rand() < params.special) {
+    const cluster = foes.reduce((m, u) => Math.max(m, foes.filter((o) => Math.abs(o.x - u.x) < 50).length), 0);
+    const threat = foes.some((u) => u.type === 2 && (baseFront(side) - u.x) * -d < 120);
+    if (params === DIFFICULTY.hard ? (cluster >= 4 || threat) : foes.length >= (params === DIFFICULTY.easy ? 6 : 5)) { special(g, side); return; }
+  }
   // torres e espaços: quando há ouro a mais e a base está a ser pressionada
   if (sd.era >= params.turretFrom) {
     if (freeSlot(sd) >= 0 && canBuyTurret(g, side) && nearMyBase >= 2 && sd.hp < BASE_HP * 0.85) { buyTurret(g, side); return; }
     if (params === DIFFICULTY.hard) {
+      // constrói defesas antes de ser pressionado, quando tem caricas de sobra
+      if (freeSlot(sd) >= 0 && canBuyTurret(g, side) && sd.gold > turretStats(sd.era).cost + unitStats(sd.era, 2).cost) { buyTurret(g, side); return; }
       const old = sd.turrets.findIndex((t, i) => i < sd.slots && t && t.era < sd.era);
       if (old >= 0 && sd.gold > turretStats(sd.era).cost * 1.6) { sellTurret(g, side); buyTurret(g, side); return; }
       if (canAddSlot(g, side) && sd.gold > SLOT_COST[sd.slots] + unitStats(sd.era, 2).cost * 2) { addSlot(g, side); return; }

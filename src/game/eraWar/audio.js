@@ -77,14 +77,27 @@ const ok = () => ctx && prefs.sfx && ctx.state === 'running';
 
 // ---------- Sons da interface ----------
 export const ui = {
-  select() { if (!init() || !prefs.sfx) return; tone({ f: 1320, dur: 0.05, type: 'pulse25', vol: 0.18 }); },
+  select() { if (!init() || !prefs.sfx) return; noise({ dur: 0.025, vol: 0.22, freq: 3500, type: 'bandpass', q: 2 }); tone({ f: 1800, dur: 0.03, type: 'square', vol: 0.06 }); tone({ t: 0.03, f: 140, f2: 90, dur: 0.05, type: 'triangle', vol: 0.18 }); },
   confirm() { if (!init() || !prefs.sfx) return; tone({ f: 660, dur: 0.07, type: 'pulse25', vol: 0.2 }); tone({ t: 0.07, f: 990, dur: 0.1, type: 'pulse25', vol: 0.2 }); },
   back() { if (!init() || !prefs.sfx) return; tone({ f: 660, dur: 0.06, type: 'pulse25', vol: 0.18 }); tone({ t: 0.06, f: 440, dur: 0.09, type: 'pulse25', vol: 0.18 }); },
   error() { if (!init() || !prefs.sfx) return; if (throttled('err', 150)) return; tone({ f: 140, dur: 0.14, type: 'square', vol: 0.18 }); tone({ t: 0.05, f: 120, dur: 0.14, type: 'square', vol: 0.15 }); },
-  coin() { if (!ok()) return; tone({ f: 988, dur: 0.05, type: 'pulse25', vol: 0.16 }); tone({ t: 0.05, f: 1319, dur: 0.12, type: 'pulse25', vol: 0.16 }); },
+  coin() { if (!ok()) return; capClink(0, 0.9); },
   start() { if (!init() || !prefs.sfx) return; [523, 659, 784, 1047].forEach((f, i) => tone({ t: i * 0.08, f, dur: 0.12, type: 'pulse25', vol: 0.2 })); },
   pause() { if (!ok()) return; tone({ f: 880, dur: 0.08, type: 'pulse12', vol: 0.18 }); tone({ t: 0.09, f: 587, dur: 0.12, type: 'pulse12', vol: 0.18 }); },
 };
+
+// tilintar de carica: parciais metálicos inarmónicos + toque seco, com um ressalto
+function capClink(t = 0, vol = 1) {
+  for (const [f, v] of [[2637, 0.16], [3951, 0.1], [5274, 0.07], [6890, 0.05]]) tone({ t, f, f2: f * 0.98, dur: 0.18, type: 'sine', vol: v * vol, attack: 0.001 });
+  noise({ t, dur: 0.02, vol: 0.18 * vol, freq: 6000, type: 'highpass' });
+  for (const [f, v] of [[2637, 0.07], [3951, 0.05]]) tone({ t: t + 0.09, f, dur: 0.1, type: 'sine', vol: v * vol, attack: 0.001 });
+}
+export function capGain() { if (!ok() || throttled('cap', 160)) return; capClink(0, 0.55); }
+// sirene de alerta (sobe e desce duas vezes)
+export function siren(times = 2) {
+  if (!ok()) return;
+  for (let i = 0; i < times; i++) { tone({ t: i * 0.9, f: 420, f2: 900, dur: 0.45, type: 'sawtooth', vol: 0.12 }); tone({ t: i * 0.9 + 0.45, f: 900, f2: 420, dur: 0.45, type: 'sawtooth', vol: 0.12 }); }
+}
 
 // ---------- Sons do combate ----------
 const panOf = (x) => (x == null ? null : (x / 480) * 1.6 - 0.8);
@@ -151,6 +164,19 @@ export function specialSfx(kind, side) {
     tone({ f: 70, f2: 95, dur: 2.6, type: 'sawtooth', vol: 0.12, vib: 4, attack: 0.5 });
     noise({ dur: 2.6, vol: 0.12, freq: 300, attack: 0.5 });
     for (let i = 0; i < 6; i++) { tone({ t: 0.7 + i * 0.2, f: 1500, f2: 250, dur: 0.65, type: 'pulse12', vol: 0.07, pan }); boom(1.3 + i * 0.2, 1.2, pan); }
+  } else if (kind === 'gas') { // botijas a cair, silvo do gás a sair e borbulhar ácido
+    for (let i = 0; i < 4; i++) { tone({ t: i * 0.25, f: 900, f2: 300, dur: 0.3, type: 'pulse12', vol: 0.08, pan }); noise({ t: 0.3 + i * 0.25, dur: 0.08, vol: 0.2, freq: 1200, pan }); }
+    noise({ t: 0.35, dur: 3.5, vol: 0.18, freq: 5000, freq2: 2500, type: 'highpass', attack: 0.3, pan });
+    for (let i = 0; i < 14; i++) tone({ t: 0.6 + i * 0.22 + Math.random() * 0.1, f: 200 + Math.random() * 300, f2: 500 + Math.random() * 400, dur: 0.06, type: 'sine', vol: 0.08, pan });
+  } else if (kind === 'nuke') { // sirene, assobio longo a cair e explosão nuclear com estrondo grave
+    siren(1);
+    tone({ t: 0.5, f: 2400, f2: 300, dur: 1.2, type: 'sine', vol: 0.12, pan });
+    const t0 = 1.7;
+    noise({ t: t0, dur: 3.2, vol: 0.7, freq: 2500, freq2: 40, attack: 0.01 });
+    tone({ t: t0, f: 80, f2: 22, dur: 3, type: 'sine', vol: 0.7, attack: 0.01 });
+    tone({ t: t0, f: 55, f2: 25, dur: 3.5, type: 'triangle', vol: 0.5, attack: 0.02 });
+    noise({ t: t0 + 0.4, dur: 2.5, vol: 0.18, freq: 400, freq2: 150, attack: 0.5 }); // vento da onda de choque
+    for (let i = 0; i < 8; i++) noise({ t: t0 + 0.3 + i * 0.18, dur: 0.15, vol: 0.12, freq: 1500, type: 'bandpass', q: 2, pan: (Math.random() - 0.5) * 1.6 }); // destroços
   } else if (kind === 'laser') { // carga a subir, disparo orbital e crepitar
     tone({ f: 120, f2: 2400, dur: 0.6, type: 'sawtooth', vol: 0.16, attack: 0.3 });
     tone({ f: 240, f2: 4800, dur: 0.6, type: 'pulse12', vol: 0.08, attack: 0.3 });

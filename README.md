@@ -47,15 +47,30 @@ A rede é verificada em tempo real (eventos do browser e um pedido de teste ao p
 
 ## Mini Jogo: Guerra das Eras
 
-Jogo original de defesa de base em pixel art (separador **Mini Jogo**), desenhado num canvas com as cores do tema da app. Funciona sem internet.
+Jogo original de defesa de base em pixel art retro, com uma só linha de combate (separador **Mini Jogo**). Funciona sem internet.
 
+- **Visual:** ilustração de fósforo verde CRT (segue a cor do tema da app). O campo de batalha é pós-apocalíptico: montanhas, manilha partida, árvores retorcidas, trincheira, sacos de areia e arame farpado. As bases são entradas ovais de abrigos escavadas na rocha. Os desenhos são feitos em código (`src/game/eraWar/render.js`) e convertidos em pixel art de 6 tons com contorno, sem ficheiros de imagem.
+- **Tropas:** todas são o explorador mascote da app (chapéu safari, mochila, camisa de bolsos, calções cargo e botas), equipado conforme a era.
 - **Objetivo:** destruir a base inimiga (500 HP) antes que ela destrua a tua.
-- **5 eras:** Idade da Pedra, Idade Média, Renascimento, Era Moderna e Era Futurista, cada uma com 3 tropas (linha da frente, atiradores e pesadas), uma torre e um ataque especial com tempo de recarga (meteoros, flechas, artilharia, bombardeamento aéreo, raio orbital).
-- **Recursos:** ouro e XP ganhos a abater tropas inimigas (mais um pouco de ouro com o tempo). O ouro compra tropas, torres e espaços para torres; o XP faz avançar de era.
-- **IA:** Fácil (junta recursos mais devagar e hesita), Médio (equilibrado) e Difícil (decide logo, gere o ouro e ataca em vagas). O equilíbrio foi afinado com partidas simuladas de IA contra IA (`src/game/eraWar/logic.js`, sem desenho, para poder ser testado sozinho).
-- **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida, para não haver partidas sem fim.
-- **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa. No telemóvel, joga-se melhor na horizontal.
-- **Som 8-bit:** tudo gerado no browser (Web Audio, `src/game/eraWar/audio.js`), sem ficheiros, por isso também funciona sem internet. Música chiptune para o menu e para a batalha (muda de tom, ritmo e timbre a cada era e fica mais tensa com a base fraca ou no cerco), sons de ataque diferentes por tropa e era, tiros das torres, mortes e golpes nas bases com posição esquerda/direita, um som próprio para cada ataque especial (meteoros, flechas, artilharia, avião e bombas, raio orbital), fanfarras de evolução, vitória e derrota, e sons nos menus. Os botões MÚSICA e EFEITOS desligam cada parte; a escolha fica guardada.
+- **5 eras:** Sobreviventes Primitivos, Sucateiros Medievais, Milícia Industrial, Tropas Táticas e Armadura Futurista. Cada uma tem 3 tropas (linha da frente, atiradores e pesadas: javali, cavalo de sucata, canhão a vapor, blindado, exo-armadura), uma torre e um ataque especial: chuva de destroços, barragem de morteiros, gás tóxico, bombardeamento aéreo e **Mini Nuke** (com clarão, onda de choque e tremor do ecrã).
+- **Recursos:** caricas e XP ganhos a abater tropas inimigas, mais umas caricas com o tempo. As caricas compram tropas, torres e espaços para torres. O XP faz avançar de era.
+- **IA:**
+  - Fácil: junta caricas mais devagar e demora a evoluir.
+  - Médio: equilibrado.
+  - Difícil: otimiza caricas, constrói defesas e usa os especiais nos grupos de tropas.
+
+  O equilíbrio foi afinado com partidas simuladas de IA contra IA (`src/game/eraWar/logic.js`).
+- **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida.
+- **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa.
+- **Som 8-bit** (Web Audio, `src/game/eraWar/audio.js`, sem ficheiros):
+  - tilintar de carica ao ganhar ou gastar;
+  - cliques de terminal nos botões;
+  - tiros, lasers e explosões;
+  - sirene de alerta com a base em perigo;
+  - estrondo grave da Mini Nuke;
+  - música chiptune que muda com a era.
+
+  Os botões MÚSICA e EFEITOS desligam cada parte.
 
 ## Funciona sem o claude.ai
 

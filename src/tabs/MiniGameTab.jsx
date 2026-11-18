@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Gamepad2, Swords, Shield, Zap, TrendingUp } from 'lucide-react';
 import { mountEraWar, loadStats } from '../game/eraWar';
 import { createGame, step, train, DIFFICULTY } from '../game/eraWar/logic';
-import { render, themeColors } from '../game/eraWar/render';
+import { render, themeColors, CANVAS } from '../game/eraWar/render';
 import '../game/eraWar/eraWar.css';
 import * as audio from '../game/eraWar/audio';
 
 const DIFFS = [
-  { id: 'easy', desc: 'A IA junta ouro mais devagar e hesita nas compras.' },
-  { id: 'medium', desc: 'Ritmo equilibrado de tropas e de evolução.' },
-  { id: 'hard', desc: 'Reage logo, gere bem o ouro e ataca em vagas.' },
+  { id: 'easy', desc: 'A IA junta caricas mais devagar e demora a evoluir.' },
+  { id: 'medium', desc: 'Ritmo equilibrado de ataque e de evolução.' },
+  { id: 'hard', desc: 'Gere bem as caricas, constrói defesas e usa os especiais na altura certa.' },
 ];
 
 // Pré-visualização animada no cartão: uma batalha IA contra IA a correr em segundo plano
@@ -34,7 +34,7 @@ function Preview() {
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
     return () => { cancelAnimationFrame(raf); mo.disconnect(); };
   }, []);
-  return <canvas ref={ref} width={480} height={200} className="w-full block" style={{ imageRendering: 'pixelated' }} aria-hidden="true" />;
+  return <canvas ref={ref} width={CANVAS.w} height={CANVAS.h} className="w-full block" style={{ imageRendering: 'pixelated' }} aria-hidden="true" />;
 }
 
 function Game({ difficulty, onExit }) {
@@ -83,16 +83,16 @@ export default function MiniGameTab() {
         </div>
         <div className="p-4">
           <h3 className="text-xl font-bold tracking-widest" style={{ textShadow: '0 0 10px rgb(var(--c) / 0.6)' }}>GUERRA DAS ERAS</h3>
-          <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: '#ffb000' }}>Retro 8-bit · defesa de base</p>
+          <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: '#ffb000' }}>Retro 8-bit · defesa de base pós-apocalíptica</p>
           <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgb(var(--c) / 0.8)' }}>
-            Destrói a base inimiga antes que ela destrua a tua. Treina tropas, ganha ouro e XP a cada baixa e faz a tua civilização avançar
-            da Idade da Pedra até à Era Futurista.
+            Destrói o abrigo inimigo antes que ele destrua o teu. Treina exploradores, ganha caricas e XP a cada baixa e faz o teu grupo
+            avançar dos Sobreviventes Primitivos até à Armadura Futurista.
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] mb-4" style={{ color: 'rgb(var(--c) / 0.8)' }}>
             <li className="flex gap-2"><Swords size={14} className="shrink-0" /> 3 tropas por era: linha da frente, atiradores e pesadas.</li>
-            <li className="flex gap-2"><TrendingUp size={14} className="shrink-0" /> 5 eras: Pedra, Média, Renascimento, Moderna e Futurista.</li>
+            <li className="flex gap-2"><TrendingUp size={14} className="shrink-0" /> 5 eras: Primitivos, Sucateiros, Milícia, Táticas e Futurista.</li>
             <li className="flex gap-2"><Shield size={14} className="shrink-0" /> Torres na base, até 3 espaços.</li>
-            <li className="flex gap-2"><Zap size={14} className="shrink-0" /> Ataque especial por era, com tempo de recarga.</li>
+            <li className="flex gap-2"><Zap size={14} className="shrink-0" /> Especiais com recarga: destroços, morteiros, gás tóxico, bombardeamento e Mini Nuke.</li>
           </ul>
 
           <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.6)' }}>Dificuldade da IA</p>
