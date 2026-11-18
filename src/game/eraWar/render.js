@@ -11,22 +11,29 @@ export const CANVAS = { w: WORLD.w * S, h: WORLD.h * S + OFF };
 const GY = WORLD.ground * S + OFF; // linha do chão no ecrã
 const X = (x) => Math.round(x * S);
 
-// O campo de batalha é um ecrã de terminal de fósforo verde, fixo (não muda com o tema da app).
-// useTheme = true dá as cores do tema, para os ícones dos botões à volta do ecrã.
-export const SCREEN_RGB = '70 255 120';
+// O campo de batalha é um ecrã LCD verde-claro com desenho em verde-escuro, fixo (o mesmo tom da Patrulha Estelar
+// e da Cobra; não muda com o tema da app). useTheme = true dá as cores do tema, para os ícones dos botões à volta do ecrã.
+export const SCREEN_RGB = 'lcd';
+const LCD_INK = [14, 26, 16]; const LCD_LIGHT = [180, 232, 186];
 export function themeColors(useTheme = false) {
   const v = (useTheme && getComputedStyle(document.documentElement).getPropertyValue('--c').trim()) || SCREEN_RGB;
-  const [r, g, b] = v.split(/\s+/).map(Number);
-  const mixA = (k) => [Math.round(r * k), Math.round(g * k), Math.round(b * k)];
+  let mixA;
+  if (v === 'lcd') mixA = (k) => { const q = k ** 1.35; return LCD_INK.map((c, i) => Math.round(c + (LCD_LIGHT[i] - c) * q)); };
+  else { const [r, g, b] = v.split(/\s+/).map(Number); mixA = (k) => [Math.round(r * k), Math.round(g * k), Math.round(b * k)]; }
   const mix = (k, a = 1) => { const [x, y, z] = mixA(k); return `rgba(${x},${y},${z},${a})`; };
-  return {
+  const lcd = v === 'lcd';
+  const C = {
     key: v, hi: mix(1), sky: mix(0.62), sky2: mix(0.42), mid: mix(0.72), low: mix(0.38), dim: mix(0.26), dark: mix(0.14), ink: mix(0.05), bg: mix(0.05),
-    fire: '#ffb000', fire2: '#ff6a00', red: '#ff3b2f', white: '#f4ffe8',
+    // no LCD o "fogo" e as luzes são tons de verde (como num ecrã de uma só cor)
+    fire: lcd ? '#3f6f37' : '#ffb000', fire2: lcd ? '#2c4c27' : '#ff6a00', red: lcd ? '#1a2a17' : '#ff3b2f', white: lcd ? '#dff3d6' : '#f4ffe8',
     // tons da posterização: tropas do jogador, tropas inimigas e cenário
     lvA: [0.05, 0.22, 0.4, 0.6, 0.8, 1].map(mixA),
     lvB: [0.05, 0.2, 0.36, 0.54, 0.72, 0.9].map(mixA),
     lvBg: [0.05, 0.2, 0.33, 0.47, 0.62, 0.78].map(mixA),
   };
+  const glow = lcd ? [223, 243, 214] : [255, 176, 0];
+  C.lvA.amber = glow; C.lvB.amber = glow; C.lvBg.amber = glow;
+  return C;
 }
 const R = (c, x, y, w, h) => c.fillRect(Math.round(x), Math.round(y), w, h);
 
@@ -53,7 +60,7 @@ function posterize(cv, lv, outline) {
   for (let i = 0, p = 0; p < w * h; i += 4, p++) {
     if (d[i + 3] < 120) { d[i + 3] = 0; continue; }
     solid[p] = 1; d[i + 3] = 255;
-    if (d[i] > 160 && d[i + 2] > 160 && d[i + 1] < 110) { d[i] = 255; d[i + 1] = 176; d[i + 2] = 0; continue; } // âmbar
+    if (d[i] > 160 && d[i + 2] > 160 && d[i + 1] < 110) { const a = lv.amber || [255, 176, 0]; d[i] = a[0]; d[i + 1] = a[1]; d[i + 2] = a[2]; continue; } // âmbar / luz
     const k = Math.max(0, Math.min(5, Math.round(((d[i] + d[i + 1] + d[i + 2]) / 3 / 255) * 5)));
     const col = lv[k]; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2];
   }

@@ -180,7 +180,7 @@ export default function MiniGameTab() {
       <section className="rounded-md overflow-hidden" style={box}>
         <div className="relative" style={{ borderBottom: '2px solid rgb(var(--c) / 0.3)' }}>
           <Preview />
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 1px, transparent 1px 3px)' }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(0deg, rgb(0 0 0 / 0.06) 0 1px, transparent 1px 3px)' }} />
         </div>
         <div className="p-4">
           <h3 className="text-xl font-bold tracking-widest" style={{ textShadow: '0 0 10px rgb(var(--c) / 0.6)' }}>GUERRA DAS ERAS</h3>
