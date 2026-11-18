@@ -2,6 +2,8 @@
 // Direção: setas / WASD / 2 4 6 8 ou deslizar o dedo no ecrã · Nível no menu: ◀ ▶ · Pausa: OK / P · Sair: C / Esc
 import { W, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
+const MUTE = new Proxy({}, { get: () => () => {} });
+
 const BEST = 'pb_lcd_snake_best';
 const LEVEL_KEY = 'pb_lcd_snake_level';
 const CELL = 3; const COLS = 27; const ROWS = 13; const OX = 1; const OY = 8; // campo: 27x13 casas de 3 píxeis
@@ -9,14 +11,12 @@ const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
 const BUGS = [['# # #', ' ### ', '#####', ' # # '], ['#   #', '#####', ' ### ', '# # #'], [' ### ', '## ##', ' ### ', '# # #']];
 
-export function mountSnake(root, { onExit = () => {} } = {}) {
-  const shell = mountShell(root, {
-    title: 'Cobra',
-    help: 'PC: setas/WASD mudam a direção · espaço/Enter começa · ◀ ▶ escolhem o nível no menu · P pausa · Esc sai · M som<br>Telemóvel: 2 4 6 8 ou deslizar o dedo no ecrã · 5 começa · OK pausa · C sai',
-  });
-  const scr = createScreen(shell.canvas);
+// Lógica e desenho do jogo, separados da interface (as pré-visualizações usam o mesmo código a jogar sozinho)
+export function createSnake(scr, shell, { demo = false, onQuit = () => {} } = {}) {
+  const SFX_ = demo ? MUTE : SFX;
   let best = loadBest(BEST);
   let level = 5; try { level = Number(localStorage.getItem(LEVEL_KEY)) || 5; } catch { /* sem armazenamento */ }
+  if (demo) level = 7;
   let mode = 'title'; let modeT = 0; let paused = false; let newBest = false;
   let st;
 
@@ -43,11 +43,11 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
     st.queue.push(d);
   }
   shell.onSwipe((d) => { if (mode === 'play') turn(d); else if (mode === 'title' && (d === 'left' || d === 'right')) changeLevel(d === 'right' ? 1 : -1); });
-  function changeLevel(dv) { level = Math.max(1, Math.min(9, level + dv)); try { localStorage.setItem(LEVEL_KEY, String(level)); } catch { /* sem armazenamento */ } SFX.key(); }
-  function start() { reset(); mode = 'play'; paused = false; modeT = 0; SFX.start(); }
+  function changeLevel(dv) { level = Math.max(1, Math.min(9, level + dv)); try { localStorage.setItem(LEVEL_KEY, String(level)); } catch { /* sem armazenamento */ } SFX_.key(); }
+  function start() { reset(); mode = 'play'; paused = false; modeT = 0; SFX_.start(); }
   function die() {
-    st.dead = 1; mode = 'dying'; modeT = 0; SFX.die();
-    newBest = st.score > best; if (newBest) { best = st.score; saveBest(BEST, best); }
+    st.dead = 1; mode = 'dying'; modeT = 0; SFX_.die();
+    newBest = st.score > best; if (newBest && !demo) { best = st.score; saveBest(BEST, best); }
   }
 
   function advance() {
@@ -61,19 +61,34 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
     st.body.unshift([nx, ny]);
     if (st.grow > 0) st.grow -= 1; else st.body.pop();
     if (st.food && nx === st.food[0] && ny === st.food[1]) {
-      st.score += level + 3; st.eaten += 1; st.grow += 1; SFX.eat(); placeFood();
+      st.score += level + 3; st.eaten += 1; st.grow += 1; SFX_.eat(); placeFood();
       if (st.eaten % 5 === 0 && !st.bug) { const p = randFree(2); if (p) st.bug = { x: p[0], y: p[1], left: 24, kind: Math.floor(Math.random() * BUGS.length) }; }
     } else if (st.bug && ny === st.bug.y && (nx === st.bug.x || nx === st.bug.x + 1)) {
-      st.score += 5 * level + st.bug.left * 2; st.grow += 2; st.bug = null; SFX.bonus();
+      st.score += 5 * level + st.bug.left * 2; st.grow += 2; st.bug = null; SFX_.bonus();
     }
     if (st.bug) { st.bug.left -= 1; if (st.bug.left <= 0) st.bug = null; }
     if (!st.food) placeFood();
   }
 
+  // piloto automático das pré-visualizações: vai para a comida pelo caminho seguro
+  function bot() {
+    const [hx, hy] = st.body[0]; const f = st.food || [0, 0];
+    const safe = (d) => {
+      const [dx, dy] = DIRS[d]; const nx = hx + dx; const ny = hy + dy;
+      if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) return false;
+      return !st.body.some(([bx, by], i) => i < st.body.length - 1 && bx === nx && by === ny);
+    };
+    const opts = Object.keys(DIRS).filter((d) => d !== OPP[st.dir] && safe(d));
+    if (!opts.length) return;
+    opts.sort((a, b) => { const da = Math.abs(hx + DIRS[a][0] - f[0]) + Math.abs(hy + DIRS[a][1] - f[1]); const db = Math.abs(hx + DIRS[b][0] - f[0]) + Math.abs(hy + DIRS[b][1] - f[1]); return da - db; });
+    st.queue = [opts[0]];
+  }
+
   function update(dt) {
+    if (demo) { if (mode === 'title') start(); if (mode === 'over' && modeT > 1) start(); if (st.body.length > 40) start(); }
     for (const k of shell.take()) {
-      if (k === 'mute') { setSound(!getSound()); SFX.key(); continue; }
-      if (k === 'back') { if (mode === 'play' && !paused) { paused = true; SFX.key(); } else { stop(); return; } continue; }
+      if (k === 'mute') { setSound(!getSound()); SFX_.key(); continue; }
+      if (k === 'back') { if (mode === 'play' && !paused) { paused = true; SFX_.key(); } else { onQuit(); return; } continue; }
       if (mode === 'title') {
         if (k === 'left' || k === 'down') changeLevel(-1); else if (k === 'right' || k === 'up') changeLevel(1);
         else if (k === 'fire' || k === 'ok' || k === 'tap') start();
@@ -81,7 +96,7 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
       }
       if (mode === 'over') { if (modeT > 0.6 && (k === 'fire' || k === 'ok' || k === 'tap')) start(); continue; }
       if (mode === 'play') {
-        if (k === 'ok' || (paused && (k === 'fire' || k === 'tap'))) { paused = !paused; SFX.key(); continue; }
+        if (k === 'ok' || (paused && (k === 'fire' || k === 'tap'))) { paused = !paused; SFX_.key(); continue; }
         if (DIRS[k]) turn(k);
       }
     }
@@ -90,7 +105,7 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
     if (mode !== 'play' || paused) return;
     st.acc += dt;
     const stt = stepTime();
-    while (st.acc >= stt && mode === 'play') { st.acc -= stt; advance(); }
+    while (st.acc >= stt && mode === 'play') { st.acc -= stt; if (demo) bot(); advance(); }
   }
 
   // segmento: bloco 2x2 com ligação ao segmento seguinte (o aspeto "corrente" do LCD)
@@ -121,7 +136,7 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
       const head = Math.floor(t * 12) % path.length;
       for (let i = 0; i < 12; i++) { const [x, y] = path[(head - i + path.length) % path.length]; scr.rect(x, y, i ? 2 : 3, i ? 2 : 3); }
       scr.text(`NIVEL < ${level} >`, W / 2, 26, { align: 'center' });
-      if (Math.floor(t * 2) % 2) scr.text('5/OK: JOGAR', W / 2, 33, { align: 'center' });
+      if (Math.floor(t * 2) % 2) scr.text('A: JOGAR', W / 2, 33, { align: 'center' });
       scr.text(`RECORDE ${scr.num(best, 4)}`, W / 2, 41, { align: 'center' });
       scr.present(); return;
     }
@@ -133,23 +148,33 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
     if (st.food) { const px = OX + st.food[0] * CELL; const py = OY + st.food[1] * CELL; scr.sprite([' # ', '# #', ' # '], px, py); }
     if (st.bug && Math.floor(t * 4) % 4) { scr.sprite(BUGS[st.bug.kind], OX + st.bug.x * CELL, OY + st.bug.y * CELL - 1); }
     if (!(mode === 'dying' && Math.floor(t * 6) % 2)) drawSnake();
-    if (paused) { scr.rect(20, 17, 44, 15, 0); scr.frame(20, 17, 44, 15); scr.text('PAUSA', W / 2, 19, { align: 'center' }); scr.text('OK: JOGAR', W / 2, 25, { align: 'center' }); }
+    if (paused) { scr.rect(14, 17, 56, 15, 0); scr.frame(14, 17, 56, 15); scr.text('PAUSA', W / 2, 19, { align: 'center' }); scr.text('A: CONTINUAR', W / 2, 25, { align: 'center' }); }
     if (mode === 'over') {
       scr.rect(8, 10, 68, 32, 0); scr.frame(8, 10, 68, 32);
       scr.text('FIM DO JOGO', W / 2, 13, { align: 'center' });
       scr.text(`PONTOS ${scr.num(st.score, 4)}`, W / 2, 21, { align: 'center' });
       scr.text(newBest ? 'NOVO RECORDE!' : `RECORDE ${scr.num(best, 4)}`, W / 2, 28, { align: 'center' });
-      if (modeT > 0.6 && Math.floor(t * 2) % 2) scr.text('5: OUTRA VEZ', W / 2, 35, { align: 'center' });
+      if (modeT > 0.6 && Math.floor(t * 2) % 2) scr.text('A: OUTRA VEZ', W / 2, 35, { align: 'center' });
     }
     scr.present();
   }
 
   reset();
-  const stopLoop = runLoop(update, draw);
-  const onHide = () => { if (document.hidden && mode === 'play') paused = true; };
-  document.addEventListener('visibilitychange', onHide);
+  return { update, draw, pause() { if (mode === 'play') paused = true; } };
+}
+
+export function mountSnake(root, { onExit = () => {} } = {}) {
+  const shell = mountShell(root, {
+    title: 'Cobra', stick: 'dominant',
+    a: { k: 'ok', label: 'PAUSA' }, b: { k: 'mute', label: 'SOM' },
+    mids: [{ k: 'back', label: 'SAIR' }],
+    help: 'PC: setas/WASD mudam a direção · espaço/Enter começa · ◀ ▶ escolhem o nível no menu · P pausa · Esc sai · M som',
+  });
   let stopped = false;
   const cleanup = () => { stopped = true; stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
-  function stop() { if (stopped) return; cleanup(); onExit(); }
+  const game = createSnake(createScreen(shell.canvas), shell, { onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
+  const stopLoop = runLoop(game.update, game.draw);
+  const onHide = () => { if (document.hidden) game.pause(); };
+  document.addEventListener('visibilitychange', onHide);
   return () => { if (!stopped) cleanup(); };
 }

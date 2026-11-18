@@ -1,5 +1,5 @@
 // Motor dos jogos LCD retro: ecrã de 84x48 píxeis a preto sobre verde, letra de 3x5, bips e
-// a moldura de um telemóvel antigo com teclado (toque) + teclado do computador. JavaScript puro, offline.
+// um comando no ecrã (analógico + botões A/B, toque e rato) mais o teclado do computador. JavaScript puro, offline.
 
 export const W = 84;
 export const H = 48;
@@ -105,8 +105,8 @@ export const SFX = {
   start: () => beep([659, 0.06, 0, 0.02, 988, 0.1]),
 };
 
-// ---------- Moldura do telemóvel com teclado ----------
-// teclas lógicas: up down left right fire alt ok back
+// ---------- Ecrã com moldura do tema + comando (analógico à esquerda, botões A e B à direita) ----------
+// teclas lógicas: up down left right fire alt ok back mute
 const KEYMAP = {
   ArrowUp: 'up', KeyW: 'up', Digit2: 'up', Numpad8: 'up',
   ArrowDown: 'down', KeyS: 'down', Digit8: 'down', Numpad2: 'down',
@@ -115,30 +115,23 @@ const KEYMAP = {
   Space: 'fire', Digit5: 'fire', Numpad5: 'fire', KeyJ: 'fire', KeyK: 'alt', KeyX: 'alt', Digit0: 'alt', Numpad0: 'alt',
   Enter: 'ok', NumpadEnter: 'ok', KeyP: 'ok', Escape: 'back', Backspace: 'back', KeyM: 'mute',
 };
-// linha de números: 2/4/6/8 como no teclado do telemóvel; teclado numérico do PC: 8 em cima, 2 em baixo
 
-const PAD = [
-  ['1', '', ''], ['2', '▲', 'up'], ['3', '', ''],
-  ['4', '◀', 'left'], ['5', '●', 'fire'], ['6', '▶', 'right'],
-  ['7', '', ''], ['8', '▼', 'down'], ['9', '', ''],
-  ['*', '', ''], ['0', '✶', 'alt'], ['#', '♪', 'mute'],
-];
-
-// Monta a moldura e devolve { canvas, keys (estado premido), on(fn) para toques, destroy }
-export function mountShell(root, { title, help, altLabel = '' }) {
+// opts: { title, help, a: {k, label}, b: {k, label}, mids: [{k, label}], stick: 'free' | 'dominant' }
+export function mountShell(root, { title, help, a, b, mids = [], stick = 'free' }) {
   root.innerHTML = `
 <div class="lcd" tabindex="-1">
-  <div class="lcd-phone">
-    <div class="lcd-ear" aria-hidden="true"></div>
-    <div class="lcd-bezel"><div class="lcd-glass"><canvas width="${W}" height="${H}" aria-label="${title}"></canvas></div></div>
+  <div class="lcd-console">
+    <div class="lcd-screen"><div class="lcd-glass"><canvas width="${W}" height="${H}" aria-label="${title}"></canvas></div></div>
     <div class="lcd-pad">
-      <div class="lcd-soft">
-        <button type="button" class="lcd-key lcd-sk" data-k="back" aria-label="Voltar">C</button>
-        <button type="button" class="lcd-key lcd-nav" data-k="ok" aria-label="OK / Pausa">OK</button>
-        <button type="button" class="lcd-key lcd-sk" data-k="mute" aria-label="Som">♪</button>
+      <div class="lcd-side lcd-left">
+        <div class="lcd-stick" role="application" aria-label="Analógico: arrasta para mover"><div class="lcd-ring"><div class="lcd-thumb"></div></div></div>
       </div>
-      <div class="lcd-num">
-        ${PAD.map(([n, sym, k]) => `<button type="button" class="lcd-key${k ? ' on' : ''}" ${k ? `data-k="${k}"` : 'tabindex="-1" aria-hidden="true"'}><b>${n}</b>${sym ? `<i>${sym}</i>` : ''}${k === 'alt' && altLabel ? `<small>${altLabel}</small>` : ''}</button>`).join('')}
+      <div class="lcd-mid">${mids.map((m) => `<button type="button" class="lcd-pill" data-k="${m.k}"><span></span>${m.label}</button>`).join('')}</div>
+      <div class="lcd-side lcd-right">
+        <div class="lcd-ab">
+          <span class="lcd-abw"><button type="button" class="lcd-btn lcd-b" data-k="${b.k}" aria-label="B: ${b.label}">B</button><small>${b.label}</small></span>
+          <span class="lcd-abw"><button type="button" class="lcd-btn lcd-a" data-k="${a.k}" aria-label="A: ${a.label}">A</button><small>${a.label}</small></span>
+        </div>
       </div>
     </div>
   </div>
@@ -147,6 +140,7 @@ export function mountShell(root, { title, help, altLabel = '' }) {
   const el = root.querySelector('.lcd');
   const canvas = root.querySelector('canvas');
   const keys = Object.create(null);
+  const axis = { x: 0, y: 0 };
   const presses = [];
   const press = (k) => { if (!k) return; unlockAudio(); if (!keys[k]) presses.push(k); keys[k] = true; };
   const release = (k) => { if (k) keys[k] = false; };
@@ -160,25 +154,52 @@ export function mountShell(root, { title, help, altLabel = '' }) {
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
 
-  // teclas no ecrã: manter premido funciona (ponteiro) e não faz scroll nem zoom
+  // botões: manter premido funciona; sem scroll nem zoom
   const held = new Map();
   const down = (e) => {
-    const b = e.target.closest('[data-k]'); if (!b) return;
-    e.preventDefault(); b.setPointerCapture?.(e.pointerId);
-    held.set(e.pointerId, b.dataset.k); b.classList.add('down'); press(b.dataset.k);
+    const bt = e.target.closest('[data-k]'); if (!bt) return;
+    e.preventDefault(); try { bt.setPointerCapture(e.pointerId); } catch { /* ok */ }
+    held.set(e.pointerId, bt); bt.classList.add('down'); press(bt.dataset.k);
     if (navigator.vibrate) try { navigator.vibrate(8); } catch { /* sem vibração */ }
   };
   const up = (e) => {
-    const k = held.get(e.pointerId); if (!k) return;
-    held.delete(e.pointerId); release(k);
-    el.querySelectorAll(`[data-k="${k}"]`).forEach((b) => b.classList.remove('down'));
+    const bt = held.get(e.pointerId); if (!bt) return;
+    held.delete(e.pointerId); release(bt.dataset.k); bt.classList.remove('down');
   };
-  el.addEventListener('pointerdown', down);
-  el.addEventListener('pointerup', up);
-  el.addEventListener('pointercancel', up);
+  el.querySelectorAll('[data-k]').forEach((bt) => {
+    bt.addEventListener('pointerdown', down); bt.addEventListener('pointerup', up); bt.addEventListener('pointercancel', up);
+  });
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  // deslizar o dedo no ecrã (usado pela cobra) e tocar no ecrã (= OK/disparar)
+  // analógico virtual
+  const stickEl = root.querySelector('.lcd-stick'); const ring = root.querySelector('.lcd-ring'); const thumb = root.querySelector('.lcd-thumb');
+  let sid = null;
+  const DIRS4 = ['up', 'down', 'left', 'right'];
+  const setDirs = (x, y) => {
+    let want;
+    if (stick === 'dominant') {
+      const m = Math.hypot(x, y);
+      want = m < 0.45 ? [] : Math.abs(x) > Math.abs(y) ? [x > 0 ? 'right' : 'left'] : [y > 0 ? 'down' : 'up'];
+    } else {
+      want = []; if (y < -0.35) want.push('up'); if (y > 0.35) want.push('down'); if (x < -0.35) want.push('left'); if (x > 0.35) want.push('right');
+    }
+    for (const d of DIRS4) { const on = want.includes(d); if (on && !keys[d]) press(d); else if (!on && keys[d]) release(d); }
+  };
+  const moveStick = (e) => {
+    const r = ring.getBoundingClientRect(); const rad = r.width / 2;
+    let dx = (e.clientX - (r.left + rad)) / rad; let dy = (e.clientY - (r.top + rad)) / rad;
+    const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
+    axis.x = dx; axis.y = dy;
+    thumb.style.transform = `translate(${dx * rad * 0.55}px, ${dy * rad * 0.55}px)`;
+    setDirs(dx, dy);
+  };
+  const endStick = () => { sid = null; axis.x = 0; axis.y = 0; thumb.style.transform = ''; stickEl.classList.remove('down'); setDirs(0, 0); };
+  stickEl.addEventListener('pointerdown', (e) => { e.preventDefault(); unlockAudio(); sid = e.pointerId; try { stickEl.setPointerCapture(e.pointerId); } catch { /* ok */ } stickEl.classList.add('down'); moveStick(e); });
+  stickEl.addEventListener('pointermove', (e) => { if (e.pointerId === sid) moveStick(e); });
+  stickEl.addEventListener('pointerup', (e) => { if (e.pointerId === sid) endStick(); });
+  stickEl.addEventListener('pointercancel', (e) => { if (e.pointerId === sid) endStick(); });
+
+  // deslizar o dedo no ecrã (usado pela cobra) e tocar no ecrã
   let sw = null; const swipeFns = [];
   const glass = root.querySelector('.lcd-glass');
   glass.addEventListener('pointerdown', (e) => { e.preventDefault(); unlockAudio(); sw = { x: e.clientX, y: e.clientY, t: performance.now(), used: false }; });
@@ -190,8 +211,8 @@ export function mountShell(root, { title, help, altLabel = '' }) {
   glass.addEventListener('pointerup', () => { if (sw && !sw.used && performance.now() - sw.t < 300) presses.push('tap'); sw = null; });
 
   return {
-    el, canvas, keys,
-    take() { return presses.splice(0); }, // teclas premidas desde a última leitura
+    el, canvas, keys, axis,
+    take() { return presses.splice(0); },
     onSwipe(f) { swipeFns.push(f); },
     destroy() {
       window.removeEventListener('keydown', onKeyDown);
@@ -200,6 +221,9 @@ export function mountShell(root, { title, help, altLabel = '' }) {
     },
   };
 }
+
+// Entrada "falsa" para as pré-visualizações (o jogo joga sozinho)
+export function demoInput() { return { keys: Object.create(null), axis: { x: 0, y: 0 }, take: () => [], onSwipe() {} }; }
 
 // Ciclo com passo fixo; pausa automática quando a página fica escondida
 export function runLoop(update, draw) {

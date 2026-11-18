@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Gamepad2, Swords, Shield, Zap, TrendingUp, Rocket, Worm } from 'lucide-react';
+import { Gamepad2, Swords, Shield, Zap, TrendingUp, Rocket, Worm, Heart, Crosshair, Trophy, Bug, Gauge, Joystick } from 'lucide-react';
 import { mountEraWar, loadStats } from '../game/eraWar';
 import { createGame, step, train, DIFFICULTY } from '../game/eraWar/logic';
 import { render, themeColors, CANVAS } from '../game/eraWar/render';
 import '../game/eraWar/eraWar.css';
 import * as audio from '../game/eraWar/audio';
-import { mountSpace } from '../game/lcd/space';
-import { mountSnake } from '../game/lcd/snake';
+import { mountSpace, createSpace } from '../game/lcd/space';
+import { mountSnake, createSnake } from '../game/lcd/snake';
+import { createScreen, demoInput, runLoop, loadBest } from '../game/lcd/engine';
 import '../game/lcd/lcd.css';
 
 const GAMES = [
@@ -16,16 +17,33 @@ const GAMES = [
 ];
 const LCD_INFO = {
   space: {
-    title: 'PATRULHA ESTELAR', tag: 'Shooter de rolagem lateral · ecrã LCD retro',
+    title: 'PATRULHA ESTELAR', tag: 'Retro LCD · shooter de rolagem lateral', best: 'pb_lcd_space_best', digits: 5,
     text: 'Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.',
-    points: ['3 vidas (corações) e bónus de vida', 'Laser especial que limpa a linha', 'Chefes resistentes que disparam em leque', 'Recorde guardado no aparelho'],
+    points: [[Heart, '3 vidas em corações e bónus de vida pelo caminho.'], [Crosshair, 'Disparo automático ao manter A e laser especial no B.'], [Zap, 'Chefes resistentes que disparam em leque.'], [Joystick, 'Analógico no ecrã ou setas/WASD no PC.']],
   },
   snake: {
-    title: 'COBRA', tag: 'O clássico da cobrinha · ecrã LCD retro',
+    title: 'COBRA', tag: 'Retro LCD · o clássico da cobrinha', best: 'pb_lcd_snake_best', digits: 4,
     text: 'Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.',
-    points: ['9 níveis de velocidade', 'Bicho de bónus com contagem', 'Deslizar o dedo ou setas', 'Recorde guardado no aparelho'],
+    points: [[Gauge, '9 níveis de velocidade, escolhe no menu.'], [Bug, 'Bicho de bónus com contagem decrescente.'], [Joystick, 'Analógico, deslizar o dedo ou setas no PC.'], [Trophy, 'Recorde guardado no aparelho.']],
   },
 };
+
+// Pré-visualização animada: o jogo a jogar sozinho, sem som e sem mexer nos recordes
+function LcdPreview({ kind }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const scr = createScreen(ref.current);
+    const game = (kind === 'space' ? createSpace : createSnake)(scr, demoInput(), { demo: true });
+    return runLoop(game.update, game.draw);
+  }, [kind]);
+  return (
+    <div className="p-3" style={{ background: 'rgb(var(--cd) / 0.7)' }}>
+      <div className="rounded overflow-hidden" style={{ background: '#86b08c', boxShadow: 'inset 0 0 0 2px rgb(0 0 0 / 0.35)' }}>
+        <canvas ref={ref} width={84} height={48} className="w-full block" style={{ imageRendering: 'pixelated', aspectRatio: '84 / 48' }} aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
 
 function LcdGame({ kind, onExit }) {
   const ref = useRef(null);
@@ -133,26 +151,26 @@ export default function MiniGameTab() {
 
       {game !== 'erawar' && (
         <section className="rounded-md overflow-hidden" style={box}>
-          <div className="p-4 flex justify-center" style={{ borderBottom: '2px solid rgb(var(--c) / 0.3)', background: 'rgb(var(--cb) / 0.6)' }}>
-            <div className="w-full max-w-sm rounded-lg p-2" style={{ background: 'linear-gradient(#cfd5df, #9aa3b2)' }}>
-              <div className="rounded flex items-center justify-center font-bold tracking-widest" style={{ aspectRatio: '84 / 48', background: '#86b08c', color: '#101c12', fontFamily: 'Courier New, monospace', boxShadow: 'inset 0 0 12px rgb(0 0 0 / 0.35)' }}>
-                {game === 'space' ? '▶═  ◆ ◆ ◆' : '■■■■■■■  ◆'}
-              </div>
-            </div>
+          <div className="relative" style={{ borderBottom: '2px solid rgb(var(--c) / 0.3)' }}>
+            <LcdPreview kind={game} />
           </div>
           <div className="p-4">
             <h3 className="text-xl font-bold tracking-widest" style={{ textShadow: '0 0 10px rgb(var(--c) / 0.6)' }}>{LCD_INFO[game].title}</h3>
             <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: '#ffb000' }}>{LCD_INFO[game].tag}</p>
             <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgb(var(--c) / 0.8)' }}>{LCD_INFO[game].text}</p>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] mb-4 list-disc pl-4" style={{ color: 'rgb(var(--c) / 0.8)' }}>
-              {LCD_INFO[game].points.map((t) => <li key={t}>{t}</li>)}
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] mb-4" style={{ color: 'rgb(var(--c) / 0.8)' }}>
+              {LCD_INFO[game].points.map(([Icon, t]) => <li key={t} className="flex gap-2"><Icon size={14} className="shrink-0" /> {t}</li>)}
             </ul>
+            <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.8)', border: '2px solid rgb(var(--c) / 0.25)' }}>
+              <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}><Trophy size={14} /> Recorde</span>
+              <span className="text-lg font-bold tabular-nums" style={{ color: '#ffb000' }}>{String(loadBest(LCD_INFO[game].best)).padStart(LCD_INFO[game].digits, '0')}</span>
+            </div>
             <button type="button" onClick={() => { audio.ui.confirm(); setLcdPlaying(true); }} className="w-full py-3 rounded-sm text-sm font-bold tracking-widest"
               style={{ background: 'rgb(var(--c))', color: 'rgb(var(--cb))', boxShadow: '0 0 16px rgb(var(--c) / 0.4)' }}>
               ▶ JOGAR
             </button>
             <p className="text-[10px] mt-2 text-center" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-              Telemóvel: teclas no ecrã (2 4 6 8 · 5). PC: setas/WASD e espaço. Funciona sem internet.
+              Telemóvel: analógico à esquerda, botões A e B à direita. PC: setas/WASD e espaço. Funciona sem internet.
             </p>
           </div>
         </section>

@@ -74,14 +74,14 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
 
 ## Mini Jogo: Patrulha Estelar e Cobra (ecrã LCD retro)
 
-Dois jogos simples no separador **Mini Jogo**, num ecrã LCD de 84×48 píxeis a preto sobre verde, dentro de um telemóvel antigo genérico com teclado (`src/game/lcd/`):
+Dois jogos simples no separador **Mini Jogo**, num ecrã LCD de 84×48 píxeis a preto sobre verde, com moldura nas cores do tema e um comando no ecrã (`src/game/lcd/`). No separador, cada cartão mostra o jogo a jogar sozinho:
 
 - **Patrulha Estelar:** nave de rolagem lateral, vagas de inimigos, montanhas com padrão quadriculado, corações de vida, laser especial, bónus e um chefe resistente no fim de cada nível.
 - **Cobra:** o clássico da cobrinha, com 9 níveis de velocidade e um bicho de bónus com contagem. Bater nas paredes ou no corpo acaba o jogo.
 - Os recordes ficam guardados no aparelho.
 - **Controlos:**
-  - telemóvel: teclas no ecrã (2 4 6 8 movem, 5 dispara ou começa, 0 laser, OK pausa, C sai) ou deslizar o dedo para a cobra;
-  - PC: setas/WASD, espaço, X, P, Esc, M para o som.
+  - telemóvel: analógico à esquerda; botões à direita (Patrulha: A dispara, B laser; Cobra: A pausa, B som); SAIR, PAUSA e SOM ao centro; na cobra também dá para deslizar o dedo no ecrã;
+  - PC: setas/WASD, espaço, X, P, Esc, M para o som (o comando também funciona com o rato).
 - **Ficheiro único:** `npm run build` gera também `arcade/mini-arcade-retro.html` (publicado em `arcade.html`), um só HTML com CSS e JavaScript embutidos e os 3 jogos (Patrulha Estelar, Cobra e Guerra das Eras). Abre-se diretamente no browser, sem internet.
 
 ## Funciona sem o claude.ai
