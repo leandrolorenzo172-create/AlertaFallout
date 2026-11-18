@@ -58,7 +58,8 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   const el = {};
   root.querySelectorAll('[data-ew]').forEach((n) => { el[n.dataset.ew] = n; });
   const ctx = el.canvas.getContext('2d');
-  let C = themeColors();
+  let C = themeColors(); // ecrã: verde fixo
+  let CI = themeColors(true); // ícones dos botões: cor do tema
   let g = createGame({ difficulty });
   let paused = false; let destroyed = false; let raf = 0; let last = performance.now(); let acc = 0;
   let iconEra = -1; let bannerTimer = null; let recorded = false; let sirenDone = false;
@@ -107,8 +108,8 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     setDis(el.addslot, !canAddSlot(g, 0));
     if (iconEra !== me.era) {
       iconEra = me.era;
-      for (let i = 0; i < 3; i++) drawIcon(el[`icon${i}`], me.era, i, C);
-      const cap = capIcon(C, 12); el.capimg.src = cap; root.style.setProperty('--ew-cap', `url(${cap})`);
+      for (let i = 0; i < 3; i++) drawIcon(el[`icon${i}`], me.era, i, CI);
+      const cap = capIcon(CI, 12); el.capimg.src = cap; root.style.setProperty('--ew-cap', `url(${cap})`);
     }
   }
 
@@ -213,7 +214,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   // pausa sozinho quando a app vai para segundo plano
   on(document, 'visibilitychange', () => { if (document.hidden && !g.over) setPaused(true); });
   // muda de cor com o tema da app
-  const themeWatch = new MutationObserver(() => { C = themeColors(); iconEra = -1; });
+  const themeWatch = new MutationObserver(() => { CI = themeColors(true); iconEra = -1; });
   themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
 
   // música de batalha e fanfarra de início (o jogo começa depois de um toque em JOGAR, por isso o som pode tocar)

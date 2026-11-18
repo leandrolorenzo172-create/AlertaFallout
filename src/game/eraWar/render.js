@@ -11,8 +11,11 @@ export const CANVAS = { w: WORLD.w * S, h: WORLD.h * S + OFF };
 const GY = WORLD.ground * S + OFF; // linha do chão no ecrã
 const X = (x) => Math.round(x * S);
 
-export function themeColors() {
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--c').trim() || '0 255 65';
+// O campo de batalha é um ecrã de terminal de fósforo verde, fixo (não muda com o tema da app).
+// useTheme = true dá as cores do tema, para os ícones dos botões à volta do ecrã.
+export const SCREEN_RGB = '70 255 120';
+export function themeColors(useTheme = false) {
+  const v = (useTheme && getComputedStyle(document.documentElement).getPropertyValue('--c').trim()) || SCREEN_RGB;
   const [r, g, b] = v.split(/\s+/).map(Number);
   const mixA = (k) => [Math.round(r * k), Math.round(g * k), Math.round(b * k)];
   const mix = (k, a = 1) => { const [x, y, z] = mixA(k); return `rgba(${x},${y},${z},${a})`; };

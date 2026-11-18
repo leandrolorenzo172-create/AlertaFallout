@@ -64,3 +64,9 @@
 }
 @media (prefers-reduced-motion: reduce) { .lcd-thumb { transition: none; } }
 @media (hover: none) and (pointer: coarse) { .lcd-help { display: none; } }
+
+/* Telemóvel na vertical: ecrã em cima e comando em baixo, junto aos polegares */
+@media (orientation: portrait) and (max-width: 700px) {
+  .lcd-console { min-height: calc(100dvh - 270px); }
+  .lcd-pad { margin-top: auto; }
+}
