@@ -1,10 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Gamepad2, Swords, Shield, Zap, TrendingUp } from 'lucide-react';
+import { Gamepad2, Swords, Shield, Zap, TrendingUp, Rocket, Worm } from 'lucide-react';
 import { mountEraWar, loadStats } from '../game/eraWar';
 import { createGame, step, train, DIFFICULTY } from '../game/eraWar/logic';
 import { render, themeColors, CANVAS } from '../game/eraWar/render';
 import '../game/eraWar/eraWar.css';
 import * as audio from '../game/eraWar/audio';
+import { mountSpace } from '../game/lcd/space';
+import { mountSnake } from '../game/lcd/snake';
+import '../game/lcd/lcd.css';
+
+const GAMES = [
+  { id: 'erawar', name: 'Guerra das Eras', sub: 'Defesa de base', icon: Swords },
+  { id: 'space', name: 'Patrulha Estelar', sub: 'Nave · LCD', icon: Rocket },
+  { id: 'snake', name: 'Cobra', sub: 'Cobrinha · LCD', icon: Worm },
+];
+const LCD_INFO = {
+  space: {
+    title: 'PATRULHA ESTELAR', tag: 'Shooter de rolagem lateral · ecrã LCD retro',
+    text: 'Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.',
+    points: ['3 vidas (corações) e bónus de vida', 'Laser especial que limpa a linha', 'Chefes resistentes que disparam em leque', 'Recorde guardado no aparelho'],
+  },
+  snake: {
+    title: 'COBRA', tag: 'O clássico da cobrinha · ecrã LCD retro',
+    text: 'Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.',
+    points: ['9 níveis de velocidade', 'Bicho de bónus com contagem', 'Deslizar o dedo ou setas', 'Recorde guardado no aparelho'],
+  },
+};
+
+function LcdGame({ kind, onExit }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    const stop = (kind === 'space' ? mountSpace : mountSnake)(el, { onExit });
+    el.scrollIntoView({ block: 'start' });
+    return stop;
+  }, [kind, onExit]);
+  return <div ref={ref} style={{ scrollMarginTop: 46 }} />;
+}
 
 const DIFFS = [
   { id: 'easy', desc: 'A IA junta caricas mais devagar e demora a evoluir.' },
@@ -45,6 +77,14 @@ function Game({ difficulty, onExit }) {
 
 export default function MiniGameTab() {
   const [playing, setPlaying] = useState(null);
+  const [game, setGame] = useState(() => { try { return localStorage.getItem('pb_minijogo_game') || 'erawar'; } catch { return 'erawar'; } });
+  const [lcdPlaying, setLcdPlaying] = useState(false);
+  const exitLcd = React.useCallback(() => setLcdPlaying(false), []);
+  const pickGame = (id) => {
+    audio.ui.select(); setGame(id); setLcdPlaying(false);
+    try { localStorage.setItem('pb_minijogo_game', id); } catch { /* sem armazenamento */ }
+    if (id === 'erawar') { audio.unlock(); audio.playMusic('menu'); } else audio.stopMusic();
+  };
   const [diff, setDiff] = useState(() => { try { return localStorage.getItem('pb_erawar_diff') || 'medium'; } catch { return 'medium'; } });
   const [stats, setStats] = useState(loadStats);
   const [snd, setSnd] = useState(audio.getPrefs);
@@ -55,10 +95,11 @@ export default function MiniGameTab() {
   const choose = (d) => { audio.ui.select(); setDiff(d); try { localStorage.setItem('pb_erawar_diff', d); } catch { /* sem armazenamento */ } };
   const toggle = (k) => { audio.unlock(); audio.setPref(k, !snd[k]); setSnd(audio.getPrefs()); audio.ui.select(); if (k === 'music' && !snd.music) audio.playMusic('menu'); };
   // música do menu: começa no primeiro toque nesta aba (os browsers não deixam tocar som antes) e pára ao sair
-  const startMenuMusic = () => { if (!playing) { audio.unlock(); audio.playMusic('menu'); } };
+  const startMenuMusic = () => { if (!playing && game === 'erawar') { audio.unlock(); audio.playMusic('menu'); } };
   useEffect(() => () => audio.stopMusic(), []);
 
   if (playing) return <div className="pt-3"><Game difficulty={playing} onExit={exit} /></div>;
+  if (lcdPlaying && game !== 'erawar') return <div className="pt-3"><LcdGame kind={game} onExit={exitLcd} /></div>;
   const sndBtn = (k, label) => (
     <button type="button" aria-pressed={snd[k]} onClick={() => toggle(k)} className="px-2 py-1 rounded-sm text-[10px] tracking-wider"
       style={{ border: `1px solid rgb(var(--c) / ${snd[k] ? 0.8 : 0.25})`, color: `rgb(var(--c) / ${snd[k] ? 1 : 0.5})`, textDecoration: snd[k] ? 'none' : 'line-through', background: 'rgb(var(--cb) / 0.8)' }}>
@@ -76,6 +117,48 @@ export default function MiniGameTab() {
         {sndBtn('sfx', '♬ EFEITOS')}
       </div>
 
+      <div className="grid grid-cols-3 gap-2 mb-3" role="tablist" aria-label="Escolher jogo">
+        {GAMES.map((gm) => {
+          const on = game === gm.id; const Icon = gm.icon;
+          return (
+            <button key={gm.id} type="button" role="tab" aria-selected={on} onClick={() => pickGame(gm.id)}
+              className="p-2 rounded-sm text-left min-w-0"
+              style={{ background: on ? 'rgb(var(--c) / 0.15)' : 'rgb(var(--cb) / 0.8)', border: `2px solid rgb(var(--c) / ${on ? 0.9 : 0.25})`, color: 'rgb(var(--c))' }}>
+              <span className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold leading-tight"><Icon size={14} className="shrink-0" /><span>{gm.name}</span></span>
+              <span className="block text-[9px] sm:text-[10px] mt-1 leading-tight" style={{ color: 'rgb(var(--c) / 0.65)' }}>{gm.sub}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {game !== 'erawar' && (
+        <section className="rounded-md overflow-hidden" style={box}>
+          <div className="p-4 flex justify-center" style={{ borderBottom: '2px solid rgb(var(--c) / 0.3)', background: 'rgb(var(--cb) / 0.6)' }}>
+            <div className="w-full max-w-sm rounded-lg p-2" style={{ background: 'linear-gradient(#cfd5df, #9aa3b2)' }}>
+              <div className="rounded flex items-center justify-center font-bold tracking-widest" style={{ aspectRatio: '84 / 48', background: '#86b08c', color: '#101c12', fontFamily: 'Courier New, monospace', boxShadow: 'inset 0 0 12px rgb(0 0 0 / 0.35)' }}>
+                {game === 'space' ? '▶═  ◆ ◆ ◆' : '■■■■■■■  ◆'}
+              </div>
+            </div>
+          </div>
+          <div className="p-4">
+            <h3 className="text-xl font-bold tracking-widest" style={{ textShadow: '0 0 10px rgb(var(--c) / 0.6)' }}>{LCD_INFO[game].title}</h3>
+            <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: '#ffb000' }}>{LCD_INFO[game].tag}</p>
+            <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgb(var(--c) / 0.8)' }}>{LCD_INFO[game].text}</p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] mb-4 list-disc pl-4" style={{ color: 'rgb(var(--c) / 0.8)' }}>
+              {LCD_INFO[game].points.map((t) => <li key={t}>{t}</li>)}
+            </ul>
+            <button type="button" onClick={() => { audio.ui.confirm(); setLcdPlaying(true); }} className="w-full py-3 rounded-sm text-sm font-bold tracking-widest"
+              style={{ background: 'rgb(var(--c))', color: 'rgb(var(--cb))', boxShadow: '0 0 16px rgb(var(--c) / 0.4)' }}>
+              ▶ JOGAR
+            </button>
+            <p className="text-[10px] mt-2 text-center" style={{ color: 'rgb(var(--c) / 0.55)' }}>
+              Telemóvel: teclas no ecrã (2 4 6 8 · 5). PC: setas/WASD e espaço. Funciona sem internet.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {game === 'erawar' && (
       <section className="rounded-md overflow-hidden" style={box}>
         <div className="relative" style={{ borderBottom: '2px solid rgb(var(--c) / 0.3)' }}>
           <Preview />
@@ -117,6 +200,7 @@ export default function MiniGameTab() {
           <p className="text-[10px] mt-2 text-center" style={{ color: 'rgb(var(--c) / 0.55)' }}>Funciona sem internet. Melhor com o telemóvel na horizontal.</p>
         </div>
       </section>
+      )}
     </div>
   );
 }

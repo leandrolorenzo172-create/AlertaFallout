@@ -72,6 +72,18 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
 
   Os botões MÚSICA e EFEITOS desligam cada parte.
 
+## Mini Jogo: Patrulha Estelar e Cobra (ecrã LCD retro)
+
+Dois jogos simples no separador **Mini Jogo**, num ecrã LCD de 84×48 píxeis a preto sobre verde, dentro de um telemóvel antigo genérico com teclado (`src/game/lcd/`):
+
+- **Patrulha Estelar:** nave de rolagem lateral, vagas de inimigos, montanhas com padrão quadriculado, corações de vida, laser especial, bónus e um chefe resistente no fim de cada nível.
+- **Cobra:** o clássico da cobrinha, com 9 níveis de velocidade e um bicho de bónus com contagem. Bater nas paredes ou no corpo acaba o jogo.
+- Os recordes ficam guardados no aparelho.
+- **Controlos:**
+  - telemóvel: teclas no ecrã (2 4 6 8 movem, 5 dispara ou começa, 0 laser, OK pausa, C sai) ou deslizar o dedo para a cobra;
+  - PC: setas/WASD, espaço, X, P, Esc, M para o som.
+- **Ficheiro único:** `npm run build` gera também `arcade/mini-arcade-retro.html` (publicado em `arcade.html`), um só HTML com CSS e JavaScript embutidos e os 3 jogos (Patrulha Estelar, Cobra e Guerra das Eras). Abre-se diretamente no browser, sem internet.
+
 ## Funciona sem o claude.ai
 
 Fora do claude.ai os separadores usam dados reais de fontes públicas: meteorologia e avisos do IPMA, catástrofes do GDACS e do USGS, e notícias recolhidas de hora a hora de jornais portugueses (`scripts/fetch-news.mjs`). O Painel e o Índice Pizza são calculados a partir dessas notícias e alertas. O assistente responde com a base local ou, com uma chave da API guardada nas Definições, com a IA completa (ver acima).
