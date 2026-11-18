@@ -366,7 +366,7 @@ function drawHudFrames(c, C, g) {
     const bx = side === 0 ? 226 : WD - 238; const bh = 172;
     c.fillStyle = C.ink; R(c, bx - 2, 0, 16, bh + 2);
     c.fillStyle = C.dark; R(c, bx, 0, 12, bh);
-    c.fillStyle = p < 0.3 ? C.red : side === 0 ? C.hi : C.fire; const fh = Math.round(bh * p); R(c, bx, bh - fh, 12, fh);
+    const HPC = '#e0302a'; c.fillStyle = p < 0.3 && Math.floor(performance.now() / 250) % 2 ? '#ff7a6e' : HPC; const fh = Math.round(bh * p); R(c, bx, bh - fh, 12, fh);
     c.fillStyle = C.ink; for (let y = 10; y < bh; y += 12) R(c, bx, y, 12, 2);
     // caixa do HP
     const fx = side === 0 ? 214 : WD - 334; c.strokeStyle = C.mid; c.lineWidth = 3; c.globalAlpha = 0.85;
@@ -468,7 +468,7 @@ function drawUnit(c, C, u) {
   c.restore();
   const bw = heavyU ? 34 : 20; const p = Math.max(0, u.hp / u.maxHp); const by = foot - h - 2;
   c.fillStyle = C.ink; R(c, x - bw / 2 - 1, by - 1, bw + 2, 5);
-  c.fillStyle = u.side === 0 ? C.hi : C.fire; R(c, x - bw / 2, by, Math.max(1, Math.round(bw * p)), 3);
+  c.fillStyle = '#e0302a'; R(c, x - bw / 2, by, Math.max(1, Math.round(bw * p)), 3);
 }
 
 export function render(ctx, g, C, t) {
