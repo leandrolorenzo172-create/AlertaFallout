@@ -45,6 +45,17 @@ Conversa ao estilo Gemini/Claude, com respostas em Markdown (listas, tabelas, c�
 
 A rede é verificada em tempo real (eventos do browser e um pedido de teste ao próprio site a cada 30 segundos). Se a IA online falhar a meio (rede, chave recusada, limite de pedidos), a resposta vem da base local com um aviso.
 
+## Mini Jogo: Guerra das Eras
+
+Jogo original de defesa de base em pixel art (separador **Mini Jogo**), desenhado num canvas com as cores do tema da app. Funciona sem internet.
+
+- **Objetivo:** destruir a base inimiga (500 HP) antes que ela destrua a tua.
+- **5 eras:** Idade da Pedra, Idade Média, Renascimento, Era Moderna e Era Futurista, cada uma com 3 tropas (linha da frente, atiradores e pesadas), uma torre e um ataque especial com tempo de recarga (meteoros, flechas, artilharia, bombardeamento aéreo, raio orbital).
+- **Recursos:** ouro e XP ganhos a abater tropas inimigas (mais um pouco de ouro com o tempo). O ouro compra tropas, torres e espaços para torres; o XP faz avançar de era.
+- **IA:** Fácil (junta recursos mais devagar e hesita), Médio (equilibrado) e Difícil (decide logo, gere o ouro e ataca em vagas). O equilíbrio foi afinado com partidas simuladas de IA contra IA (`src/game/eraWar/logic.js`, sem desenho, para poder ser testado sozinho).
+- **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida, para não haver partidas sem fim.
+- **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa. No telemóvel, joga-se melhor na horizontal.
+
 ## Funciona sem o claude.ai
 
 Fora do claude.ai os separadores usam dados reais de fontes públicas: meteorologia e avisos do IPMA, catástrofes do GDACS e do USGS, e notícias recolhidas de hora a hora de jornais portugueses (`scripts/fetch-news.mjs`). O Painel e o Índice Pizza são calculados a partir dessas notícias e alertas. O assistente responde com a base local ou, com uma chave da API guardada nas Definições, com a IA completa (ver acima).

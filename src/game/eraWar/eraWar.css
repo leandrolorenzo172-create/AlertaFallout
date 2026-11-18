@@ -1,0 +1,97 @@
+/* Guerra das Eras — ecrã de fósforo com moldura industrial; segue a cor do tema da app (--c) */
+.ew { --ew: rgb(var(--c)); --ew-dim: rgb(var(--c) / 0.55); --ew-line: rgb(var(--c) / 0.3); --ew-gold: #ffb000;
+  max-width: 980px; margin: 0 auto; padding: 0 12px 12px; font-family: 'Courier New', ui-monospace, monospace; color: var(--ew); -webkit-user-select: none; user-select: none; }
+.ew *, .ew *::before, .ew *::after { box-sizing: border-box; }
+.ew [hidden] { display: none !important; }
+.ew-btn { font: inherit; color: var(--ew); background: rgb(var(--cb) / 0.85); border: 2px solid var(--ew-line); border-radius: 3px; padding: 6px 10px; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6), inset 0 2px 0 rgb(var(--c) / 0.08); letter-spacing: .06em; }
+.ew-btn:hover:not(:disabled), .ew-btn:focus-visible { border-color: var(--ew); outline: none; }
+.ew-btn:disabled { opacity: .4; cursor: default; }
+.ew-hud { display: grid; grid-template-columns: auto 1fr 1fr 1.6fr 1.8fr; gap: 6px; align-items: stretch; margin-bottom: 6px; }
+.ew-pause { font-size: 14px; padding: 6px 12px; }
+.ew-stat { display: flex; flex-direction: column; justify-content: center; padding: 4px 8px; border: 2px solid var(--ew-line); border-radius: 3px; background: rgb(var(--cd) / 0.6); min-width: 0; }
+.ew-stat b { font-size: 9px; letter-spacing: .14em; color: var(--ew-dim); }
+.ew-stat span { font-size: 16px; font-variant-numeric: tabular-nums; }
+.ew-stat:first-of-type span { color: var(--ew-gold); text-shadow: 0 0 6px #ffb00066; }
+.ew-evolve, .ew-special { display: flex; flex-direction: column; align-items: flex-start; text-align: left; position: relative; overflow: hidden; min-width: 0; }
+.ew-evolve b, .ew-special b { font-size: 11px; overflow-wrap: anywhere; }
+.ew-evolve span, .ew-special span { font-size: 9px; color: var(--ew-dim); overflow-wrap: anywhere; }
+.ew-evolve.ready { border-color: var(--ew-gold); color: var(--ew-gold); animation: ew-pulse 1s ease-in-out infinite; }
+@keyframes ew-pulse { 50% { box-shadow: 0 0 12px #ffb00088; } }
+.ew-special i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--ew-gold); }
+.ew-queuebar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 6px; font-size: 10px; }
+.ew-label { letter-spacing: .14em; color: var(--ew-dim); }
+.ew-queue { display: flex; gap: 4px; }
+.ew-queue i { position: relative; width: 26px; height: 14px; border: 1px solid var(--ew-line); background: rgb(var(--cb)); overflow: hidden; }
+.ew-queue i.on { border-color: var(--ew); background: rgb(var(--c) / 0.18); }
+.ew-queue i b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ew); opacity: .7; }
+.ew-era { margin-left: auto; color: var(--ew-dim); letter-spacing: .06em; }
+.ew-screen { position: relative; border: 3px solid rgb(var(--c) / 0.35); border-radius: 6px; background: rgb(var(--cb)); overflow: hidden;
+  box-shadow: inset 0 0 0 2px #000, 0 0 0 2px rgb(0 0 0 / 0.6), 0 0 18px rgb(var(--c) / 0.12); }
+.ew-screen canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.ew-screen::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 0.45) 100%); }
+.ew-hp { position: absolute; bottom: 6%; font-size: clamp(9px, 2vw, 13px); font-weight: bold; letter-spacing: .05em; text-shadow: 0 0 4px #000, 0 0 2px #000; z-index: 2; }
+.ew-hp.l { left: 1.2%; } .ew-hp.r { right: 1.2%; }
+.ew-banner { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); z-index: 3; padding: 6px 14px; font-size: clamp(11px, 2.4vw, 16px); letter-spacing: .12em;
+  color: var(--ew-gold); background: rgb(0 0 0 / 0.75); border: 2px solid var(--ew-gold); white-space: nowrap; }
+.ew-overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px;
+  background: rgb(0 0 0 / 0.78); text-align: center; }
+.ew-overlay h2 { margin: 0; font-size: clamp(20px, 6vw, 40px); letter-spacing: .16em; text-shadow: 0 0 12px rgb(var(--c) / 0.7); }
+.ew-overlay p { margin: 0; font-size: 12px; }
+.ew-small { font-size: 11px !important; color: var(--ew-dim); }
+.ew-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+.ew-tabs { display: flex; gap: 4px; margin-top: 8px; }
+.ew-tabs button { font: inherit; font-size: 11px; letter-spacing: .14em; padding: 6px 14px; cursor: pointer; color: var(--ew-dim); background: rgb(var(--cb)); border: 2px solid var(--ew-line); border-bottom: 0; border-radius: 4px 4px 0 0; }
+.ew-tabs button[aria-selected="true"] { color: var(--ew); background: rgb(var(--cd) / 0.7); border-color: var(--ew); }
+.ew-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; border: 2px solid var(--ew-line); border-radius: 0 4px 4px 4px; background: rgb(var(--cd) / 0.45); }
+.ew-unit { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; font: inherit; cursor: pointer; color: var(--ew);
+  background: rgb(var(--cb) / 0.85); border: 2px solid var(--ew-line); border-radius: 3px; min-width: 0; }
+.ew-unit:hover:not(:disabled), .ew-unit:focus-visible { border-color: var(--ew); outline: none; }
+.ew-unit:active:not(:disabled) { transform: translateY(1px); }
+.ew-unit:disabled { opacity: .4; cursor: default; }
+.ew-unit canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+.ew-uname { font-size: 11px; text-align: center; overflow-wrap: anywhere; }
+.ew-cost { font-size: 10px; color: var(--ew-gold); text-align: center; }
+.ew-unit kbd { position: absolute; top: 3px; right: 4px; font-size: 9px; color: var(--ew-dim); }
+.ew-help { margin: 8px 0 0; font-size: 10px; color: var(--ew-dim); text-align: center; }
+.ew kbd { font-family: inherit; padding: 0 3px; border: 1px solid var(--ew-line); border-radius: 2px; }
+@media (max-width: 640px) {
+  .ew { padding: 0 8px 8px; }
+  .ew-hud { grid-template-columns: auto 1fr 1fr; }
+  .ew-evolve { grid-column: 1 / 3; } .ew-special { grid-column: 3 / 4; }
+  .ew-era { margin-left: 0; width: 100%; }
+  .ew-help { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .ew-evolve.ready { animation: none; } }
+
+/* Telemóvel na horizontal (ecrãs baixos): campo de batalha à esquerda, comandos à direita, tudo visível */
+@media (orientation: landscape) and (max-height: 560px) {
+  .ew { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 30%); grid-template-areas: 'screen hud' 'screen queue' 'screen tabs' 'screen panel'; grid-template-rows: auto auto auto 1fr; column-gap: 8px; align-items: start; }
+  .ew-screen { grid-area: screen; max-width: calc((100vh - 130px) * 2.4); width: 100%; justify-self: center; }
+  .ew-hud { grid-area: hud; grid-template-columns: auto 1fr 1fr; margin-bottom: 4px; }
+  .ew-evolve { grid-column: 1 / 3; } .ew-special { grid-column: 3 / 4; }
+  .ew-stat span { font-size: 13px; }
+  .ew-queuebar { grid-area: queue; margin-bottom: 4px; }
+  .ew-era { display: none; }
+  .ew-tabs { grid-area: tabs; margin-top: 0; }
+  .ew-panel { grid-area: panel; padding: 5px; gap: 4px; }
+  .ew-unit { padding: 4px 2px; }
+  .ew-unit canvas { width: 26px; height: 26px; }
+  .ew-uname { font-size: 10px; }
+  .ew-help { display: none; }
+}
+.ew { scroll-margin-top: 46px; } /* não ficar por baixo da barra de estado da app */
+@media (orientation: landscape) and (max-height: 560px) {
+  .ew-btn { padding: 3px 6px; }
+  .ew-stat { padding: 2px 6px; }
+  .ew-stat b { font-size: 8px; } .ew-stat span { font-size: 12px; }
+  .ew-evolve b, .ew-special b { font-size: 9px; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .ew-evolve span, .ew-special span { font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .ew-hud { gap: 4px; }
+  .ew-queue i { width: 18px; height: 10px; }
+  .ew-tabs button { padding: 3px 10px; font-size: 10px; }
+  .ew-unit canvas { width: 20px; height: 20px; }
+  .ew-uname, .ew-cost { font-size: 9px; }
+  .ew-unit kbd { display: none; }
+}

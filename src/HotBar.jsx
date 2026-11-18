@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings } from 'lucide-react';
+import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2 } from 'lucide-react';
 import { usePipBoySound } from './usePipBoySound';
 import { useSettings, orderTabs } from './theme';
 
@@ -18,6 +18,7 @@ export const TABS = [
   { id: 'meteo', path: '/meteo', label: 'Meteo', icon: Cloud },
   { id: 'radio', path: '/radio', label: 'Rádio FM', icon: RadioIcon },
   { id: 'musica', path: '/musica', label: 'Música', icon: Disc3 },
+  { id: 'minijogo', path: '/minijogo', label: 'Mini Jogo', icon: Gamepad2 },
   { id: 'pizza', path: '/pizza', label: 'Pizza', icon: TrendingUp },
   { id: 'assistente', path: '/assistente', label: 'IA', icon: Bot },
   { id: 'conhecimento', path: '/conhecimento', label: 'Ficheiros IA', icon: BrainCircuit },
