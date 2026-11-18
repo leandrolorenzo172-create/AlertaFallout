@@ -4,6 +4,7 @@ import { mountEraWar, loadStats } from '../game/eraWar';
 import { createGame, step, train, DIFFICULTY } from '../game/eraWar/logic';
 import { render, themeColors } from '../game/eraWar/render';
 import '../game/eraWar/eraWar.css';
+import * as audio from '../game/eraWar/audio';
 
 const DIFFS = [
   { id: 'easy', desc: 'A IA junta ouro mais devagar e hesita nas compras.' },
@@ -46,17 +47,33 @@ export default function MiniGameTab() {
   const [playing, setPlaying] = useState(null);
   const [diff, setDiff] = useState(() => { try { return localStorage.getItem('pb_erawar_diff') || 'medium'; } catch { return 'medium'; } });
   const [stats, setStats] = useState(loadStats);
+  const [snd, setSnd] = useState(audio.getPrefs);
   const exit = React.useCallback(() => { setPlaying(null); setStats(loadStats()); }, []);
-  const choose = (d) => { setDiff(d); try { localStorage.setItem('pb_erawar_diff', d); } catch { /* sem armazenamento */ } };
+  // ao voltar do jogo, a música do menu recomeça depois de o jogo fechar (o fecho do jogo pára a música dele)
+  const wasPlaying = useRef(false);
+  useEffect(() => { if (playing) wasPlaying.current = true; else if (wasPlaying.current) audio.playMusic('menu'); }, [playing]);
+  const choose = (d) => { audio.ui.select(); setDiff(d); try { localStorage.setItem('pb_erawar_diff', d); } catch { /* sem armazenamento */ } };
+  const toggle = (k) => { audio.unlock(); audio.setPref(k, !snd[k]); setSnd(audio.getPrefs()); audio.ui.select(); if (k === 'music' && !snd.music) audio.playMusic('menu'); };
+  // música do menu: começa no primeiro toque nesta aba (os browsers não deixam tocar som antes) e pára ao sair
+  const startMenuMusic = () => { if (!playing) { audio.unlock(); audio.playMusic('menu'); } };
+  useEffect(() => () => audio.stopMusic(), []);
 
   if (playing) return <div className="pt-3"><Game difficulty={playing} onExit={exit} /></div>;
+  const sndBtn = (k, label) => (
+    <button type="button" aria-pressed={snd[k]} onClick={() => toggle(k)} className="px-2 py-1 rounded-sm text-[10px] tracking-wider"
+      style={{ border: `1px solid rgb(var(--c) / ${snd[k] ? 0.8 : 0.25})`, color: `rgb(var(--c) / ${snd[k] ? 1 : 0.5})`, textDecoration: snd[k] ? 'none' : 'line-through', background: 'rgb(var(--cb) / 0.8)' }}>
+      {label}
+    </button>
+  );
 
   const box = { background: 'rgb(var(--cd) / 0.45)', border: '2px solid rgb(var(--c) / 0.3)' };
   return (
-    <div className="p-4 max-w-3xl mx-auto">
+    <div className="p-4 max-w-3xl mx-auto" onPointerDown={startMenuMusic}>
       <div className="flex items-center gap-2 mb-4">
         <Gamepad2 size={16} />
-        <h2 className="text-sm uppercase tracking-wider font-bold">Mini Jogo</h2>
+        <h2 className="text-sm uppercase tracking-wider font-bold flex-1">Mini Jogo</h2>
+        {sndBtn('music', '♫ MÚSICA')}
+        {sndBtn('sfx', '♬ EFEITOS')}
       </div>
 
       <section className="rounded-md overflow-hidden" style={box}>
@@ -93,7 +110,7 @@ export default function MiniGameTab() {
               );
             })}
           </div>
-          <button type="button" onClick={() => setPlaying(diff)} className="w-full py-3 rounded-sm text-sm font-bold tracking-widest"
+          <button type="button" onClick={() => { audio.ui.confirm(); setPlaying(diff); }} className="w-full py-3 rounded-sm text-sm font-bold tracking-widest"
             style={{ background: 'rgb(var(--c))', color: 'rgb(var(--cb))', boxShadow: '0 0 16px rgb(var(--c) / 0.4)' }}>
             ▶ JOGAR
           </button>

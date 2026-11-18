@@ -51,7 +51,7 @@ export function createGame({ difficulty = 'medium', seed = Date.now() } = {}) {
   return {
     t: 0, over: null, difficulty, ai: DIFFICULTY[difficulty], rand,
     sides: [newSide(), newSide()], units: [], shots: [], fx: [], texts: [], nextId: 1,
-    aiTimer: 1.5, aiEvolveWait: 0, events: [],
+    aiTimer: 1.5, aiEvolveWait: 0, events: [], sfx: [],
   };
 }
 
@@ -119,6 +119,9 @@ export function special(g, side) {
   return true;
 }
 
+// Sons: a interface lê esta lista em cada imagem e esvazia-a (fica limitada para os testes sem interface)
+function sound(g, ev) { g.sfx.push(ev); if (g.sfx.length > 120) g.sfx.shift(); }
+
 // ---------- Simulação ----------
 function damageUnit(g, u, amount, bySide) {
   if (u.hp <= 0) return;
@@ -128,6 +131,7 @@ function damageUnit(g, u, amount, bySide) {
     const mult = incomeOf(g, bySide); // a dificuldade da IA também mexe no ouro e XP ganhos em combate
     killer.gold += Math.round(st.cost * KILL_GOLD * mult); killer.xp += Math.round(st.cost * KILL_XP * mult); killer.kills += 1;
     g.sides[u.side].lost += 1;
+    sound(g, { k: 'die', type: u.type, side: u.side, x: u.x });
     g.fx.push({ kind: 'boom', x: u.x, y: WORLD.ground - 6, t: 0, life: 0.35, big: u.type === 2 });
     if (bySide === 0) g.texts.push({ x: u.x, y: WORLD.ground - 26, text: `+${Math.round(st.cost * KILL_GOLD)}`, t: 0 });
   }
@@ -135,6 +139,7 @@ function damageUnit(g, u, amount, bySide) {
 function damageBase(g, side, amount, bySide) {
   const sd = g.sides[side]; if (g.over) return;
   sd.hp = Math.max(0, sd.hp - amount);
+  sound(g, { k: 'base', side });
   g.sides[bySide].xp += Math.round(amount * 0.5);
   if (sd.hp <= 0) g.over = { winner: bySide, t: g.t };
 }
@@ -160,6 +165,7 @@ export function step(g, dt) {
         const blocked = g.units.some((u) => u.side === i && Math.abs(u.x - sx) < 10);
         if (!blocked) {
           const st = unitStats(q.era, q.type);
+          if (i === 0) sound(g, { k: 'spawn' });
           g.units.push({ id: g.nextId++, side: i, era: q.era, type: q.type, x: sx, hp: st.hp, maxHp: st.hp, dmg: st.dmg, rng: st.rng, spd: st.spd, rate: st.rate, cd: 0.3, walk: 0, hit: 0, atk: 0 });
           sd.queue.shift();
         }
@@ -204,6 +210,7 @@ export function step(g, dt) {
     u.cd -= dt;
     if (target && u.cd <= 0) {
       u.cd = u.rate; u.atk = 0.18;
+      sound(g, { k: 'atk', era: u.era, type: u.type, x: u.x });
       if (u.rng > 0) {
         const tx = target === 'base' ? baseFront(1 - u.side) + d * 8 : target.x;
         g.shots.push({ x: u.x + d * 4, y: WORLD.ground - (u.type === 2 ? 10 : 12), tx, side: u.side, dmg: u.dmg, base: target === 'base', target: target === 'base' ? null : target.id, era: u.era, kind: 'unit', vsBase: vsBase(u) });
@@ -226,6 +233,7 @@ export function step(g, dt) {
       if (best) t.aim = best.x;
       if (best && t.cd <= 0) {
         t.cd = t.rate;
+        sound(g, { k: 'tur', era: t.era, x: i === 0 ? 30 : WORLD.w - 30 });
         const tx = i === 0 ? 30 : WORLD.w - 30;
         g.shots.push({ x: tx, y: WORLD.ground - 44 - k * 13, tx: best.x, side: i, dmg: t.dmg, base: false, target: best.id, era: t.era, kind: 'turret', ty: WORLD.ground - 10 });
       }

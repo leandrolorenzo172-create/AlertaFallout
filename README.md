@@ -55,6 +55,7 @@ Jogo original de defesa de base em pixel art (separador **Mini Jogo**), desenhad
 - **IA:** Fácil (junta recursos mais devagar e hesita), Médio (equilibrado) e Difícil (decide logo, gere o ouro e ataca em vagas). O equilíbrio foi afinado com partidas simuladas de IA contra IA (`src/game/eraWar/logic.js`, sem desenho, para poder ser testado sozinho).
 - **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida, para não haver partidas sem fim.
 - **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa. No telemóvel, joga-se melhor na horizontal.
+- **Som 8-bit:** tudo gerado no browser (Web Audio, `src/game/eraWar/audio.js`), sem ficheiros, por isso também funciona sem internet. Música chiptune para o menu e para a batalha (muda de tom, ritmo e timbre a cada era e fica mais tensa com a base fraca ou no cerco), sons de ataque diferentes por tropa e era, tiros das torres, mortes e golpes nas bases com posição esquerda/direita, um som próprio para cada ataque especial (meteoros, flechas, artilharia, avião e bombas, raio orbital), fanfarras de evolução, vitória e derrota, e sons nos menus. Os botões MÚSICA e EFEITOS desligam cada parte; a escolha fica guardada.
 
 ## Funciona sem o claude.ai
 

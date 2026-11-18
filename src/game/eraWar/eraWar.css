@@ -95,3 +95,9 @@
   .ew-uname, .ew-cost { font-size: 9px; }
   .ew-unit kbd { display: none; }
 }
+
+/* Botões de som */
+.ew-audio { display: inline-flex; gap: 4px; }
+.ew-audio button { font: inherit; font-size: 9px; letter-spacing: .1em; padding: 2px 7px; cursor: pointer; color: var(--ew-dim); background: rgb(var(--cb)); border: 1px solid var(--ew-line); border-radius: 2px; }
+.ew-audio button[aria-pressed="true"] { color: var(--ew); border-color: var(--ew); }
+.ew-audio button[aria-pressed="false"] { text-decoration: line-through; }

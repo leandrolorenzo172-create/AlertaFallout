@@ -5,6 +5,7 @@ import {
   special, canSpecial, buyTurret, canBuyTurret, sellTurret, addSlot, canAddSlot,
 } from './logic';
 import { render, themeColors, drawIcon } from './render';
+import * as audio from './audio';
 
 const STATS_KEY = 'pb_erawar_stats';
 export function loadStats() {
@@ -29,6 +30,7 @@ const TEMPLATE = `
   <span class="ew-label">TREINO</span>
   <div class="ew-queue" data-ew="queue"></div>
   <span class="ew-era" data-ew="eras"></span>
+  <span class="ew-audio"><button type="button" data-ew="mus" aria-pressed="true">&#9835; MÚSICA</button><button type="button" data-ew="snd" aria-pressed="true">&#9836; EFEITOS</button></span>
 </div>
 <div class="ew-screen">
   <canvas data-ew="canvas" width="${WORLD.w}" height="${WORLD.h}" aria-label="Campo de batalha"></canvas>
@@ -107,7 +109,18 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   }
 
   function handleEvents() {
+    for (const s of g.sfx) {
+      if (s.k === 'atk') audio.attack(s.era, s.type, s.x);
+      else if (s.k === 'tur') audio.turret(s.era, s.x);
+      else if (s.k === 'die') audio.death(s.type, s.side, s.x);
+      else if (s.k === 'base') audio.baseHit(s.side);
+      else if (s.k === 'spawn') audio.trained();
+    }
+    g.sfx.length = 0;
+    audio.setTension(!g.over && (g.sides[0].hp < BASE_HP * 0.3 || g.t > 600));
     for (const e of g.events) {
+      if (e.type === 'evolve') { audio.evolveSfx(e.side === 0); if (e.side === 0) audio.setMusicEra(e.era); }
+      if (e.type === 'special') audio.specialSfx(e.kind, e.side);
       if (e.type === 'evolve') banner(e.side === 0 ? `NOVA ERA: ${ERAS[e.era].name.toUpperCase()}` : `A IA AVANÇOU PARA: ${ERAS[e.era].name.toUpperCase()}`);
       if (e.type === 'special' && e.side === 1) banner(`IA: ${ERAS[g.sides[1].era].special.toUpperCase()}!`);
     }
@@ -115,6 +128,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     if (g.over && !recorded) {
       recorded = true;
       const won = g.over.winner === 0; saveResult(g.difficulty, won);
+      audio.jingle(won);
       const me = g.sides[0]; const m = Math.floor(g.t / 60); const s = Math.floor(g.t % 60);
       overlay(`<h2>${won ? 'VITÓRIA' : 'DERROTA'}</h2>
         <p>${won ? 'A base inimiga caiu.' : 'A tua base caiu.'}${g.over.siege ? ' (decidido pelo cerco)' : ''}</p>
@@ -126,11 +140,15 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   function setPaused(p) {
     if (g.over) return;
     paused = p;
+    audio.pauseAudio(p);
     overlay(p ? `<h2>PAUSA</h2><p class="ew-small">Dificuldade: ${DIFFICULTY[g.difficulty].label}</p>
       <div class="ew-row"><button type="button" class="ew-btn" data-act="resume">CONTINUAR</button><button type="button" class="ew-btn" data-act="restart">RECOMEÇAR</button><button type="button" class="ew-btn" data-act="exit">SAIR</button></div>` : '');
     if (!p) last = performance.now();
   }
-  function restart() { g = createGame({ difficulty }); recorded = false; iconEra = -1; paused = false; overlay(''); last = performance.now(); }
+  function restart() {
+    g = createGame({ difficulty }); recorded = false; iconEra = -1; paused = false; overlay(''); last = performance.now();
+    audio.pauseAudio(false); audio.ui.start(); audio.playMusic('battle', 0); audio.setMusicEra(0);
+  }
 
   // ---------- Ciclo: passo fixo de 1/60 s ----------
   const DT = 1 / 60;
@@ -150,32 +168,40 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   // ---------- Controlos ----------
   const offs = [];
   const on = (t, ev, fn, o) => { t.addEventListener(ev, fn, o); offs.push(() => t.removeEventListener(ev, fn, o)); };
-  for (let i = 0; i < 3; i++) on(el[`unit${i}`], 'click', () => train(g, 0, i));
-  on(el.evolve, 'click', () => evolve(g, 0));
-  on(el.special, 'click', () => special(g, 0));
-  on(el.buyturret, 'click', () => buyTurret(g, 0));
-  on(el.sellturret, 'click', () => sellTurret(g, 0));
-  on(el.addslot, 'click', () => addSlot(g, 0));
-  on(el.pause, 'click', () => setPaused(!paused));
+  const act = (fn) => { audio.unlock(); if (fn()) audio.ui.coin(); else audio.ui.error(); };
+  const doTrain = (i) => act(() => train(g, 0, i));
+  const doEvolve = () => { audio.unlock(); if (!evolve(g, 0)) audio.ui.error(); };
+  const doSpecial = () => { audio.unlock(); if (!special(g, 0)) audio.ui.error(); };
+  for (let i = 0; i < 3; i++) on(el[`unit${i}`], 'click', () => doTrain(i));
+  on(el.evolve, 'click', doEvolve);
+  on(el.special, 'click', doSpecial);
+  on(el.buyturret, 'click', () => act(() => buyTurret(g, 0)));
+  on(el.sellturret, 'click', () => act(() => sellTurret(g, 0)));
+  on(el.addslot, 'click', () => act(() => addSlot(g, 0)));
+  on(el.pause, 'click', () => { audio.ui.select(); setPaused(!paused); });
+  const syncAudioBtns = () => { const pr = audio.getPrefs(); el.mus.setAttribute('aria-pressed', String(pr.music)); el.snd.setAttribute('aria-pressed', String(pr.sfx)); };
+  on(el.mus, 'click', () => { audio.unlock(); audio.setPref('music', !audio.getPrefs().music); syncAudioBtns(); audio.ui.select(); });
+  on(el.snd, 'click', () => { audio.unlock(); audio.setPref('sfx', !audio.getPrefs().sfx); syncAudioBtns(); audio.ui.select(); });
+  syncAudioBtns();
   const tab = (n) => {
     [0, 1].forEach((k) => { el[`panel${k}`].hidden = k !== n; el[`tab${k}`].setAttribute('aria-selected', String(k === n)); });
   };
-  on(el.tab0, 'click', () => tab(0)); on(el.tab1, 'click', () => tab(1));
+  on(el.tab0, 'click', () => { audio.ui.select(); tab(0); }); on(el.tab1, 'click', () => { audio.ui.select(); tab(1); });
   on(el.overlay, 'click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'resume') setPaused(false);
+    if (act === 'resume') { setPaused(false); audio.ui.confirm(); }
     if (act === 'restart' || act === 'again') restart();
-    if (act === 'exit') onExit();
+    if (act === 'exit') { audio.pauseAudio(false); audio.ui.back(); onExit(); }
   });
   on(window, 'keydown', (e) => {
     if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     const k = e.key.toLowerCase();
     if (k === 'p' || k === 'escape') { setPaused(!paused); e.preventDefault(); return; }
     if (paused || g.over) return;
-    if (k === '1' || k === '2' || k === '3') train(g, 0, Number(k) - 1);
-    else if (k === 'q') special(g, 0);
-    else if (k === 'e') evolve(g, 0);
-    else if (k === 't') buyTurret(g, 0);
+    if (k === '1' || k === '2' || k === '3') doTrain(Number(k) - 1);
+    else if (k === 'q') doSpecial();
+    else if (k === 'e') doEvolve();
+    else if (k === 't') act(() => buyTurret(g, 0));
   });
   // pausa sozinho quando a app vai para segundo plano
   on(document, 'visibilitychange', () => { if (document.hidden && !g.over) setPaused(true); });
@@ -183,11 +209,14 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   const themeWatch = new MutationObserver(() => { C = themeColors(); iconEra = -1; });
   themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
 
+  // música de batalha e fanfarra de início (o jogo começa depois de um toque em JOGAR, por isso o som pode tocar)
+  audio.unlock(); audio.pauseAudio(false); audio.ui.start(); audio.playMusic('battle', 0);
   // ao começar, o jogo fica no topo do ecrã
   requestAnimationFrame(() => { try { root.scrollIntoView({ block: 'start' }); } catch { /* sem efeito */ } });
   raf = requestAnimationFrame(frame);
   return function destroy() {
     destroyed = true; cancelAnimationFrame(raf); clearTimeout(bannerTimer);
+    audio.stopMusic(); audio.pauseAudio(false);
     offs.forEach((f) => f()); themeWatch.disconnect();
     root.innerHTML = ''; root.classList.remove('ew');
   };
