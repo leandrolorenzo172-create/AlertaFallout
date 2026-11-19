@@ -210,3 +210,7 @@
   background: rgb(var(--c) / 0.14); text-shadow: 0 0 8px rgb(var(--c) / 0.53); box-shadow: 0 0 18px rgb(var(--c) / 0.27); }
 .rf-start span { font-size: 12px; letter-spacing: .08em; color: var(--rf-green2); }
 .rf-start:focus-visible b { outline: 2px solid var(--rf-green); outline-offset: 4px; }
+
+/* O visor da frequência é só ilustrativo: não reage ao dedo e deixa a página deslizar */
+.rf-screen { touch-action: pan-y; cursor: default; }
+.rf-screen canvas { pointer-events: none; }

@@ -50,7 +50,7 @@ const TEMPLATE = `
     <section class="rf-right">
       <div class="rf-clock rf-panelbox" aria-label="Hora atual"><span>HORA ATUAL</span><b data-rf="clock">--:--:--</b><span data-rf="date"></span></div>
       <div class="rf-tuner rf-panelbox">
-        <div class="rf-screen" data-rf="screen" role="slider" tabindex="0" aria-label="Frequência (arrasta ou usa as setas)"><canvas data-rf="dial"></canvas></div>
+        <div class="rf-screen" data-rf="screen" role="slider" tabindex="0" aria-label="Visor de frequência (sintoniza no botão SINTONIA)"><canvas data-rf="dial"></canvas></div>
         <div class="rf-volline"><span>VOLUME</span><i><b data-rf="volbar"></b></i><span data-rf="volpct">0%</span></div>
         <div class="rf-mid">
           <div class="rf-knobwrap">
@@ -557,28 +557,9 @@ export function mountRadio(root, opts = {}) {
   const offs = [];
   const on = (target, type, fn, opts) => { target.addEventListener(type, fn, opts); offs.push(() => target.removeEventListener(type, fn, opts)); };
 
-  // Arrastar a agulha no visor (com inércia)
-  let drag = null;
-  on(el.screen, 'pointerdown', (e) => {
-    el.screen.setPointerCapture(e.pointerId);
-    drag = { x: e.clientX, t: performance.now() }; state.vel = 0; state.target = null;
-  });
-  on(el.screen, 'pointermove', (e) => {
-    if (!drag) return;
-    const b = band();
-    const per = (b.max - b.min) / (W - pad() - 22);
-    const now = performance.now();
-    const dx = e.clientX - drag.x; const dt = Math.max(1, now - drag.t) / 1000;
-    setFreq(state.freq[state.band] + dx * per);
-    state.dragVel = (dx * per) / dt;
-    drag.x = e.clientX; drag.t = now;
-  });
-  const endDrag = () => {
-    if (!drag) return;
-    if (performance.now() - drag.t < 80) { const lim = (band().max - band().min) * 0.2; state.vel = clamp((state.dragVel || 0) * 0.6, -lim, lim); }
-    drag = null; state.dragVel = 0;
-  };
-  on(el.screen, 'pointerup', endDrag); on(el.screen, 'pointercancel', endDrag);
+  // O visor é só ilustrativo: a agulha acompanha a estação, mas não se arrasta com o dedo
+  // (arrastar o visor interferia com o deslizar da página). A sintonia faz-se no botão SINTONIA.
+  const drag = null; // nunca há arrasto no visor
 
   // Botões rotativos: o ângulo do ponteiro em relação ao centro
   function knob(node, onDelta, onTap) {
