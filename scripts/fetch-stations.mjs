@@ -93,7 +93,7 @@ const GRID = {
   FM: { from: BAND_LIMITS.FM.min * 10, to: BAND_LIMITS.FM.max * 10, step: 1, gap: Math.round(SPACING.FM * 10), toFreq: (p) => p / 10 },
   AM: { from: BAND_LIMITS.AM.min, to: BAND_LIMITS.AM.max, step: 10, gap: SPACING.AM, toFreq: (p) => p },
 };
-// Lista fixa de posições livres em cada banda. Só depende das 16 emissoras principais, por isso não muda
+// Lista fixa de posições livres em cada banda. Só depende das emissoras principais (fixas), por isso não muda
 // de um build para o outro. Na FM percorre-se a banda de baixo para cima e guarda-se cada posição que fica
 // a pelo menos 0,6 MHz das principais e das já escolhidas (assim não se desperdiça espaço entre elas).
 function slotsFor(band) {

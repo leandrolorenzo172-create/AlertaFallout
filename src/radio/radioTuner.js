@@ -12,13 +12,13 @@ const RANGE = 0.3; // MHz
 const LOCK = 0.1; // MHz
 const BANDS = {
   FM: { min: 88, max: 108, unit: 'MHz', step: 0.1, digits: 1, turn: 2, wheel: 0.05, range: RANGE, lock: LOCK },
-  AM: { min: 520, max: 1600, unit: 'kHz', step: 10, digits: 0, turn: 100, wheel: 5, range: 5, lock: 2 },
+  AM: { min: 480, max: 1600, unit: 'kHz', step: 10, digits: 0, turn: 100, wheel: 5, range: 5, lock: 2 },
 };
 const DEFAULT_PRESETS = [92.4, 97.4, 93.2, 104.3, 95.7, 89.5].map((freq) => ({ band: 'FM', freq }));
 // Memórias guardadas antes eram só números (FM); agora guardam a banda e a frequência
 const toPreset = (v) => (v && typeof v === 'object' && (v.band === 'FM' || v.band === 'AM') && Number.isFinite(Number(v.freq))
   ? { band: v.band, freq: Number(v.freq) }
-  : Number.isFinite(Number(v)) ? { band: Number(v) >= 520 ? 'AM' : 'FM', freq: Number(v) } : null);
+  : Number.isFinite(Number(v)) ? { band: Number(v) >= 480 ? 'AM' : 'FM', freq: Number(v) } : null);
 const presetLabel = (p) => (p.band === 'AM' ? `${Math.round(p.freq)} AM` : Number(p.freq).toFixed(1));
 
 // Todas as emissoras: as 16 principais + as do radio-browser.info (src/data/stationsPT.json)
@@ -163,12 +163,12 @@ export function mountRadio(root, opts = {}) {
   const last = load('rf_last', null);
   const reqBand = opts.band === 'AM' || opts.band === 'FM' ? opts.band : null;
   const reqFreq = Number(opts.initialFreq);
-  const startBand = reqBand || (Number.isFinite(reqFreq) && reqFreq >= 520 ? 'AM' : (Number.isFinite(reqFreq) ? 'FM' : (last && last.band === 'AM' ? 'AM' : 'FM')));
+  const startBand = reqBand || (Number.isFinite(reqFreq) && reqFreq >= 480 ? 'AM' : (Number.isFinite(reqFreq) ? 'FM' : (last && last.band === 'AM' ? 'AM' : 'FM')));
   const state = {
     band: startBand,
     freq: {
       FM: clamp(Number(startBand === 'FM' && Number.isFinite(reqFreq) ? reqFreq : (last && last.band === 'FM' ? last.freq : load('rf_last_fm', 97.4))) || 97.4, 88, 108),
-      AM: clamp(Number(startBand === 'AM' && Number.isFinite(reqFreq) ? reqFreq : (last && last.band === 'AM' ? last.freq : 1000)) || 1000, 520, 1600),
+      AM: clamp(Number(startBand === 'AM' && Number.isFinite(reqFreq) ? reqFreq : (last && last.band === 'AM' ? last.freq : 1000)) || 1000, 480, 1600),
     },
     vel: 0, // unidades da banda por segundo (inércia)
     target: null, // deslizar até uma memória
@@ -422,8 +422,8 @@ export function mountRadio(root, opts = {}) {
     row(!fmOn);
     dctx.textAlign = 'left'; dctx.fillText('AM', 12, amY);
     dctx.textAlign = 'center';
-    for (const k of [520, 600, 700, 800, 1000, 1300, 1600]) dctx.fillText(String(k / 10), xOf(k, 'AM'), amY);
-    dctx.fillRect(xOf(520, 'AM'), amLine, xOf(1600, 'AM') - xOf(520, 'AM'), 2);
+    for (const k of [480, 600, 700, 800, 1000, 1300, 1600]) dctx.fillText(String(k / 10), xOf(k, 'AM'), amY);
+    dctx.fillRect(xOf(480, 'AM'), amLine, xOf(1600, 'AM') - xOf(480, 'AM'), 2);
     for (let k = 600; k <= 1600; k += 100) { const x = xOf(k, 'AM'); dctx.fillRect(x - 0.5, amLine - 6, 1, 6); }
     dctx.globalAlpha = 1;
 
