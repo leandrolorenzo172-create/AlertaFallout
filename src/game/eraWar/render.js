@@ -190,15 +190,17 @@ function drawUnit(c, C, u, t) {
   const attacking = u.atk > 0;
   const sheetA = getAnim();
   const fr = sheetA && (attacking ? animFrame(u.era, u.type, 'attack', Math.floor((1 - Math.min(1, u.atk / 0.25)) * animCount(u.era, u.type, 'attack')))
-    : animFrame(u.era, u.type, 'walk', Math.floor(u.walk * 6)));
+    : animFrame(u.era, u.type, 'walk', Math.floor(u.walk * 1.6)));
   let h;
   c.fillStyle = 'rgba(26,20,16,0.35)'; c.beginPath(); c.ellipse(x, LANE - 1, 18, 4, 0, 0, 7); c.fill();
-  c.save(); if (u.hit > 0) c.globalAlpha = 0.55;
-  if (fr) { // animação a sério
-    const k = ANIM_H / 110; const [sx, sy, sw, sh] = fr; const w = sw * k; h = sh * k;
+  c.save();
+  if (fr) { // animação a sério, alinhada pelo corpo (a âncora não salta entre imagens)
+    const k = ANIM_H / 110; const [sx, sy, sw, sh, ax] = fr; const w = sw * k; h = sh * k;
     c.translate(x, LANE); c.scale(face, 1);
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    c.drawImage(sheetA, sx, sy, sw, sh, -w / 2, -h, w, h);
+    if (u.hit > 0) c.filter = 'brightness(1.35)'; // golpe: um brilho rápido em vez de piscar
+    c.drawImage(sheetA, sx, sy, sw, sh, -(ax ?? sw / 2) * k, -h, w, h);
+    c.filter = 'none';
   } else { // personagem sem animação: imagem da carta, com saltinhos
     const atlas = getAtlas(); const [sx, sy, sw, sh] = unitRect(u.era, u.type);
     const w = sw * SCALE; h = sh * SCALE;
@@ -219,11 +221,11 @@ function drawCorpses(c, fx) {
     if (f.kind !== 'corpse') continue;
     const n = animCount(f.era, f.type, 'death'); if (!n) continue;
     const i = Math.min(n - 1, Math.floor((f.t / (f.life * 0.6)) * n));
-    const [sx, sy, sw, sh] = animFrame(f.era, f.type, 'death', i);
+    const [sx, sy, sw, sh, ax] = animFrame(f.era, f.type, 'death', i);
     const k = ANIM_H / 110; const w = sw * k; const h = sh * k;
     c.save(); c.globalAlpha = Math.max(0, Math.min(1, (f.life - f.t) / 0.4));
     c.translate(X(f.x), LANE); c.scale(f.side === 0 ? 1 : -1, 1);
-    c.imageSmoothingEnabled = true; c.drawImage(sheetA, sx, sy, sw, sh, -w / 2, -h, w, h);
+    c.imageSmoothingEnabled = true; c.drawImage(sheetA, sx, sy, sw, sh, -(ax ?? sw / 2) * k, -h, w, h);
     c.restore();
   }
   c.imageSmoothingEnabled = false;
