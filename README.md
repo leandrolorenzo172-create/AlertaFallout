@@ -61,7 +61,7 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
   | Futurista | CRON | RAY | APEX |
 
   Nos botões aparecem como cartas colecionáveis cor de creme, numeradas de No.01 a No.15.
-- **Animações:** 14 das 15 personagens têm animação de andar, atacar e morrer, recortada das folhas do dono da app (`assets/anim.webp` e `anim.json`). Falta só a do SARG, que continua com a imagem da carta.
+- **Animações:** As 15 personagens têm animação de andar, atacar e morrer, recortada das folhas do dono da app (`assets/anim.webp` e `anim.json`).
 - **Objetivo:** destruir a base inimiga (500 HP) antes que ela destrua a tua.
 - **5 eras:** Sobreviventes Primitivos, Sucateiros Medievais, Milícia Industrial, Tropas Táticas e Armadura Futurista. Cada uma tem 3 tropas (linha da frente, atiradores e pesadas: javali, cavalo de sucata, canhão a vapor, blindado, exo-armadura), uma torre e um ataque especial: chuva de destroços, barragem de morteiros, gás tóxico, bombardeamento aéreo e **Mini Nuke** (com clarão, onda de choque e tremor do ecrã).
 - **Recursos:** caricas e XP ganhos a abater tropas inimigas, mais umas caricas com o tempo. As caricas compram tropas, torres e espaços para torres. O XP faz avançar de era.
