@@ -65,11 +65,11 @@ function drawHudFrames(c, C, g) {
 // Bases (centro do disco, em píxeis do ecrã, bunker esquerdo; o direito é espelhado): 0 = topo do bunker, 1 = flanco
 const MOUNTS = [{ x: 97, y: 166 }, { x: 67, y: 211 }];
 // Torres desenhadas pelo dono da app, com o pedestal original (assets/torres.webp): [x, y, l, a, centro do pedestal, largura do pedestal]
-// 0 lança-pedras · 1 balista · 2 metralhadora a vapor · 3 ninho (repouso) · 4 ninho (a disparar) · 5 torre laser
-const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 506], [1037, 0, 500, 407, 234.5, 451], [1539, 0, 312, 330, 151.5, 303], [1853, 0, 498, 409, 156.0, 312], [2353, 0, 499, 446, 227.5, 455]];
+// 0 lança-pedras · 1 balista · 2 metralhadora a vapor · 3/4 ninho (repouso/disparo) · 5/6 torre laser (repouso/carga)
+const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 506], [1037, 0, 500, 407, 234.5, 451], [1539, 0, 312, 330, 151.5, 303], [1853, 0, 498, 409, 156.0, 312], [2353, 0, 456, 404, 207.0, 414], [2811, 0, 581, 426, 209.5, 419]];
 const PED_W = 62; // largura do pedestal no ecrã (cobre a base metálica do bunker)
 // boca de fogo de cada torre (fração da imagem) para o clarão ao disparar
-const MUZZLE = [[0.12, 0.42], [0.98, 0.1], [0.98, 0.33], null, null, [0.97, 0.22]];
+const MUZZLE = [[0.12, 0.42], [0.98, 0.1], [0.98, 0.33], null, null, null, null];
 let torres = null;
 if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { torres = im; }; im.src = torresUrl; }
 // base metálica circular (como no desenho do bunker)
@@ -90,7 +90,7 @@ function drawTurrets(c, C, side, sd) {
     if (!tu) { drawMount(c, x, y); continue; }
     const firing = tu.cd > (tu.rate || 1.3) - 0.2;
     if (!torres) continue;
-    const idx = tu.era === 3 ? (firing ? 4 : 3) : tu.era === 4 ? 5 : tu.era;
+    const idx = tu.era === 3 ? (firing ? 4 : 3) : tu.era === 4 ? (firing ? 6 : 5) : tu.era;
     const [sx, sy, sw, sh, bx, bw] = TURRET_RECTS[idx];
     const k2 = PED_W / bw; const dw = sw * k2; const dh = sh * k2;
     c.save(); c.translate(x, y + 7); if (side === 1) c.scale(-1, 1);
