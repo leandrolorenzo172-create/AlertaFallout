@@ -5,6 +5,7 @@
 import { WORLD, BASE_HP, ERAS, SIEGE_AT } from './logic';
 import { rect as unitRect, getAtlas, spritesReady } from './sprites';
 import mapaUrl from './assets/mapa.webp';
+import torresUrl from './assets/torres.webp';
 
 // mapa desenhado pelo dono da app (redesenhado com IA): ocupa a largura toda, na parte de baixo do ecrã
 let mapa = null;
@@ -60,46 +61,54 @@ function drawHudFrames(c, C, g) {
   });
 }
 
-// ---------- Torres: em cima dos bunkers, a cores ----------
-const TUR = [{ x: 72, y: 118 }, { x: 30, y: 106 }, { x: 116, y: 132 }];
-function turretSprite(era) {
-  return sheet(`tur${era}`, 48, 40, (c) => {
-    // plataforma de sacos de areia
-    for (let i = 0; i < 4; i++) { ellipse(c, '#3b3520', 7 + i * 11, 34, 6.5, 4.5); ellipse(c, '#9c9058', 7 + i * 11, 33.5, 5.5, 3.6); ellipse(c, '#c7bb7a', 6 + i * 11, 32.5, 3, 1.6); }
-    if (era === 0) { // lança-pedras de madeira
-      P(c, '#3a2716', 10, 24, 28, 5); P(c, '#7a5733', 11, 25, 26, 3);
-      c.strokeStyle = '#3a2716'; c.lineWidth = 4; c.beginPath(); c.moveTo(16, 26); c.lineTo(34, 6); c.stroke();
-      c.strokeStyle = '#a07a48'; c.lineWidth = 2; c.beginPath(); c.moveTo(16, 26); c.lineTo(34, 6); c.stroke();
-      ellipse(c, '#4a4a48', 35, 6, 4, 4); ellipse(c, '#8a8a86', 34, 5, 2, 2);
-    } else if (era === 1) { // balista de sucata
-      P(c, '#2a1d10', 8, 18, 30, 10); P(c, '#6b4a2b', 9, 19, 28, 8); P(c, '#8a8a86', 9, 19, 28, 2);
-      c.strokeStyle = '#3a2716'; c.lineWidth = 3; c.beginPath(); c.arc(30, 22, 10, -1.3, 1.3); c.stroke();
-    } else if (era === 2) { // metralhadora a vapor (latão)
-      P(c, '#2a1d10', 9, 12, 28, 18); P(c, '#b5893a', 10, 13, 26, 16); P(c, '#e0b85a', 11, 13, 6, 16);
-      P(c, '#2a1d10', 15, 2, 6, 11); P(c, '#6b6b66', 16, 3, 4, 10); ellipse(c, '#d9d9d2', 18, 2, 4, 2);
-    } else if (era === 3) { // ninho de metralhadora
-      for (let i = 0; i < 3; i++) { ellipse(c, '#3b3520', 9 + i * 15, 22, 8, 6); ellipse(c, '#7d8a4a', 9 + i * 15, 21, 7, 5); ellipse(c, '#a3b065', 8 + i * 15, 19.5, 3.5, 2); }
-      P(c, '#1a1a18', 16, 10, 16, 9); P(c, '#4a5a2c', 17, 11, 14, 7);
-    } else { // torre laser
-      P(c, '#1a1a24', 12, 4, 24, 26); P(c, '#8a95a8', 13, 5, 22, 24); P(c, '#c9d2e0', 14, 5, 5, 24);
-      P(c, '#1a1a24', 16, 10, 16, 6); P(c, '#5ff3ff', 17, 11, 14, 4);
-    }
+// ---------- Torres: nas duas bases metálicas de cada bunker ----------
+// Bases (centro do disco, em píxeis do ecrã, bunker esquerdo; o direito é espelhado): 0 = topo do bunker, 1 = flanco
+const MOUNTS = [{ x: 97, y: 166 }, { x: 67, y: 211 }];
+// Torres das eras 1 a 4 (folha do dono da app, assets/torres.webp): [x, y, l, a, apoioX, apoioY] — repouso e disparo
+const TURRET_RECTS = [[0, 0, 166, 119, 69.3, 119], [168, 0, 185, 128, 82.5, 128], [355, 0, 169, 69, 133.4, 76], [526, 0, 199, 91, 75.7, 91], [727, 0, 255, 120, 103.0, 120], [984, 0, 234, 127, 87.6, 127], [1220, 0, 131, 88, 74.5, 88], [1353, 0, 198, 126, 87.7, 126]];
+const TURRET_SCALE = 0.42;
+let torres = null;
+if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { torres = im; }; im.src = torresUrl; }
+// base metálica circular (como no desenho do bunker)
+function drawMount(c, x, y) {
+  c.fillStyle = 'rgba(20,16,12,0.45)'; c.beginPath(); c.ellipse(x + 2, y + 5, 22, 7, 0, 0, 7); c.fill();
+  c.fillStyle = '#1e1d1b'; c.beginPath(); c.ellipse(x, y + 2, 21, 7.5, 0, 0, 7); c.fill();
+  c.fillStyle = '#55534e'; c.beginPath(); c.ellipse(x, y + 1, 20, 6.5, 0, 0, 7); c.fill();
+  c.fillStyle = '#86847d'; c.beginPath(); c.ellipse(x, y - 1, 20, 6, 0, 0, 7); c.fill();
+  c.fillStyle = '#3a3935'; c.beginPath(); c.ellipse(x, y - 1, 14, 4, 0, 0, 7); c.fill();
+  c.fillStyle = '#6d6b65'; c.beginPath(); c.ellipse(x, y - 1.5, 12, 3, 0, 0, 7); c.fill();
+  c.fillStyle = '#2a2926'; R(c, x - 3, y - 3, 6, 3);
+  c.fillStyle = '#b9b7ae'; for (const dx of [-17, -9, 9, 17]) R(c, x + dx, y + (Math.abs(dx) > 10 ? 0 : 3), 1.5, 1.5);
+}
+// torre laser da era 5 (desenhada em código, no mesmo estilo)
+function laserTurret(firing) {
+  return sheet(`laser${firing ? 1 : 0}`, 70, 40, (c) => {
+    P(c, '#1a1a1e', 22, 22, 14, 16); P(c, '#4a4d55', 24, 22, 10, 16);
+    P(c, '#111216', 8, 6, 38, 18); P(c, '#5c6370', 10, 8, 34, 14); P(c, '#8d96a5', 10, 8, 34, 3); P(c, '#3a3f48', 10, 18, 34, 4);
+    P(c, '#111216', 44, 11, 14, 8); P(c, '#6d7684', 45, 12, 12, 6); P(c, '#5ff3ff', 55, 13, 3, 4);
+    P(c, '#5ff3ff', 16, 12, 14, 3); P(c, '#dffcff', 18, 12, 4, 3);
+    if (firing) { P(c, '#5ff3ff', 58, 12, 12, 6); P(c, '#ffffff', 58, 14, 12, 2); }
   });
 }
-function drawTurrets(c, C, side, sd, t) {
-  for (let k = 0; k < sd.slots; k++) {
-    const p = TUR[k]; const x = side === 0 ? p.x : WD - p.x; const y = p.y;
-    const tu = sd.turrets[k];
-    c.fillStyle = 'rgba(26,20,16,0.55)'; R(c, x - 24, y + 36, 48, 4);
-    if (!tu) { c.strokeStyle = 'rgba(255,233,160,0.35)'; c.lineWidth = 1; c.strokeRect(x - 20, y + 20, 40, 18); continue; }
-    c.save(); c.translate(x, y); if (side === 1) c.scale(-1, 1); c.drawImage(turretSprite(tu.era), -24, 0); c.restore();
-    if (tu.era === 0 || tu.era === 1) continue;
-    const tx = tu.aim ? X(tu.aim) : (side === 0 ? x + 160 : x - 160);
-    const ang = Math.atan2(LANE - 30 - (y + 16), tx - x); const len = 26;
-    c.strokeStyle = C.ink; c.lineWidth = 7; c.beginPath(); c.moveTo(x, y + 16); c.lineTo(x + Math.cos(ang) * len, y + 16 + Math.sin(ang) * len); c.stroke();
-    c.strokeStyle = tu.era === 4 ? C.laser : tu.era === 2 ? '#e0b85a' : '#6b6b66'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(x, y + 16); c.lineTo(x + Math.cos(ang) * (len - 2), y + 16 + Math.sin(ang) * (len - 2)); c.stroke();
-    if (tu.cd > 0 && tu.cd < 0.08) { c.fillStyle = tu.era === 4 ? C.laser : C.fire; c.beginPath(); c.arc(x + Math.cos(ang) * (len + 3), y + 16 + Math.sin(ang) * (len + 3), 4, 0, 7); c.fill(); }
+function drawTurrets(c, C, side, sd) {
+  for (let k = 0; k < MOUNTS.length; k++) {
+    const m = MOUNTS[k]; const x = side === 0 ? m.x : WD - m.x; const y = m.y;
+    drawMount(c, x, y);
+    const tu = k < sd.slots ? sd.turrets[k] : null;
+    if (!tu) continue;
+    const firing = tu.cd > (tu.rate || 1.3) - 0.2;
+    // coluna de apoio sobre a base
+    c.fillStyle = '#1e1d1b'; R(c, x - 5, y - 12, 10, 12); c.fillStyle = '#5a5852'; R(c, x - 3, y - 12, 6, 11);
+    c.save(); c.translate(x, y - 10); if (side === 1) c.scale(-1, 1);
+    if (tu.era < 4 && torres) {
+      const [sx, sy, sw, sh, px, py] = TURRET_RECTS[tu.era * 2 + (firing ? 1 : 0)];
+      c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+      c.drawImage(torres, sx, sy, sw, sh, -px * TURRET_SCALE, -py * TURRET_SCALE, sw * TURRET_SCALE, sh * TURRET_SCALE);
+      c.imageSmoothingEnabled = false;
+    } else if (tu.era >= 4) {
+      c.drawImage(laserTurret(firing), -29, -36);
+    }
+    c.restore();
   }
 }
 
@@ -218,8 +227,8 @@ export function render(ctx, g, C, t) {
     }
   }
   c.globalAlpha = 1;
-  drawTurrets(c, C, 0, g.sides[0], t);
-  drawTurrets(c, C, 1, g.sides[1], t);
+  drawTurrets(c, C, 0, g.sides[0]);
+  drawTurrets(c, C, 1, g.sides[1]);
   const units = g.units.slice().sort((a, b) => b.type - a.type); // pesadas por trás
   for (const u of units) drawUnit(c, C, u, t);
   c.setTransform(S, 0, 0, S, 0, LANE - WORLD.ground * S); // efeitos no mundo, alinhados com a linha de combate

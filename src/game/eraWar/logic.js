@@ -27,10 +27,11 @@ export function unitStats(era, type) {
 }
 export function turretStats(era) {
   const m = sc(era);
-  return { dmg: Math.round(8 * m), rng: 100, rate: 1.3, cost: Math.round(120 * m) };
+  return { dmg: Math.round(8 * m), rng: 92, rate: 1.3, cost: Math.round(120 * m) }; // alcance = linha vermelha do mapa (igual nos dois lados)
 }
-export const SLOT_COST = [0, 400, 1500]; // 2.º e 3.º espaço para torres
-export const MAX_SLOTS = 3;
+export const SLOT_COST = [0, 400]; // 2.º espaço para torres
+export const MAX_SLOTS = 2; // as duas bases metálicas de cada bunker
+const MOUNT_X = [48, 34]; const MOUNT_Y = [122, 145]; // posição da arma de cada base, em coordenadas do mundo
 export const QUEUE_MAX = 5;
 export const SPECIAL_CD = 50; // segundos
 const KILL_GOLD = 1.3; // ouro por baixa = 1,3x o custo da unidade abatida
@@ -238,9 +239,10 @@ export function step(g, dt) {
       if (best) t.aim = best.x;
       if (best && t.cd <= 0) {
         t.cd = t.rate;
-        sound(g, { k: 'tur', era: t.era, x: i === 0 ? 30 : WORLD.w - 30 });
-        const tx = i === 0 ? 30 : WORLD.w - 30;
-        g.shots.push({ x: tx, y: WORLD.ground - 44 - k * 13, tx: best.x, side: i, dmg: t.dmg, base: false, target: best.id, era: t.era, kind: 'turret', ty: WORLD.ground - 10 });
+        // origem do tiro: a base metálica onde a torre está (topo do bunker ou flanco)
+        const mx = MOUNT_X[k]; const tx = i === 0 ? mx : WORLD.w - mx;
+        sound(g, { k: 'tur', era: t.era, x: tx });
+        g.shots.push({ x: tx, y: MOUNT_Y[k], tx: best.x, side: i, dmg: t.dmg, base: false, target: best.id, era: t.era, kind: 'turret', ty: WORLD.ground - 10 });
       }
     }
   });
