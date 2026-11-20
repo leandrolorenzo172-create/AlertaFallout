@@ -49,8 +49,18 @@ A rede é verificada em tempo real (eventos do browser e um pedido de teste ao p
 
 Jogo original de defesa de base em pixel art retro, com uma só linha de combate (separador **Mini Jogo**). Funciona sem internet.
 
-- **Visual:** ilustração de fósforo verde CRT (segue a cor do tema da app). O campo de batalha é pós-apocalíptico: montanhas, manilha partida, árvores retorcidas, trincheira, sacos de areia e arame farpado. As bases são entradas ovais de abrigos escavadas na rocha. Os desenhos são feitos em código (`src/game/eraWar/render.js`) e convertidos em pixel art de 6 tons com contorno, sem ficheiros de imagem.
-- **Tropas:** todas são o explorador mascote da app (chapéu safari, mochila, camisa de bolsos, calções cargo e botas), equipado conforme a era.
+- **Visual:** pixel art de arcada 16-bit a cores. O cenário é um campo de trincheiras original desenhado em código: céu e montanhas, pinheiros, trincheiras de madeira, sacos de areia, barris, estacas, arame farpado, e bunkers de terra e sacos de areia nas pontas.
+- **Tropas:** são as 15 personagens da folha do dono da app (`src/game/eraWar/assets/tropas.webp`, recortes em `sprites.js`):
+
+  | Era | Linha da frente | Atirador | Pesada |
+  |---|---|---|---|
+  | Primitivos | KROG | LYLA | TUSK |
+  | Sucateiros | SCRAP | STALKER | ZIP |
+  | Milícia | BULK | SARG | BOLT |
+  | Táticas | IRON | BLAST | TINK |
+  | Futurista | CRON | RAY | APEX |
+
+  Nos botões aparecem como cartas colecionáveis cor de creme, numeradas de No.01 a No.15.
 - **Objetivo:** destruir a base inimiga (500 HP) antes que ela destrua a tua.
 - **5 eras:** Sobreviventes Primitivos, Sucateiros Medievais, Milícia Industrial, Tropas Táticas e Armadura Futurista. Cada uma tem 3 tropas (linha da frente, atiradores e pesadas: javali, cavalo de sucata, canhão a vapor, blindado, exo-armadura), uma torre e um ataque especial: chuva de destroços, barragem de morteiros, gás tóxico, bombardeamento aéreo e **Mini Nuke** (com clarão, onda de choque e tremor do ecrã).
 - **Recursos:** caricas e XP ganhos a abater tropas inimigas, mais umas caricas com o tempo. As caricas compram tropas, torres e espaços para torres. O XP faz avançar de era.

@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 
 const res = await build({
   entryPoints: ['src/arcade/standalone.js'], bundle: true, minify: true, format: 'iife', write: false,
-  target: ['es2020'], loader: { '.css': 'text' }, legalComments: 'none',
+  target: ['es2020'], loader: { '.css': 'text', '.webp': 'dataurl' }, legalComments: 'none',
 });
 const js = res.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const html = `<!doctype html>

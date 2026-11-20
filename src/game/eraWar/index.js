@@ -6,6 +6,7 @@ import {
 } from './logic';
 import { render, themeColors, drawIcon, capIcon, CANVAS } from './render';
 import * as audio from './audio';
+import { card, spritesReady } from './sprites';
 
 const STATS_KEY = 'pb_erawar_stats';
 export function loadStats() {
@@ -43,7 +44,7 @@ const TEMPLATE = `
   <button type="button" role="tab" aria-selected="false" data-ew="tab1">DEFESAS</button>
 </div>
 <div class="ew-panel" data-ew="panel0">
-  ${[0, 1, 2].map((i) => `<button type="button" class="ew-unit" data-ew="unit${i}"><canvas width="50" height="50" data-ew="icon${i}"></canvas><span class="ew-uname" data-ew="uname${i}"></span><span class="ew-cost" data-ew="ucost${i}"></span><kbd>${i + 1}</kbd></button>`).join('')}
+  ${[0, 1, 2].map((i) => `<button type="button" class="ew-unit ew-card" data-ew="unit${i}"><span class="ew-no" data-ew="uno${i}">No.01</span><canvas width="120" height="96" data-ew="icon${i}"></canvas><span class="ew-uname" data-ew="uname${i}"></span><span class="ew-cost" data-ew="ucost${i}"></span><kbd>${i + 1}</kbd></button>`).join('')}
 </div>
 <div class="ew-panel" data-ew="panel1" hidden>
   <button type="button" class="ew-unit" data-ew="buyturret"><span class="ew-uname" data-ew="tname"></span><span class="ew-cost" data-ew="tcost"></span></button>
@@ -93,11 +94,11 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     [...el.queue.children].forEach((slot, i) => {
       const item = q[i]; slot.classList.toggle('on', !!item);
       slot.firstChild.style.width = item && i === 0 ? `${(1 - item.t / item.total) * 100}%` : (item ? '0%' : '0%');
-      slot.title = item ? ERAS[item.era].units[item.type] : '';
+      slot.title = item ? card(item.era, item.type).name : '';
     });
     for (let i = 0; i < 3; i++) {
       const st = unitStats(me.era, i);
-      setText(el[`uname${i}`], ERAS[me.era].units[i]); setText(el[`ucost${i}`], `${fmt(st.cost)} caricas`);
+      const cd = card(me.era, i); setText(el[`uname${i}`], cd.name); setText(el[`uno${i}`], `No.${String(cd.no).padStart(2, '0')}`); el[`unit${i}`].title = ERAS[me.era].units[i]; setText(el[`ucost${i}`], `${fmt(st.cost)} caricas`);
       setDis(el[`unit${i}`], !canTrain(g, 0, i));
     }
     const ts = turretStats(me.era);
@@ -108,7 +109,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     setDis(el.addslot, !canAddSlot(g, 0));
     if (iconEra !== me.era) {
       iconEra = me.era;
-      for (let i = 0; i < 3; i++) drawIcon(el[`icon${i}`], me.era, i, CI);
+      for (let i = 0; i < 3; i++) drawIcon(el[`icon${i}`], me.era, i);
       const cap = capIcon(CI, 12); el.capimg.src = cap; root.style.setProperty('--ew-cap', `url(${cap})`);
     }
   }
@@ -217,6 +218,8 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   const themeWatch = new MutationObserver(() => { CI = themeColors(true); iconEra = -1; });
   themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-pb'] });
 
+  // as cartas desenham-se quando a folha de personagens acabar de carregar
+  spritesReady.then(() => { iconEra = -1; });
   // música de batalha e fanfarra de início (o jogo começa depois de um toque em JOGAR, por isso o som pode tocar)
   audio.unlock(); audio.pauseAudio(false); audio.ui.start(); audio.playMusic('battle', 0);
   // ao começar, o jogo fica no topo do ecrã
