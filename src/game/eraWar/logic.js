@@ -139,6 +139,7 @@ function damageUnit(g, u, amount, bySide) {
     g.sides[u.side].lost += 1;
     sound(g, { k: 'die', type: u.type, side: u.side, x: u.x });
     g.fx.push({ kind: 'boom', x: u.x, y: WORLD.ground - 6, t: 0, life: 0.35, big: u.type === 2 });
+    g.fx.push({ kind: 'corpse', side: u.side, era: u.era, type: u.type, x: u.x, t: 0, life: 1.4 }); // animação de morte (só desenho)
     if (bySide === 0) g.texts.push({ x: u.x, y: WORLD.ground - 26, text: `+${Math.round(st.cost * KILL_GOLD)}`, t: 0 });
   }
 }
@@ -215,7 +216,7 @@ export function step(g, dt) {
     if (!stop) { u.x += d * u.spd * dt; u.walk += dt * u.spd * 0.25; }
     u.cd -= dt;
     if (target && u.cd <= 0) {
-      u.cd = u.rate; u.atk = 0.18;
+      u.cd = u.rate; u.atk = 0.25;
       sound(g, { k: 'atk', era: u.era, type: u.type, x: u.x });
       if (u.rng > 0) {
         const tx = target === 'base' ? baseFront(1 - u.side) + d * 8 : target.x;
@@ -263,7 +264,7 @@ export function step(g, dt) {
 
   // efeitos dos ataques especiais e explosões
   for (const f of g.fx) {
-    if (f.kind === 'boom') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
+    if (f.kind === 'boom' || f.kind === 'corpse') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
     if (f.delay > 0) { f.delay -= dt; continue; }
     if (f.kind === 'gas') { // dano contínuo enquanto a nuvem dura
       f.t += dt;

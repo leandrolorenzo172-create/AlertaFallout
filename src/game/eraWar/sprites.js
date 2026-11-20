@@ -1,6 +1,8 @@
 // Guerra das Eras — as 15 tropas (folha de personagens do dono da app, recortada para assets/tropas.webp).
 // Índice = era * 3 + tipo (0 linha da frente, 1 atirador, 2 pesada/cavalaria). Todas viradas para a direita.
 import atlasUrl from './assets/tropas.webp';
+import animUrl from './assets/anim.webp';
+import ANIM from './assets/anim.json';
 
 export const CARDS = [
   { no: 1, name: 'KROG' }, { no: 2, name: 'LYLA' }, { no: 3, name: 'TUSK' },
@@ -22,3 +24,14 @@ export const spritesReady = typeof Image === 'undefined' ? Promise.resolve(null)
   img.src = atlasUrl;
 });
 export const getAtlas = () => atlas;
+
+// Animações (andar, atacar, morrer) das personagens da pasta do dono da app. ANIM.units[era*3+tipo] = { walk, attack, death } (índices em ANIM.rects) ou null
+let anim = null;
+if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { anim = im; }; im.src = animUrl; }
+export const getAnim = () => anim;
+export function animFrame(era, type, kind, i) {
+  const u = ANIM.units[era * 3 + type]; if (!u) return null;
+  const list = u[kind]; if (!list || !list.length) return null;
+  return ANIM.rects[list[Math.min(list.length - 1, i % (kind === 'death' ? 99 : list.length))]];
+}
+export const animCount = (era, type, kind) => { const u = ANIM.units[era * 3 + type]; return u && u[kind] ? u[kind].length : 0; };

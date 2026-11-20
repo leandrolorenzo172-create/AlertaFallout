@@ -3,7 +3,7 @@
 // estacas, arame farpado e bunkers nas pontas) pintado em código em pixel art a meia resolução e ampliado 2x.
 // As tropas são as 15 personagens da folha do dono da app (sprites.js). Tudo offline.
 import { WORLD, BASE_HP, ERAS, SIEGE_AT } from './logic';
-import { rect as unitRect, getAtlas, spritesReady } from './sprites';
+import { rect as unitRect, getAtlas, spritesReady, getAnim, animFrame, animCount } from './sprites';
 import mapaUrl from './assets/mapa.webp';
 import torresUrl from './assets/torres.webp';
 
@@ -166,28 +166,49 @@ function drawFx(c, C, fx, t) {
 
 // ---------- Tropas: sprites da folha de personagens ----------
 const SCALE = 0.52; // tamanho no campo (as figuras têm ~150-165 px na folha)
+const ANIM_H = 84; // altura de uma personagem a andar, no ecrã
 function drawUnit(c, C, u, t) {
-  const atlas = getAtlas(); const [sx, sy, sw, sh] = unitRect(u.era, u.type);
-  const w = sw * SCALE; const h = sh * SCALE;
   const x = X(u.x); const face = u.side === 0 ? 1 : -1;
   const attacking = u.atk > 0;
-  const bob = attacking ? 0 : -Math.abs(Math.sin(u.walk * 5)) * 2.5;
-  const lunge = attacking ? face * 4 : 0;
-  // sombra
-  c.fillStyle = 'rgba(26,20,16,0.35)'; c.beginPath(); c.ellipse(x, LANE - 1, w * 0.36, 4, 0, 0, 7); c.fill();
-  if (atlas) {
-    c.save();
-    c.translate(x + lunge, LANE + bob); c.scale(face, 1);
-    if (!attacking) c.rotate(Math.sin(u.walk * 5) * 0.03);
-    if (u.hit > 0) c.globalAlpha = 0.55;
+  const sheetA = getAnim();
+  const fr = sheetA && (attacking ? animFrame(u.era, u.type, 'attack', Math.floor((1 - Math.min(1, u.atk / 0.25)) * animCount(u.era, u.type, 'attack')))
+    : animFrame(u.era, u.type, 'walk', Math.floor(u.walk * 6)));
+  let h;
+  c.fillStyle = 'rgba(26,20,16,0.35)'; c.beginPath(); c.ellipse(x, LANE - 1, 18, 4, 0, 0, 7); c.fill();
+  c.save(); if (u.hit > 0) c.globalAlpha = 0.55;
+  if (fr) { // animação a sério
+    const k = ANIM_H / 110; const [sx, sy, sw, sh] = fr; const w = sw * k; h = sh * k;
+    c.translate(x, LANE); c.scale(face, 1);
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    c.drawImage(atlas, sx, sy, sw, sh, -w / 2, -h, w, h);
-    c.restore(); c.imageSmoothingEnabled = false;
-  } else { c.fillStyle = C.dim; R(c, x - 12, LANE - 50, 24, 50); }
-  // barra de vida
-  const bw = u.type === 2 ? 36 : 24; const p = Math.max(0, u.hp / u.maxHp); const by = LANE - h - 6;
+    c.drawImage(sheetA, sx, sy, sw, sh, -w / 2, -h, w, h);
+  } else { // personagem sem animação: imagem da carta, com saltinhos
+    const atlas = getAtlas(); const [sx, sy, sw, sh] = unitRect(u.era, u.type);
+    const w = sw * SCALE; h = sh * SCALE;
+    const bob = attacking ? 0 : -Math.abs(Math.sin(u.walk * 5)) * 2.5; const lunge = attacking ? face * 4 : 0;
+    c.translate(x + lunge, LANE + bob); c.scale(face, 1); if (!attacking) c.rotate(Math.sin(u.walk * 5) * 0.03);
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+    if (atlas) c.drawImage(atlas, sx, sy, sw, sh, -w / 2, -h, w, h);
+  }
+  c.restore(); c.imageSmoothingEnabled = false;
+  const bw = u.type === 2 ? 36 : 24; const p = Math.max(0, u.hp / u.maxHp); const by = LANE - (h || 70) - 6;
   c.fillStyle = C.ink; R(c, x - bw / 2 - 1, by - 1, bw + 2, 5);
   c.fillStyle = C.red; R(c, x - bw / 2, by, Math.max(1, Math.round(bw * p)), 3);
+}
+// tropas a cair quando morrem (animação de morte), desenhadas antes das vivas
+function drawCorpses(c, fx) {
+  const sheetA = getAnim(); if (!sheetA) return;
+  for (const f of fx) {
+    if (f.kind !== 'corpse') continue;
+    const n = animCount(f.era, f.type, 'death'); if (!n) continue;
+    const i = Math.min(n - 1, Math.floor((f.t / (f.life * 0.6)) * n));
+    const [sx, sy, sw, sh] = animFrame(f.era, f.type, 'death', i);
+    const k = ANIM_H / 110; const w = sw * k; const h = sh * k;
+    c.save(); c.globalAlpha = Math.max(0, Math.min(1, (f.life - f.t) / 0.4));
+    c.translate(X(f.x), LANE); c.scale(f.side === 0 ? 1 : -1, 1);
+    c.imageSmoothingEnabled = true; c.drawImage(sheetA, sx, sy, sw, sh, -w / 2, -h, w, h);
+    c.restore();
+  }
+  c.imageSmoothingEnabled = false;
 }
 
 // fundo final: céu a continuar o azul do mapa e o mapa em baixo, à largura toda
@@ -227,6 +248,7 @@ export function render(ctx, g, C, t) {
   drawTurrets(c, C, 0, g.sides[0]);
   drawTurrets(c, C, 1, g.sides[1]);
   const units = g.units.slice().sort((a, b) => b.type - a.type); // pesadas por trás
+  drawCorpses(c, g.fx);
   for (const u of units) drawUnit(c, C, u, t);
   c.setTransform(S, 0, 0, S, 0, LANE - WORLD.ground * S); // efeitos no mundo, alinhados com a linha de combate
   drawShots(c, C, g.shots);
