@@ -68,10 +68,14 @@ function drawHudFrames(c, C, g) {
 const MOUNTS = [{ x: 97, y: 166 }, { x: 67, y: 211 }];
 // Torres desenhadas pelo dono da app, com o pedestal original (assets/torres.webp): [x, y, l, a, centro do pedestal, largura do pedestal]
 // 0 lança-pedras · 1 balista · 2 metralhadora a vapor · 3/4 ninho (repouso/disparo) · 5/6 torre laser (repouso/carga)
-const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 506], [1037, 0, 500, 407, 234.5, 451], [1539, 0, 312, 330, 151.5, 303], [1853, 0, 498, 409, 156.0, 312], [2353, 0, 456, 404, 207.0, 414], [2811, 0, 581, 426, 209.5, 419]];
-const PED_W = 62; // largura do pedestal no ecrã (cobre a base metálica do bunker)
+const TURRET_RECTS = [[0, 0, 386, 438, 215.5, 221], [388, 0, 390, 353, 202.5, 217], [780, 0, 432, 435, 181.5, 201], [1214, 0, 312, 330, 157.5, 217], [1528, 0, 498, 409, 156.5, 215], [2028, 0, 456, 404, 202.0, 258], [2486, 0, 581, 426, 195.5, 279], [3069, 0, 443, 454, 155.5, 209], [3514, 0, 322, 434, 150.5, 217], [3838, 0, 495, 354, 160.0, 220], [4335, 0, 339, 353, 157.0, 214], [4676, 0, 572, 436, 192.0, 198], [5250, 0, 632, 436, 253.5, 197], [5884, 0, 475, 436, 181.5, 201]];
+// imagem em repouso e sequência de ataque de cada era (desenhos do dono da app)
+const TURRET_IDLE = [0, 1, 2, 3, 5];
+const TURRET_FIRE = [[7, 8], [9, 10], [11, 12, 13], [4, 4], [6, 6]];
+const FIRE_T = 0.45; // duração da animação de ataque (s)
+const PED_W = 40; // largura do pedestal no ecrã (cobre a base metálica do bunker)
 // boca de fogo de cada torre (fração da imagem) para o clarão ao disparar
-const MUZZLE = [[0.12, 0.42], [0.98, 0.1], [0.98, 0.33], null, null, null, null];
+
 let esp = null;
 if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { esp = im; }; im.src = espUrl; }
 // desenha um sprite dos especiais (folhas do dono da app) com a base em (cx, by), altura h, em coordenadas do mundo
@@ -101,23 +105,16 @@ function drawTurrets(c, C, side, sd) {
     const m = MOUNTS[k]; const x = side === 0 ? m.x : WD - m.x; const y = m.y;
     const tu = k < sd.slots ? sd.turrets[k] : null;
     if (!tu) { drawMount(c, x, y); continue; }
-    const firing = tu.cd > (tu.rate || 1.3) - 0.2;
     if (!torres) continue;
-    const idx = tu.era === 3 ? (firing ? 4 : 3) : tu.era === 4 ? (firing ? 6 : 5) : tu.era;
+    const rate = tu.rate || 1.3; const since = rate - tu.cd; // tempo desde o último tiro
+    const seq = TURRET_FIRE[tu.era];
+    const idx = since >= 0 && since < FIRE_T ? seq[Math.min(seq.length - 1, Math.floor((since / FIRE_T) * seq.length))] : TURRET_IDLE[tu.era];
     const [sx, sy, sw, sh, bx, bw] = TURRET_RECTS[idx];
     const k2 = PED_W / bw; const dw = sw * k2; const dh = sh * k2;
     c.save(); c.translate(x, y + 7); if (side === 1) c.scale(-1, 1);
-    const recoil = firing && tu.era > 0 ? -1.5 : 0;
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    c.drawImage(torres, sx, sy, sw, sh, -bx * k2 + recoil, -dh, dw, dh);
+    c.drawImage(torres, sx, sy, sw, sh, -bx * k2, -dh, dw, dh);
     c.imageSmoothingEnabled = false;
-    const mz = MUZZLE[idx];
-    if (firing && mz) { // clarão / pedra lançada
-      const mx = -bx * k2 + mz[0] * dw; const my = -dh + mz[1] * dh;
-      const col = tu.era === 4 ? C.laser : tu.era === 0 ? '#8a7a4a' : C.fire;
-      c.fillStyle = col; c.beginPath(); c.arc(mx + 3, my, tu.era === 0 ? 3 : 5, 0, 7); c.fill();
-      if (tu.era) { c.fillStyle = C.white; c.beginPath(); c.arc(mx + 3, my, 2, 0, 7); c.fill(); }
-    }
     c.restore();
   }
 }
