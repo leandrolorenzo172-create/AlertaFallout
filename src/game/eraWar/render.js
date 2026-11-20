@@ -66,7 +66,7 @@ function drawHudFrames(c, C, g) {
 const MOUNTS = [{ x: 97, y: 166 }, { x: 67, y: 211 }];
 // Torres desenhadas pelo dono da app, com o pedestal original (assets/torres.webp): [x, y, l, a, centro do pedestal, largura do pedestal]
 // 0 lança-pedras · 1 balista · 2 metralhadora a vapor · 3 ninho (repouso) · 4 ninho (a disparar) · 5 torre laser
-const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 506], [1037, 0, 500, 407, 234.5, 451], [1539, 0, 141, 142, 71.0, 130], [1682, 0, 207, 181, 71.0, 128], [1891, 0, 499, 446, 227.5, 455]];
+const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 506], [1037, 0, 500, 407, 234.5, 451], [1539, 0, 312, 330, 151.5, 303], [1853, 0, 498, 409, 156.0, 312], [2353, 0, 499, 446, 227.5, 455]];
 const PED_W = 62; // largura do pedestal no ecrã (cobre a base metálica do bunker)
 // boca de fogo de cada torre (fração da imagem) para o clarão ao disparar
 const MUZZLE = [[0.12, 0.42], [0.98, 0.1], [0.98, 0.33], null, null, [0.97, 0.22]];
