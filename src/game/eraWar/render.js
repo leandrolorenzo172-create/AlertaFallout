@@ -64,9 +64,12 @@ function drawHudFrames(c, C, g) {
 // ---------- Torres: nas duas bases metálicas de cada bunker ----------
 // Bases (centro do disco, em píxeis do ecrã, bunker esquerdo; o direito é espelhado): 0 = topo do bunker, 1 = flanco
 const MOUNTS = [{ x: 97, y: 166 }, { x: 67, y: 211 }];
-// Torres das eras 1 a 4 (folha do dono da app, assets/torres.webp): [x, y, l, a, apoioX, apoioY] — repouso e disparo
-const TURRET_RECTS = [[0, 0, 166, 119, 69.3, 119], [168, 0, 185, 128, 82.5, 128], [355, 0, 169, 69, 133.4, 76], [526, 0, 199, 91, 75.7, 91], [727, 0, 255, 120, 103.0, 120], [984, 0, 234, 127, 87.6, 127], [1220, 0, 131, 88, 74.5, 88], [1353, 0, 198, 126, 87.7, 126]];
-const TURRET_SCALE = 0.42;
+// Torres desenhadas pelo dono da app, com o pedestal original (assets/torres.webp): [x, y, l, a, centro do pedestal, largura do pedestal]
+// 0 lança-pedras · 1 balista · 2 metralhadora a vapor · 3 ninho (repouso) · 4 ninho (a disparar) · 5 torre laser
+const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 506], [1037, 0, 500, 407, 234.5, 451], [1539, 0, 141, 142, 71.0, 130], [1682, 0, 207, 181, 71.0, 128], [1891, 0, 499, 446, 227.5, 455]];
+const PED_W = 62; // largura do pedestal no ecrã (cobre a base metálica do bunker)
+// boca de fogo de cada torre (fração da imagem) para o clarão ao disparar
+const MUZZLE = [[0.12, 0.42], [0.98, 0.1], [0.98, 0.33], null, null, [0.97, 0.22]];
 let torres = null;
 if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { torres = im; }; im.src = torresUrl; }
 // base metálica circular (como no desenho do bunker)
@@ -80,33 +83,27 @@ function drawMount(c, x, y) {
   c.fillStyle = '#2a2926'; R(c, x - 3, y - 3, 6, 3);
   c.fillStyle = '#b9b7ae'; for (const dx of [-17, -9, 9, 17]) R(c, x + dx, y + (Math.abs(dx) > 10 ? 0 : 3), 1.5, 1.5);
 }
-// torre laser da era 5 (desenhada em código, no mesmo estilo)
-function laserTurret(firing) {
-  return sheet(`laser${firing ? 1 : 0}`, 70, 40, (c) => {
-    P(c, '#1a1a1e', 22, 22, 14, 16); P(c, '#4a4d55', 24, 22, 10, 16);
-    P(c, '#111216', 8, 6, 38, 18); P(c, '#5c6370', 10, 8, 34, 14); P(c, '#8d96a5', 10, 8, 34, 3); P(c, '#3a3f48', 10, 18, 34, 4);
-    P(c, '#111216', 44, 11, 14, 8); P(c, '#6d7684', 45, 12, 12, 6); P(c, '#5ff3ff', 55, 13, 3, 4);
-    P(c, '#5ff3ff', 16, 12, 14, 3); P(c, '#dffcff', 18, 12, 4, 3);
-    if (firing) { P(c, '#5ff3ff', 58, 12, 12, 6); P(c, '#ffffff', 58, 14, 12, 2); }
-  });
-}
 function drawTurrets(c, C, side, sd) {
   for (let k = 0; k < MOUNTS.length; k++) {
     const m = MOUNTS[k]; const x = side === 0 ? m.x : WD - m.x; const y = m.y;
-    drawMount(c, x, y);
     const tu = k < sd.slots ? sd.turrets[k] : null;
-    if (!tu) continue;
+    if (!tu) { drawMount(c, x, y); continue; }
     const firing = tu.cd > (tu.rate || 1.3) - 0.2;
-    // coluna de apoio sobre a base
-    c.fillStyle = '#1e1d1b'; R(c, x - 5, y - 12, 10, 12); c.fillStyle = '#5a5852'; R(c, x - 3, y - 12, 6, 11);
-    c.save(); c.translate(x, y - 10); if (side === 1) c.scale(-1, 1);
-    if (tu.era < 4 && torres) {
-      const [sx, sy, sw, sh, px, py] = TURRET_RECTS[tu.era * 2 + (firing ? 1 : 0)];
-      c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-      c.drawImage(torres, sx, sy, sw, sh, -px * TURRET_SCALE, -py * TURRET_SCALE, sw * TURRET_SCALE, sh * TURRET_SCALE);
-      c.imageSmoothingEnabled = false;
-    } else if (tu.era >= 4) {
-      c.drawImage(laserTurret(firing), -29, -36);
+    if (!torres) continue;
+    const idx = tu.era === 3 ? (firing ? 4 : 3) : tu.era === 4 ? 5 : tu.era;
+    const [sx, sy, sw, sh, bx, bw] = TURRET_RECTS[idx];
+    const k2 = PED_W / bw; const dw = sw * k2; const dh = sh * k2;
+    c.save(); c.translate(x, y + 7); if (side === 1) c.scale(-1, 1);
+    const recoil = firing && tu.era > 0 ? -1.5 : 0;
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+    c.drawImage(torres, sx, sy, sw, sh, -bx * k2 + recoil, -dh, dw, dh);
+    c.imageSmoothingEnabled = false;
+    const mz = MUZZLE[idx];
+    if (firing && mz) { // clarão / pedra lançada
+      const mx = -bx * k2 + mz[0] * dw; const my = -dh + mz[1] * dh;
+      const col = tu.era === 4 ? C.laser : tu.era === 0 ? '#8a7a4a' : C.fire;
+      c.fillStyle = col; c.beginPath(); c.arc(mx + 3, my, tu.era === 0 ? 3 : 5, 0, 7); c.fill();
+      if (tu.era) { c.fillStyle = C.white; c.beginPath(); c.arc(mx + 3, my, 2, 0, 7); c.fill(); }
     }
     c.restore();
   }

@@ -71,8 +71,7 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
 
   O equilíbrio foi afinado com partidas simuladas de IA contra IA (`src/game/eraWar/logic.js`).
 - **Torres:** cada bunker tem 2 bases metálicas, uma no topo e outra no flanco.
-  - Eras 1 a 4: torres desenhadas pelo dono da app (`assets/torres.webp`), com imagem em repouso e a disparar.
-  - Era 5: torre laser no mesmo estilo.
+  - As 5 torres (lança-pedras, balista, metralhadora a vapor, ninho de metralhadora e torre laser) são os desenhos do dono da app, com os pedestais originais (`assets/torres.webp`).
   - Alcance: segue a linha vermelha marcada no mapa, igual nos dois lados.
 - **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida.
 - **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa.
