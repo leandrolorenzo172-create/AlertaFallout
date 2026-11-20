@@ -6,6 +6,8 @@ import { WORLD, BASE_HP, ERAS, SIEGE_AT } from './logic';
 import { rect as unitRect, getAtlas, spritesReady, getAnim, animFrame, animCount } from './sprites';
 import mapaUrl from './assets/mapa.webp';
 import torresUrl from './assets/torres.webp';
+import espUrl from './assets/especiais.webp';
+import ESP from './assets/especiais.json';
 
 // mapa desenhado pelo dono da app (redesenhado com IA): ocupa a largura toda, na parte de baixo do ecrã
 let mapa = null;
@@ -70,6 +72,17 @@ const TURRET_RECTS = [[0, 0, 473, 478, 241.5, 461], [475, 0, 560, 398, 253.0, 50
 const PED_W = 62; // largura do pedestal no ecrã (cobre a base metálica do bunker)
 // boca de fogo de cada torre (fração da imagem) para o clarão ao disparar
 const MUZZLE = [[0.12, 0.42], [0.98, 0.1], [0.98, 0.33], null, null, null, null];
+let esp = null;
+if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { esp = im; }; im.src = espUrl; }
+// desenha um sprite dos especiais (folhas do dono da app) com a base em (cx, by), altura h, em coordenadas do mundo
+function spr(c, name, cx, by, h, flip = false, alpha = 1, anchor = 'bottom') {
+  const r = ESP[name]; if (!esp || !r) return false;
+  const [sx, sy, sw, sh] = r; const w = (sw / sh) * h;
+  c.save(); c.globalAlpha *= Math.max(0, Math.min(1, alpha)); c.translate(cx, by); if (flip) c.scale(-1, 1);
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(esp, sx, sy, sw, sh, -w / 2, anchor === 'center' ? -h / 2 : -h, w, h);
+  c.restore(); c.imageSmoothingEnabled = false; return true;
+}
 let torres = null;
 if (typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { torres = im; }; im.src = torresUrl; }
 // base metálica circular (como no desenho do bunker)
@@ -119,48 +132,53 @@ function drawShots(c, C, shots) {
   }
 }
 function drawFx(c, C, fx, t) {
-  let plane = false; const W = WORLD.w; const G = WORLD.ground;
+  let plane = null; const W = WORLD.w; const G = WORLD.ground;
   for (const f of fx) {
     if (f.kind === 'boom') {
-      const k = f.t / f.life; const r = (f.big ? 13 : 7) * (0.4 + k);
+      const k = f.t / f.life; const flip = f.side === 1;
+      if (f.src === 'meteor' && spr(c, k < 0.35 ? 'deb_fall' : 'deb_dust', f.x, G + 2, k < 0.35 ? 32 : 34, flip, 1 - Math.max(0, k - 0.6) / 0.4)) continue;
+      if (f.src === 'shells' && spr(c, k < 0.45 ? 'tire_boom' : 'tire_smoke', f.x, G + 2, k < 0.45 ? 28 : 34, flip, 1 - Math.max(0, k - 0.7) / 0.3)) continue;
+      if (f.src === 'bombs' && spr(c, 'bomb_ground', f.x, G + 3, 20 + k * 8, flip, 1 - Math.max(0, k - 0.6) / 0.4)) continue;
+      const r = (f.big ? 13 : 7) * (0.4 + k);
       c.fillStyle = k < 0.35 ? C.white : k < 0.6 ? C.fire : k < 0.8 ? C.fire2 : '#4a3c28';
       for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; R(c, f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, 2); }
       if (k < 0.45) { c.fillStyle = C.fire2; R(c, f.x - 5, f.y - 5, 10, 10); c.fillStyle = C.fire; R(c, f.x - 3.5, f.y - 3.5, 7, 7); c.fillStyle = C.white; R(c, f.x - 1.5, f.y - 1.5, 3, 3); }
       continue;
     }
-    if (f.delay > 0) continue;
-    if (f.kind === 'meteor') { // destroços em chamas
-      for (let i = 1; i < 8; i++) { c.fillStyle = i < 3 ? C.fire : i < 5 ? C.fire2 : '#6b5a3a'; R(c, f.x - i * 1.5, f.y - i * 4, 5 - i * 0.5, 3); }
-      c.fillStyle = C.ink; R(c, f.x - 4, f.y - 4, 8, 8); c.fillStyle = '#6b5a3a'; R(c, f.x - 3, f.y - 3, 6, 6); c.fillStyle = C.fire; R(c, f.x - 3, f.y + 1, 6, 2);
-    } else if (f.kind === 'shells') { // granadas de morteiro
-      c.fillStyle = C.ink; R(c, f.x - 2, f.y - 4, 4, 7); c.fillStyle = '#5a6a3a'; R(c, f.x - 1, f.y - 3, 2, 5); c.fillStyle = C.fire; R(c, f.x - 0.5, f.y - 8, 1, 3);
-    } else if (f.kind === 'bombs') { plane = true; c.fillStyle = C.ink; R(c, f.x - 2, f.y - 5, 5, 8); c.fillStyle = '#4a5a2c'; R(c, f.x - 1, f.y - 4, 3, 6); c.fillStyle = C.ink; R(c, f.x - 3, f.y - 6, 7, 1); }
-    else if (f.kind === 'gas') { // nuvens de gás tóxico verde
-      const a = Math.min(1, f.t / 0.4) * Math.min(1, (f.life - f.t) / 0.8);
-      c.globalAlpha = 0.5 * a;
-      for (let i = 0; i < 18; i++) { const ang = i * 2.4 + t * 1.5; const rr = (f.r - 6) * ((i % 5) / 5 + 0.3); c.fillStyle = i % 3 ? C.gas : C.gas2; R(c, f.x + Math.cos(ang) * rr - 4, f.y + Math.sin(ang * 1.3) * 8 - 3, 8, 6); }
-      c.globalAlpha = 1;
-    } else if (f.kind === 'nuke') {
-      c.fillStyle = C.ink; R(c, f.x - 4, f.y - 7, 8, 12); R(c, f.x - 6, f.y - 9, 12, 2); c.fillStyle = '#c9a400'; R(c, f.x - 3, f.y - 6, 6, 10); c.fillStyle = C.ink; R(c, f.x - 2, f.y - 2, 4, 3);
-    } else if (f.kind === 'shock') { // clarão branco, onda de choque e cogumelo
+    if (f.kind === 'stranger') { // o Stranger entra, põe a bomba de gás, ativa-a e vai-se embora
+      const fr = f.t < 0.45 ? 'str1' : f.t < 0.9 ? 'str2' : f.t < 1.35 ? 'str3' : 'str4';
+      spr(c, fr, f.x, G + 1, 40, f.side === 1, Math.min(1, f.t / 0.2, (f.life - f.t) / 0.35));
+      continue;
+    }
+    if (f.kind === 'corpse') continue;
+    if (f.delay > 0) { if (f.kind === 'bombs') plane = plane || f; continue; }
+    if (f.kind === 'meteor') { // chuva de destroços: pedras e ossos a cair
+      if (!spr(c, 'deb_big', f.x, f.y, 34, f.side === 1, 1, 'center')) { c.fillStyle = '#6b5a3a'; R(c, f.x - 3, f.y - 3, 6, 6); }
+    } else if (f.kind === 'shells') { // pneus em chamas a cair
+      if (!spr(c, 'tire_big', f.x - (f.side === 1 ? -6 : 6), f.y + 4, 26, f.side === 1)) { c.fillStyle = C.ink; R(c, f.x - 2, f.y - 4, 4, 7); }
+    } else if (f.kind === 'bombs') { plane = plane || f; if (!spr(c, 'bombs', f.x, f.y, 16, f.side === 1, 1, 'center')) { c.fillStyle = C.ink; R(c, f.x - 2, f.y - 5, 5, 8); } }
+    else if (f.kind === 'gas') { // bomba de gás e nuvens (pequena, depois grande)
+      const a = Math.min(1, f.t / 0.3) * Math.min(1, (f.life - f.t) / 0.8);
+      if (f.t < 1) spr(c, 'gas_bomb', f.x, G + 1, 7);
+      if (!spr(c, f.t < 1.1 ? 'gas_small' : 'gas_large', f.x, G + 3, f.t < 1.1 ? 26 + f.t * 8 : 40, f.side === 1, a * 0.92)) {
+        c.globalAlpha = 0.5 * a; c.fillStyle = C.gas; R(c, f.x - 20, f.y - 8, 40, 16); c.globalAlpha = 1;
+      }
+    } else if (f.kind === 'nuke') { // o explorador montado na bomba
+      const fr = f.y < G - 70 ? 'nuke1' : f.y < G - 32 ? 'nuke2' : 'nuke3';
+      if (!spr(c, fr, f.x, f.y + 12, 42, f.side === 1)) { c.fillStyle = C.ink; R(c, f.x - 4, f.y - 7, 8, 12); }
+    } else if (f.kind === 'shock') { // clarão, onda de choque e cogumelo
       const k = f.t / f.life;
       if (k < 0.25) { c.globalAlpha = (0.25 - k) * 3.6; c.fillStyle = C.white; R(c, 0, -200, W, 600); c.globalAlpha = 1; }
       const rr = k * 260; c.fillStyle = k < 0.5 ? C.white : C.fire;
       for (let i = 0; i < 60; i++) { const a = (i / 60) * Math.PI; R(c, f.x + Math.cos(a) * rr, G - Math.sin(a) * rr * 0.35, 3, 2); }
-      const h = Math.min(1, k * 2.2) * 80; const top = G - h;
-      c.fillStyle = '#4a3c28'; R(c, f.x - 6, top, 12, h); c.fillStyle = C.fire2; R(c, f.x - 4, top, 8, h); c.fillStyle = C.fire; R(c, f.x - 1.5, top, 3, h);
-      const cw = 20 + k * 28;
-      c.fillStyle = '#4a3c28'; R(c, f.x - cw, top - 18, cw * 2, 22); R(c, f.x - cw * 0.7, top - 26, cw * 1.4, 10);
-      c.fillStyle = k < 0.6 ? C.fire2 : '#8a6a4a'; R(c, f.x - cw + 2, top - 16, cw * 2 - 4, 18); R(c, f.x - cw * 0.7 + 2, top - 24, cw * 1.4 - 4, 8);
-      c.fillStyle = k < 0.6 ? C.fire : '#b89a72'; R(c, f.x - cw * 0.6, top - 14, cw * 1.2, 6);
-      c.fillStyle = C.white; R(c, f.x - cw / 2, top - 12, cw, 2); c.fillStyle = C.fire2; R(c, f.x - cw + 2, top, cw * 2 - 4, 2);
+      if (k < 0.3) spr(c, 'nuke_flash', f.x, G + 3, 60 + k * 120, false, 1 - k / 0.3);
+      if (k > 0.08) spr(c, 'nuke_boom', f.x, G + 4, Math.min(1, (k - 0.08) * 3) * 105, false, Math.min(1, (1 - k) / 0.25));
     }
   }
-  if (plane) { // avião do bombardeamento
-    const x = ((t * 140) % (W + 80)) - 40; const y = 62; // dentro do ecrã largo
-    c.fillStyle = C.ink; R(c, x - 15, y - 1, 30, 6); R(c, x - 4, y - 7, 8, 18);
-    c.fillStyle = '#5a6a3a'; R(c, x - 14, y, 28, 4); R(c, x - 3, y - 6, 6, 16); c.fillStyle = '#7d8a4a'; R(c, x - 14, y, 28, 1);
-    c.fillStyle = '#9fb8c8'; R(c, x + 8, y, 3, 2); c.fillStyle = C.ink; R(c, x + 13, y - 2, 2, 8);
+  if (plane) { // o avião passa a largar as bombas
+    const dir = plane.side === 1 ? -1 : 1; const span = W + 120;
+    const x = dir > 0 ? ((t * 150) % span) - 60 : W + 60 - ((t * 150) % span);
+    if (!spr(c, 'plane', x, 72, 24, dir < 0)) { c.fillStyle = C.ink; R(c, x - 15, 4, 30, 6); }
   }
 }
 

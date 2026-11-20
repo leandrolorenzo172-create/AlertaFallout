@@ -116,7 +116,9 @@ export function special(g, side) {
     const center = enemies.length ? enemies.reduce((best, u) => { const n = enemies.filter((o) => Math.abs(o.x - u.x) < 60).length; return n > best.n ? { x: u.x, n } : best; }, { x: enemies[0].x, n: 0 }).x : (lo + hi) / 2;
     g.fx.push({ kind: 'nuke', side, x: center, y: -20, vy: 90, dmg: dmg * 2.4, r: 90, delay: 0.9, done: false });
   } else if (kind === 'gas') { // nuvens de gás que ficam alguns segundos a fazer dano
-    for (let i = 0; i < 4; i++) g.fx.push({ kind: 'gas', side, x: pick(30), y: WORLD.ground - 14, t: 0, life: 4.5, dps: dmg * 0.32, r: 26, delay: i * 0.25, done: false });
+    const xs = [0, 1, 2, 3].map(() => pick(30));
+    g.fx.push({ kind: 'stranger', side, x: xs[0] - (side === 0 ? 10 : -10), t: 0, life: 1.9 }); // o Stranger vem pôr a bomba (só desenho)
+    for (let i = 0; i < 4; i++) g.fx.push({ kind: 'gas', side, x: xs[i], y: WORLD.ground - 14, t: 0, life: 4.5, dps: dmg * 0.32, r: 26, delay: 1.1 + i * 0.25, done: false });
   } else {
     const n = kind === 'meteor' ? 8 : kind === 'shells' ? 9 : 8;
     for (let i = 0; i < n; i++) g.fx.push({ kind, side, x: pick(20), y: -10 - i * 14 - g.rand() * 20, vy: kind === 'shells' ? 150 : 120, dmg, r: 22, delay: i * 0.12, done: false });
@@ -264,7 +266,7 @@ export function step(g, dt) {
 
   // efeitos dos ataques especiais e explosões
   for (const f of g.fx) {
-    if (f.kind === 'boom' || f.kind === 'corpse') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
+    if (f.kind === 'boom' || f.kind === 'corpse' || f.kind === 'stranger') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
     if (f.delay > 0) { f.delay -= dt; continue; }
     if (f.kind === 'gas') { // dano contínuo enquanto a nuvem dura
       f.t += dt;
@@ -276,7 +278,7 @@ export function step(g, dt) {
     f.y += f.vy * dt;
     if (f.y >= WORLD.ground - 4) {
       hitArea(g, f); f.done = true;
-      if (f.kind === 'nuke') { g.fx.push({ kind: 'shock', x: f.x, t: 0, life: 1.6 }); g.events.push({ type: 'nukeHit', side: f.side }); } else g.fx.push({ kind: 'boom', x: f.x, y: WORLD.ground - 4, t: 0, life: 0.4, big: true });
+      if (f.kind === 'nuke') { g.fx.push({ kind: 'shock', x: f.x, t: 0, life: 1.6 }); g.events.push({ type: 'nukeHit', side: f.side }); } else g.fx.push({ kind: 'boom', x: f.x, y: WORLD.ground - 4, t: 0, life: f.kind === 'shells' ? 0.9 : 0.7, big: true, src: f.kind, side: f.side });
     }
   }
   g.fx = g.fx.filter((f) => !f.done);

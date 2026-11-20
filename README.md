@@ -74,6 +74,12 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
 - **Torres:** cada bunker tem 2 bases metálicas, uma no topo e outra no flanco.
   - As 5 torres (lança-pedras, balista, metralhadora a vapor, ninho de metralhadora e torre laser) são os desenhos do dono da app, com os pedestais originais (`assets/torres.webp`).
   - Alcance: segue a linha vermelha marcada no mapa, igual nos dois lados.
+- **Especiais:** desenhos do dono da app (`assets/especiais.webp`):
+  - chuva de destroços (pedras e ossos, poeira);
+  - pneus em chamas (fogo e fumo negro);
+  - gás tóxico (o Stranger entra, põe a bomba e sai, e depois vêm as nuvens);
+  - bombardeamento aéreo (avião, bombas e explosões);
+  - Mini Nuke (o explorador montado na bomba, clarão azul e cogumelo).
 - **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida.
 - **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa.
 - **Som 8-bit** (Web Audio, `src/game/eraWar/audio.js`, sem ficheiros):
