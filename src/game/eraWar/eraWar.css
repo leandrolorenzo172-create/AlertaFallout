@@ -68,7 +68,7 @@
 /* Telemóvel na horizontal (ecrãs baixos): campo de batalha à esquerda, comandos à direita, tudo visível */
 @media (orientation: landscape) and (max-height: 560px) {
   .ew { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 30%); grid-template-areas: 'screen hud' 'screen queue' 'screen tabs' 'screen panel'; grid-template-rows: auto auto auto 1fr; column-gap: 8px; align-items: start; }
-  .ew-screen { grid-area: screen; max-width: calc((100vh - 130px) * 2.4); width: 100%; justify-self: center; }
+  .ew-screen { grid-area: screen; max-width: calc((100vh - 130px) * 3.2); width: 100%; justify-self: center; }
   .ew-hud { grid-area: hud; grid-template-columns: auto 1fr 1fr; margin-bottom: 4px; }
   .ew-evolve, .ew-special { grid-column: 1 / -1; }
   .ew-stat span { font-size: 13px; }
@@ -153,4 +153,11 @@
   .ew-card canvas { max-width: 64px; }
   .ew-card .ew-no { font-size: 9px; }
   .ew-card::after { height: 5px; top: 4px; }
+}
+/* horizontal: cartas compactas para caberem acima da barra de navegação */
+@media (orientation: landscape) and (max-height: 560px) {
+  .ew-card { padding: 12px 2px 2px; gap: 0; }
+  .ew-card canvas { max-width: 42px; }
+  .ew-card .ew-uname { font-size: 10px; }
+  .ew-card .ew-cost { font-size: 8px; }
 }

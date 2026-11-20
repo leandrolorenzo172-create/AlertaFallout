@@ -49,7 +49,7 @@ A rede é verificada em tempo real (eventos do browser e um pedido de teste ao p
 
 Jogo original de defesa de base em pixel art retro, com uma só linha de combate (separador **Mini Jogo**). Funciona sem internet.
 
-- **Visual:** pixel art de arcada 16-bit a cores. O cenário é um campo de trincheiras original desenhado em código: céu e montanhas, pinheiros, trincheiras de madeira, sacos de areia, barris, estacas, arame farpado, e bunkers de terra e sacos de areia nas pontas.
+- **Visual:** pixel art de arcada 16-bit a cores. O cenário é o mapa de trincheiras desenhado pelo dono da app (redesenhado com IA, `src/game/eraWar/assets/mapa.webp`), com bunkers nas pontas. O ecrã de batalha é largo, ao formato do mapa.
 - **Tropas:** são as 15 personagens da folha do dono da app (`src/game/eraWar/assets/tropas.webp`, recortes em `sprites.js`):
 
   | Era | Linha da frente | Atirador | Pesada |
