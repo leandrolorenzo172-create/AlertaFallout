@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { getPushCode, pushSupported } from '@/notify/push';
 import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
 
 const notifications = [
@@ -53,6 +54,15 @@ export default function NotificationsTab() {
     load();
   }, []);
 
+  const [pushCode, setPushCode] = useState('');
+  const [pushMsg, setPushMsg] = useState('');
+  const activatePush = async () => {
+    setPushMsg('');
+    try { const c = await getPushCode(); setPushCode(c); setPerm('granted'); } catch (e) { setPushMsg(e.message); }
+  };
+  const copyPush = async () => {
+    try { await navigator.clipboard.writeText(pushCode); setPushMsg('Código copiado.'); } catch { setPushMsg('Não deu para copiar: seleciona o texto e copia à mão.'); }
+  };
   const [perm, setPerm] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
   const handleToggle = (key) => {
     // ligar os avisos de greve pede logo autorização para notificações no telemóvel
@@ -159,9 +169,26 @@ export default function NotificationsTab() {
             <button type="button" onClick={() => askPermission().then(setPerm)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
               style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Autorizar notificações</button>
           )}
+          {pushSupported() && (
+            <button type="button" onClick={activatePush} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+              style={{ border: '1px solid #ffaa00', color: '#ffaa00' }}>Ativar notificações no telemóvel</button>
+          )}
           <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
             style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Testar aviso</button>
         </div>
+        {pushCode && (
+          <div className="mt-3">
+            <p className="text-[10px] leading-relaxed mb-1" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+              Código deste telemóvel. Copia-o e envia-o ao Claude (ou guarda-o no GitHub como secret PUSH_SUBSCRIPTIONS, entre [ ]).
+              A partir daí os avisos de greve chegam mesmo com a app fechada.
+            </p>
+            <textarea readOnly value={pushCode} rows={4} onFocus={(e) => e.target.select()} className="w-full p-2 rounded-sm text-[9px] font-mono"
+              style={{ background: 'rgb(var(--cb))', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c) / 0.8)' }} />
+            <button type="button" onClick={copyPush} className="mt-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+              style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Copiar código</button>
+          </div>
+        )}
+        {pushMsg && <p className="text-[10px] mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
       </div>
 
       <button

@@ -111,6 +111,14 @@ async function checkStrikes() {
   await c.put(key, new Response(JSON.stringify(st), { headers: { 'content-type': 'application/json' } }));
 }
 self.addEventListener('periodicsync', (event) => { if (event.tag === 'avisos-greve') event.waitUntil(checkStrikes().catch(() => {})); });
+// Notificações push enviadas pelo GitHub Actions (scripts/send-push.mjs)
+self.addEventListener('push', (event) => {
+  let d = {}; try { d = event.data ? event.data.json() : {}; } catch { d = { title: 'Pip-Boy Terminal', body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(d.title || 'ALERTA — Greve', {
+    body: d.body || '', tag: d.tag || 'greve', icon: BASE + 'icons/icon-192.png', badge: BASE + 'icons/icon-192.png',
+    data: { url: new URL(d.url || './#/greves', BASE).href },
+  }));
+});
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || './#/greves', BASE).href;

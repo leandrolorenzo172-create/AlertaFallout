@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false # não interromper a meio do envio das notificações
 
 jobs:
   build:
@@ -29,6 +29,12 @@ jobs:
       - name: Recolher notícias
         run: node scripts/fetch-news.mjs
         continue-on-error: true
+      - name: Enviar avisos de greve para os telemóveis
+        run: node scripts/send-push.mjs
+        continue-on-error: true
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
       - name: Recolher emissoras portuguesas
         run: node scripts/fetch-stations.mjs
         continue-on-error: true
