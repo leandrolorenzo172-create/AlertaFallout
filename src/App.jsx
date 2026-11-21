@@ -8,6 +8,8 @@ import TabBar from './pipboy/TabBar';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import DashboardTab from './tabs/DashboardTab';
 import WarNewsTab from './tabs/WarNewsTab';
+import EconomyTab from './tabs/EconomyTab';
+import StrikesTab from './tabs/StrikesTab';
 import CatastropheTab from './tabs/CatastropheTab';
 import WeatherTab from './tabs/WeatherTab';
 import RadioTab from './tabs/RadioTab';
@@ -41,6 +43,8 @@ export default function App() {
   const elements = {
     dashboard: <DashboardTab onThreatLevelChange={handleThreat} />,
     guerra: <WarNewsTab />,
+    economia: <EconomyTab />,
+    greves: <StrikesTab />,
     catastrofes: <CatastropheTab />,
     meteo: <WeatherTab />,
     radio: <RadioTab />,

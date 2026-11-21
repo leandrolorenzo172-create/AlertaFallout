@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Loader2, Shield, Skull, AlertTriangle, Globe, TrendingUp } from 'lucide-react';
-import ThreatGauge from '../pipboy/ThreatGauge';
 import PipBoyHero from '../pipboy/PipBoyHero';
 import { alpha } from '../theme';
 
@@ -187,9 +186,9 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
       
       <PipBoyHero data={data} />
 
+      {/* A Instabilidade Económica passou para o seu próprio separador; aqui fica só o resumo */}
       <div className="p-4 rounded-sm mb-6" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
-        <ThreatGauge label="📉 Instab. Económica" value={data?.economic_instability || 0} />
-        <div className="mt-4 p-3 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.13)' }}>
+        <div className="p-3 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.13)' }}>
           <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.33)' }}>Resumo</p>
           <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>{data?.summary}</p>
         </div>

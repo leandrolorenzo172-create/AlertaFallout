@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2 } from 'lucide-react';
+import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2, TrendingDown, Megaphone } from 'lucide-react';
 import { usePipBoySound } from './usePipBoySound';
 import { useSettings, orderTabs } from './theme';
 
@@ -14,6 +14,8 @@ export function useVisibleTabs() {
 export const TABS = [
   { id: 'dashboard', path: '/dashboard', label: 'Painel', icon: Shield, alert: true },
   { id: 'guerra', path: '/guerra', label: 'Guerra', icon: Skull, alert: true },
+  { id: 'economia', path: '/economia', label: 'Economia', icon: TrendingDown },
+  { id: 'greves', path: '/greves', label: 'Greves', icon: Megaphone },
   { id: 'catastrofes', path: '/catastrofes', label: 'Catástrofes', icon: AlertTriangle },
   { id: 'meteo', path: '/meteo', label: 'Meteo', icon: Cloud },
   { id: 'radio', path: '/radio', label: 'Rádio FM', icon: RadioIcon },

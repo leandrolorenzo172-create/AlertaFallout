@@ -258,8 +258,11 @@ export async function fetchDashboard() {
   const geopolitical_tension = n ? clamp(round1(1 + ((c.war + c.prep) / Math.max(1, c.total)) * 22), 1, 10) : 0;
   const cats = cat?.articles || [];
   const natural_disaster_risk = cat ? clamp(round1(cats.slice(0, 5).reduce((s, a) => s + a.severity, 0) / Math.max(1, Math.min(5, cats.length))), 1, 10) : 0;
-  const economic_instability = n ? scoreFromCount(c.econ, Math.max(10, c.total * 0.12)) : 0;
+  // usa o índice do separador Instabilidade Económica quando existe (notícias de economia); senão, o cálculo antigo
+  const economic_instability = n ? (n.economy?.level ?? scoreFromCount(c.econ, Math.max(10, c.total * 0.12))) : 0;
   const cyber_risk = n ? scoreFromCount(c.cyber, Math.max(6, c.total * 0.05)) : 0;
+  // índice de greves (só para mostrar no Painel; não entra na ameaça global)
+  const strike_index = n?.strikes?.level ?? 0;
   const global_threat_level = round1(war_risk * 0.35 + geopolitical_tension * 0.2 + natural_disaster_risk * 0.2 + economic_instability * 0.15 + cyber_risk * 0.1);
   const critical_events = [
     ...war.map((a) => ({ title: a.title, severity: a.severity, type: 'guerra', region: a.region })),
@@ -267,9 +270,23 @@ export async function fetchDashboard() {
   ].sort((a, b) => b.severity - a.severity).slice(0, 5);
   const when = n?.generated ? new Date(n.generated).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
   return {
-    war_risk, geopolitical_tension, natural_disaster_risk, economic_instability, cyber_risk, global_threat_level, critical_events,
+    war_risk, geopolitical_tension, natural_disaster_risk, economic_instability, cyber_risk, strike_index, global_threat_level, critical_events,
     summary: `Índices calculados automaticamente, não são uma avaliação oficial. ${n ? `Baseados em ${c.total} notícias de jornais portugueses (${c.war} sobre conflitos, ${c.econ} sobre economia, ${c.cyber} sobre ciberataques), recolhidas em ${when}` : 'Notícias indisponíveis'}${cat ? `, e em ${cats.length} alertas do GDACS e do USGS.` : '.'}`,
   };
+}
+
+// ---------------- Instabilidade económica e Greves (gerados em scripts/fetch-news.mjs) ----------------
+// economy = { level 1-10, total, negative, history: [{ d: 'AAAA-MM-DD', v }], articles: [{ title, summary, url, source, date, negative }] }
+export async function fetchEconomy() {
+  const n = await fetchNewsFile().catch(() => null);
+  if (!n?.economy) throw new Error('Dados de economia ainda não disponíveis. São recolhidos de hora a hora.');
+  return { ...n.economy, generated: n.generated };
+}
+// strikes = { year, since, reference, count, last30, level 1-10, bySector: { setor: n }, items: [{ title, summary, url, source, date, sector }] }
+export async function fetchStrikes() {
+  const n = await fetchNewsFile().catch(() => null);
+  if (!n?.strikes) throw new Error('Dados de greves ainda não disponíveis. São recolhidos de hora a hora.');
+  return { ...n.strikes, generated: n.generated };
 }
 
 export async function fetchPizza() {

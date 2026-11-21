@@ -107,13 +107,15 @@ export default function PipBoyHero({ data }) {
       </p>
       <div className="mb-5"><Bar value={g} /></div>
 
-      {/* Indicadores à volta da mascote */}
+      {/* Indicadores à volta da mascote: 3 à esquerda, 3 à direita */}
       <div className="grid items-center gap-x-2 gap-y-6" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(84px,30%) minmax(0,1fr)' }}>
         <Metric label="Risco de guerra" value={Number(data?.war_risk) || 0} />
-        <Mascot mode="base" className="w-full row-span-2" style={{ gridRow: 'span 2', maxHeight: 230 }} />
+        <Mascot mode="base" className="w-full" style={{ gridRow: 'span 3', maxHeight: 260 }} />
         <Metric label="Tensão geopolítica" value={Number(data?.geopolitical_tension) || 0} align="right" />
         <Metric label="Catástrofes" value={Number(data?.natural_disaster_risk) || 0} />
         <Metric label="Risco cibernético" value={Number(data?.cyber_risk) || 0} align="right" />
+        <Metric label="Instab. económica" value={Number(data?.economic_instability) || 0} />
+        <Metric label="Greves" value={Number(data?.strike_index) || 0} align="right" />
       </div>
       <p className="text-center text-sm font-bold uppercase tracking-wider mt-3" style={{ color: 'rgb(var(--c) / 0.85)' }}>Ameaça global</p>
       <p className="text-center text-sm uppercase mb-4" style={{ color: '#ffaa00' }}>Índice: {g.toFixed(1)}</p>
