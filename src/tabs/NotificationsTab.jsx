@@ -11,18 +11,20 @@ const notifications = [
   { key: 'meteorologia_enabled', label: 'Meteorologia Portugal', desc: 'Alertas meteorológicos e condições extremas', icon: '🌧️', color: '#00aaff' },
   { key: 'tensao_global_enabled', label: 'Tensão Global', desc: 'Indicadores de escalada de tensão internacional', icon: '🌍', color: '#ffaa00' },
   { key: 'pizza_index_enabled', label: 'Índice Pizza', desc: 'Alterações significativas no índice de atividade', icon: '🍕', color: '#ff9900' },
-  { key: 'deals_enabled', label: 'Promoções Sobrevivência', desc: 'Novas ofertas em equipamento de preparação', icon: '🛒', color: '#00cc66' },
+  { key: 'greves_enabled', label: 'Greves Portugal', desc: 'Novas greves e paralisações anunciadas em Portugal', icon: '✊', color: '#cc33ff' },
 ];
 
+const DEFAULTS = {
+  guerra_enabled: true,
+  catastrofes_enabled: true,
+  meteorologia_enabled: true,
+  tensao_global_enabled: true,
+  pizza_index_enabled: false,
+  greves_enabled: true,
+};
+
 export default function NotificationsTab() {
-  const [settings, setSettings] = useState({
-    guerra_enabled: true,
-    catastrofes_enabled: true,
-    meteorologia_enabled: true,
-    tensao_global_enabled: true,
-    pizza_index_enabled: false,
-    deals_enabled: false,
-  });
+  const [settings, setSettings] = useState(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [existingId, setExistingId] = useState(null);
@@ -34,7 +36,9 @@ export default function NotificationsTab() {
     const load = async () => {
       const existing = await base44.entities.NotificationSettings.list();
       if (existing.length > 0) {
-        setSettings(existing[0]);
+        // definições guardadas antes de existir a opção Greves ficam com o valor por omissão; a antiga Promoções sai
+        const { deals_enabled, ...saved } = existing[0];
+        setSettings({ ...DEFAULTS, ...saved });
         setExistingId(existing[0].id);
       }
       
@@ -130,7 +134,7 @@ export default function NotificationsTab() {
               </div>
             </div>
             <Switch
-              checked={settings[notif.key]}
+              checked={!!settings[notif.key]}
               onCheckedChange={() => handleToggle(notif.key)}
             />
           </motion.div>
