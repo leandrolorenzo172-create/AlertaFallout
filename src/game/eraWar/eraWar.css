@@ -161,3 +161,7 @@
   .ew-card .ew-uname { font-size: 10px; }
   .ew-card .ew-cost { font-size: 8px; }
 }
+/* sem riscas por cima do campo a cores (pareciam falhas de imagem); fica só uma vinheta leve */
+.ew-screen::after { background-image: radial-gradient(ellipse at center, transparent 72%, rgb(0 0 0 / 0.28) 100%) !important; background-size: 100% 100% !important; }
+/* toques rápidos nos botões não fazem zoom */
+.ew, .ew * { touch-action: manipulation; }

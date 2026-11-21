@@ -25,9 +25,15 @@ export function unitStats(era, type) {
   const b = UNIT_BASE[type]; const m = sc(era);
   return { hp: Math.round(b.hp * m), dmg: Math.round(b.dmg * m), rng: b.rng, spd: b.spd + era * 1.5, rate: b.rate, cost: Math.round(b.cost * m), time: b.time };
 }
+// Cada torre dispara à sua maneira; o dano por segundo fica parecido entre todas (equilíbrio igual ao de antes).
+// lança-pedras: lento e pesado, em arco · balista: virote rápido e certeiro · metralhadora a vapor: rajadas que aquecem
+// ninho: tiro contínuo com dispersão · laser: carrega e dispara um feixe instantâneo
+const TURRET_FX = new Set(['dust', 'stick', 'steam', 'casing', 'beam', 'burn', 'charge']);
+// lança-pedras: 2 de 5 'vidas' de um primitivo por pedra · laser: 5 de 20 'vidas' de um futurista por raio
+const TURRET_FIRE = [{ rate: 2.6, d: 24 }, { rate: 1.6, d: 15.6 }, { rate: 0.2, d: 3.4 }, { rate: 0.34, d: 3.7 }, { rate: 1.3, d: 15 }];
 export function turretStats(era) {
-  const m = sc(era);
-  return { dmg: Math.round(8 * m), rng: 92, rate: 1.3, cost: Math.round(120 * m) }; // alcance = linha vermelha do mapa (igual nos dois lados)
+  const m = sc(era); const f = TURRET_FIRE[era];
+  return { dmg: Math.max(1, Math.round(f.d * m)), rng: 92, rate: f.rate, cost: Math.round(120 * m) }; // alcance = linha vermelha do mapa (igual nos dois lados)
 }
 export const SLOT_COST = [0, 400]; // 2.º espaço para torres
 export const MAX_SLOTS = 2; // as duas bases metálicas de cada bunker
@@ -240,33 +246,89 @@ export function step(g, dt) {
         if (dist <= t.rng && dist < bd) { bd = dist; best = o; }
       }
       if (best) t.aim = best.x;
-      if (best && t.cd <= 0) {
+      const ox = i === 0 ? MOUNT_X[k] : WORLD.w - MOUNT_X[k]; const oy = MOUNT_Y[k]; const dir = i === 0 ? 1 : -1; const G = WORLD.ground;
+      if (t.heat) t.heat = Math.max(0, t.heat - 0.4 * dt); // a metralhadora a vapor arrefece
+      if (t.over && t.heat < 0.25) t.over = false;
+      if (t.charging > 0) { // torre laser a concentrar energia no núcleo
+        t.charging -= dt;
+        if (t.charging <= 0) {
+          const tgt = g.units.find((o) => o.id === t.chargeTarget && o.hp > 0);
+          if (tgt) {
+            damageUnit(g, tgt, t.dmg, i); // feixe instantâneo, sem tempo de viagem
+            g.fx.push({ kind: 'beam', x0: ox + dir * 9, y0: oy - 3, x1: tgt.x, y1: G - 12, t: 0, life: 0.24 });
+            g.fx.push({ kind: 'burn', x: tgt.x, y: G - 12, t: 0, life: 0.5 });
+            sound(g, { k: 'tur', era: 4, x: ox, ph: 'fire' });
+          }
+        }
+        continue;
+      }
+      if (best && t.cd <= 0 && !t.over) {
         t.cd = t.rate;
-        // origem do tiro: a base metálica onde a torre está (topo do bunker ou flanco)
-        const mx = MOUNT_X[k]; const tx = i === 0 ? mx : WORLD.w - mx;
-        sound(g, { k: 'tur', era: t.era, x: tx });
-        g.shots.push({ x: tx, y: MOUNT_Y[k], tx: best.x, side: i, dmg: t.dmg, base: false, target: best.id, era: t.era, kind: 'turret', ty: WORLD.ground - 10 });
+        if (t.era === 0) { // pedra em arco alto, apontada para onde o alvo vai estar
+          const T = 0.95; const px = best.x - dir * best.spd * T * 0.5;
+          g.shots.push({ kind: 'rock', side: i, era: 0, x: ox, y: oy - 6, x0: ox, y0: oy - 6, tx: px, t: 0, T, dmg: t.dmg, rot: g.rand() * 6 });
+          sound(g, { k: 'tur', era: 0, x: ox, ph: 'shot' });
+        } else if (t.era === 1) { // virote rápido em linha reta
+          g.shots.push({ kind: 'bolt', spd: 520, side: i, era: 1, x: ox + dir * 10, y: oy - 3, tx: best.x, ty: G - 14, target: best.id, dmg: t.dmg, base: false });
+          sound(g, { k: 'tur', era: 1, x: ox, ph: 'shot' });
+        } else if (t.era === 2) { // rajada que aquece; ao sobreaquecer pára a soltar vapor
+          t.heat = (t.heat || 0) + 0.14; t.shots = (t.shots || 0) + 1;
+          g.shots.push({ kind: 'lead', spd: 420, side: i, era: 2, x: ox + dir * 12, y: oy - 1, tx: best.x, ty: G - 12 + (g.rand() - 0.5) * 3, target: best.id, dmg: t.dmg, base: false });
+          if (t.shots % 3 === 0) g.fx.push({ kind: 'steam', x: ox - dir * 3, y: oy - 7, dir, t: 0, life: 0.7 });
+          sound(g, { k: 'tur', era: 2, x: ox, ph: 'shot' });
+          if (t.heat >= 1) {
+            t.over = true;
+            for (let s2 = 0; s2 < 4; s2++) g.fx.push({ kind: 'steam', x: ox + (g.rand() - 0.5) * 10, y: oy - 4 - g.rand() * 4, dir: g.rand() < 0.5 ? 1 : -1, t: -s2 * 0.15, life: 0.9, big: true });
+            sound(g, { k: 'tur', era: 2, x: ox, ph: 'steam' });
+          }
+        } else if (t.era === 3) { // tiro contínuo com ligeira dispersão e cápsulas a saltar
+          g.shots.push({ kind: 'mg', spd: 460, side: i, era: 3, x: ox + dir * 10, y: oy - 2, tx: best.x, ty: G - 12 + (g.rand() - 0.5) * 7, target: best.id, dmg: t.dmg, base: false });
+          g.fx.push({ kind: 'casing', x: ox - dir * 2, y: oy - 3, vx: -dir * (14 + g.rand() * 16), vy: -30 - g.rand() * 20, t: 0, life: 0.7 });
+          sound(g, { k: 'tur', era: 3, x: ox, ph: 'shot' });
+        } else { // laser: começa a carregar
+          t.charging = 0.42; t.chargeTarget = best.id;
+          g.fx.push({ kind: 'charge', x: ox + dir * 9, y: oy - 3, t: 0, life: 0.42 });
+          sound(g, { k: 'tur', era: 4, x: ox, ph: 'charge' });
+        }
       }
     }
   });
 
   // projéteis (acertam ao chegar ao destino)
   for (const p of g.shots) {
-    const speed = 230; const dx = p.tx - p.x;
+    if (p.kind === 'rock') { // pedra em parábola: dano pesado no impacto e um pouco à volta
+      p.t += dt; const k2 = Math.min(1, p.t / p.T); const G = WORLD.ground;
+      p.x = p.x0 + (p.tx - p.x0) * k2; p.y = p.y0 + (G - 6 - p.y0) * k2 - 62 * 4 * k2 * (1 - k2); p.rot += dt * 7;
+      if (k2 >= 1) {
+        p.done = true; let main = null; let md = 99;
+        for (const o of g.units) { if (o.side !== p.side && o.hp > 0) { const d2 = Math.abs(o.x - p.tx); if (d2 < md) { md = d2; main = o; } } }
+        for (const o of g.units) { if (o.side !== p.side && o.hp > 0 && Math.abs(o.x - p.tx) <= 12) damageUnit(g, o, o === main ? p.dmg : p.dmg * 0.4, p.side); }
+        g.fx.push({ kind: 'dust', x: p.tx, y: G - 4, t: 0, life: 0.7 });
+        sound(g, { k: 'tur', era: 0, x: p.tx, ph: 'hit' });
+      }
+      continue;
+    }
+    const speed = p.spd || 230; const dx = p.tx - p.x;
     const ty = p.ty != null ? p.ty : p.y;
     const dist = Math.hypot(dx, ty - p.y);
     const stepLen = speed * dt;
     if (dist <= stepLen) {
       p.done = true;
       if (p.base) damageBase(g, 1 - p.side, p.vsBase, p.side);
-      else { const tgt = g.units.find((o) => o.id === p.target && o.hp > 0); if (tgt) damageUnit(g, tgt, p.dmg, p.side); }
+      else {
+        const tgt = g.units.find((o) => o.id === p.target && o.hp > 0);
+        if (tgt) {
+          damageUnit(g, tgt, p.dmg, p.side);
+          if (p.kind === 'bolt') { g.fx.push({ kind: 'stick', x: tgt.x, y: WORLD.ground - 14, dir: p.side === 0 ? 1 : -1, t: 0, life: 0.6 }); sound(g, { k: 'tur', era: 1, x: tgt.x, ph: 'hit' }); }
+        }
+      }
     } else { p.x += (dx / dist) * stepLen; p.y += ((ty - p.y) / dist) * stepLen; }
   }
   g.shots = g.shots.filter((p) => !p.done);
 
   // efeitos dos ataques especiais e explosões
   for (const f of g.fx) {
-    if (f.kind === 'boom' || f.kind === 'corpse' || f.kind === 'stranger') { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
+    if (f.kind === 'boom' || f.kind === 'corpse' || f.kind === 'stranger' || TURRET_FX.has(f.kind)) { f.t += dt; if (f.t >= f.life) f.done = true; continue; }
     if (f.delay > 0) { f.delay -= dt; continue; }
     if (f.kind === 'gas') { // dano contínuo enquanto a nuvem dura
       f.t += dt;

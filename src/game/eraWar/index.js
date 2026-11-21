@@ -117,7 +117,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   function handleEvents() {
     for (const s of g.sfx) {
       if (s.k === 'atk') audio.attack(s.era, s.type, s.x);
-      else if (s.k === 'tur') audio.turret(s.era, s.x);
+      else if (s.k === 'tur') audio.turret(s.era, s.x, s.ph);
       else if (s.k === 'die') { audio.death(s.type, s.side, s.x); if (s.side === 1) audio.capGain(); }
       else if (s.k === 'base') audio.baseHit(s.side);
       else if (s.k === 'spawn') audio.trained();

@@ -71,15 +71,14 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
   - Difícil: otimiza caricas, constrói defesas e usa os especiais nos grupos de tropas.
 
   O equilíbrio foi afinado com partidas simuladas de IA contra IA (`src/game/eraWar/logic.js`).
-- **Torres:** cada bunker tem 2 bases metálicas, uma no topo e outra no flanco.
-  - As 5 torres (lança-pedras, balista, metralhadora a vapor, ninho de metralhadora e torre laser) são os desenhos do dono da app, com os pedestais originais (`assets/torres.webp`).
-  - Alcance: segue a linha vermelha marcada no mapa, igual nos dois lados.
-- **Especiais:** desenhos do dono da app (`assets/especiais.webp`):
-  - chuva de destroços (pedras e ossos, poeira);
-  - pneus em chamas (fogo e fumo negro);
-  - gás tóxico (o Stranger entra, põe a bomba e sai, e depois vêm as nuvens);
-  - bombardeamento aéreo (avião, bombas e explosões);
-  - Mini Nuke (o explorador montado na bomba, clarão azul e cogumelo).
+- **Torres:** cada bunker tem 2 bases metálicas, uma no topo e outra no flanco. As torres são desenhos do dono da app (`assets/torres.webp`) e cada uma dispara à sua maneira:
+  - Lança-pedras: pedra em arco alto, lenta e pesada, com poeira no impacto (2 de 5 vidas de um primitivo por pedra).
+  - Balista: virote rápido em linha reta que fica cravado no alvo.
+  - Metralhadora a vapor: rajadas que aquecem o cano e soltam vapor; se sobreaquecer, pára a arrefecer.
+  - Ninho de metralhadora: tiro contínuo com dispersão e cápsulas a saltar.
+  - Torre laser: carrega energia e dispara um feixe instantâneo (5 de 20 vidas de um futurista por raio).
+
+  Cada torre tem som próprio. O alcance segue a linha vermelha marcada no mapa, igual nos dois lados.
 - **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida.
 - **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa.
 - **Som 8-bit** (Web Audio, `src/game/eraWar/audio.js`, sem ficheiros):

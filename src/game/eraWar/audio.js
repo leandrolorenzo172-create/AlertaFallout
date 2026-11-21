@@ -124,14 +124,25 @@ export function attack(era, type, x) {
     else { tone({ f: 1600, f2: 120, dur: 0.3, type: 'sawtooth', vol: 0.18, pan }); tone({ f: 800, f2: 60, dur: 0.35, type: 'pulse25', vol: 0.15, pan }); } // tanque laser
   }
 }
-export function turret(era, x) {
-  if (!ok() || throttled(`t${era}`, 160)) return;
+export function turret(era, x, ph = 'shot') {
+  if (!ok() || throttled(`t${era}${ph}`, era === 2 ? 70 : era === 3 ? 95 : 140)) return;
   const pan = panOf(x);
-  if (era === 0) tone({ f: 300, f2: 120, dur: 0.1, type: 'triangle', vol: 0.15, pan });
-  else if (era === 1) tone({ f: 500, f2: 150, dur: 0.12, type: 'triangle', vol: 0.18, pan });
-  else if (era === 2) boom(0, 0.5, pan);
-  else if (era === 3) [0, 0.05, 0.1].forEach((t) => noise({ t, dur: 0.04, vol: 0.2, freq: 3000, pan }));
-  else tone({ f: 1800, f2: 200, dur: 0.2, type: 'pulse12', vol: 0.14, pan });
+  if (era === 0) {
+    if (ph === 'hit') { tone({ f: 95, f2: 38, dur: 0.28, type: 'sine', vol: 0.4, pan }); noise({ dur: 0.35, vol: 0.28, freq: 500, freq2: 120, pan }); }
+    else { tone({ f: 170, f2: 80, dur: 0.18, type: 'triangle', vol: 0.2, pan }); noise({ t: 0.03, dur: 0.25, vol: 0.12, freq: 900, freq2: 300, type: 'bandpass', pan }); }
+  } else if (era === 1) {
+    if (ph === 'hit') { noise({ dur: 0.05, vol: 0.25, freq: 900, type: 'bandpass', q: 2, pan }); tone({ f: 170, f2: 90, dur: 0.08, type: 'square', vol: 0.12, pan }); }
+    else { tone({ f: 950, f2: 260, dur: 0.07, type: 'square', vol: 0.12, pan }); tone({ f: 210, dur: 0.1, type: 'triangle', vol: 0.18, pan }); noise({ dur: 0.04, vol: 0.12, freq: 4000, type: 'highpass', pan }); }
+  } else if (era === 2) {
+    if (ph === 'steam') noise({ dur: 0.7, vol: 0.16, freq: 5000, type: 'highpass', attack: 0.02, pan });
+    else { noise({ dur: 0.035, vol: 0.18, freq: 2600, type: 'bandpass', pan }); tone({ f: 120, f2: 90, dur: 0.035, type: 'square', vol: 0.1, pan }); noise({ t: 0.02, dur: 0.06, vol: 0.05, freq: 6000, type: 'highpass', pan }); }
+  } else if (era === 3) {
+    noise({ dur: 0.05, vol: 0.24, freq: 1800, type: 'bandpass', q: 1.2, pan }); tone({ f: 230, f2: 80, dur: 0.045, type: 'square', vol: 0.1, pan });
+  } else if (ph === 'charge') {
+    tone({ f: 300, f2: 2400, dur: 0.42, type: 'sine', vol: 0.09, vib: 20, pan }); tone({ f: 600, f2: 4800, dur: 0.42, type: 'pulse12', vol: 0.03, pan });
+  } else {
+    tone({ f: 2300, f2: 1900, dur: 0.24, type: 'sawtooth', vol: 0.08, vib: 60, pan }); tone({ f: 4600, dur: 0.18, type: 'sine', vol: 0.05, pan }); noise({ dur: 0.2, vol: 0.06, freq: 7000, type: 'highpass', pan });
+  }
 }
 export function death(type, side, x) {
   if (!ok() || throttled(`d${side}`, 90)) return;

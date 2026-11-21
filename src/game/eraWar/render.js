@@ -68,10 +68,10 @@ function drawHudFrames(c, C, g) {
 const MOUNTS = [{ x: 97, y: 166 }, { x: 67, y: 211 }];
 // Torres desenhadas pelo dono da app, com o pedestal original (assets/torres.webp): [x, y, l, a, centro do pedestal, largura do pedestal]
 // 0 lança-pedras · 1 balista · 2 metralhadora a vapor · 3/4 ninho (repouso/disparo) · 5/6 torre laser (repouso/carga)
-const TURRET_RECTS = [[0, 0, 386, 438, 215.5, 221], [388, 0, 390, 353, 202.5, 217], [780, 0, 432, 435, 181.5, 201], [1214, 0, 312, 330, 157.5, 217], [1528, 0, 498, 409, 156.5, 215], [2028, 0, 456, 404, 202.0, 258], [2486, 0, 581, 426, 195.5, 279], [3069, 0, 443, 454, 155.5, 209], [3514, 0, 322, 434, 150.5, 217], [3838, 0, 495, 354, 160.0, 220], [4335, 0, 339, 353, 157.0, 214], [4676, 0, 572, 436, 192.0, 198], [5250, 0, 632, 436, 253.5, 197], [5884, 0, 475, 436, 181.5, 201]];
+const TURRET_RECTS = [[0, 0, 173, 193, 98.5, 115], [177, 0, 143, 190, 68.5, 113], [324, 0, 198, 210, 70.5, 121], [526, 0, 174, 156, 96.0, 110], [704, 0, 150, 155, 69.0, 116], [858, 0, 273, 169, 107.5, 113], [1135, 0, 218, 178, 105.5, 119], [1357, 0, 257, 159, 85.5, 117], [1618, 0, 139, 144, 68.0, 126], [1761, 0, 211, 166, 66.0, 110], [1976, 0, 456, 404, 202.0, 335], [2436, 0, 581, 426, 195.5, 363]];
 // imagem em repouso e sequência de ataque de cada era (desenhos do dono da app)
-const TURRET_IDLE = [0, 1, 2, 3, 5];
-const TURRET_FIRE = [[7, 8], [9, 10], [11, 12, 13], [4, 4], [6, 6]];
+const TURRET_IDLE = [0, 3, 6, 8, 10];
+const TURRET_FIRE = [[2, 1], [4], [5, 7], [9], [11]];
 const FIRE_T = 0.45; // duração da animação de ataque (s)
 const PED_W = 40; // largura do pedestal no ecrã (cobre a base metálica do bunker)
 // boca de fogo de cada torre (fração da imagem) para o clarão ao disparar
@@ -113,8 +113,14 @@ function drawTurrets(c, C, side, sd) {
     const k2 = PED_W / bw; const dw = sw * k2; const dh = sh * k2;
     c.save(); c.translate(x, y + 7); if (side === 1) c.scale(-1, 1);
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    c.drawImage(torres, sx, sy, sw, sh, -bx * k2, -dh, dw, dh);
+    const recoil = (tu.era === 0 || tu.era === 1) && since >= 0 && since < 0.25 ? -(1 - since / 0.25) * (tu.era === 0 ? 5 : 3) : 0;
+    const shake = tu.era === 2 && since >= 0 && since < 0.2 ? Math.sin(since * 120) * 0.8 : tu.era === 3 && since < 0.1 ? 0.6 : 0;
+    c.drawImage(torres, sx, sy, sw, sh, -bx * k2 + recoil, -dh + shake, dw, dh);
     c.imageSmoothingEnabled = false;
+    if (tu.era === 2 && tu.heat > 0.45) { // cano a aquecer durante as rajadas
+      c.globalAlpha = Math.min(0.75, (tu.heat - 0.45) * 1.4) * (0.8 + Math.sin(performance.now() / 90) * 0.2);
+      c.fillStyle = tu.over ? '#ff3a1a' : '#ff8a2a'; c.beginPath(); c.ellipse(dw * 0.18, -dh * 0.55, dw * 0.18, dh * 0.09, 0, 0, 7); c.fill(); c.globalAlpha = 1;
+    }
     c.restore();
   }
 }
@@ -122,15 +128,83 @@ function drawTurrets(c, C, side, sd) {
 // ---------- Projéteis e efeitos (coordenadas do mundo, ampliadas) ----------
 function drawShots(c, C, shots) {
   for (const s of shots) {
+    if (s.kind === 'rock') { // pedra irregular a rodar
+      c.save(); c.translate(s.x, s.y); c.rotate(s.rot);
+      c.fillStyle = '#2a2622'; c.beginPath(); c.moveTo(-4, -2); c.lineTo(-1, -4.5); c.lineTo(3.5, -3); c.lineTo(4.5, 1); c.lineTo(1.5, 4); c.lineTo(-3, 3.5); c.closePath(); c.fill();
+      c.fillStyle = '#6f6a62'; c.beginPath(); c.moveTo(-3, -1.5); c.lineTo(-0.5, -3.5); c.lineTo(2.5, -2.2); c.lineTo(3.2, 0.6); c.lineTo(0.8, 2.6); c.lineTo(-2.2, 2.4); c.closePath(); c.fill();
+      c.fillStyle = '#a49d92'; c.fillRect(-1.5, -2.5, 2, 1.5); c.restore(); continue;
+    }
+    if (s.kind === 'bolt') { // virote com rasto de vento
+      const d = s.tx > s.x ? 1 : -1;
+      c.globalAlpha = 0.35; c.fillStyle = '#e8f2f5'; R(c, s.x - d * 16, s.y, 12, 1); c.globalAlpha = 1;
+      c.fillStyle = '#4a3420'; R(c, d > 0 ? s.x - 9 : s.x, s.y - 0.5, 9, 1.5);
+      c.fillStyle = '#c9cdd2'; R(c, d > 0 ? s.x : s.x - 2, s.y - 1, 2, 2.5); c.fillStyle = '#d8c9a0'; R(c, d > 0 ? s.x - 10 : s.x + 8, s.y - 1, 2, 2.5); continue;
+    }
+    if (s.kind === 'lead') { c.fillStyle = '#8a8478'; R(c, s.x - 1.5, s.y, 3, 1.2); c.fillStyle = '#e8d8a0'; R(c, s.x, s.y, 1, 1); continue; }
+    if (s.kind === 'mg') { c.fillStyle = C.fire; R(c, s.x - 3, s.y, 4, 1); c.fillStyle = C.white; R(c, s.x, s.y, 1.5, 1); continue; }
     if (s.era === 4) { c.fillStyle = C.laser; R(c, s.x - 5, s.y - 0.5, 10, 1.5); c.fillStyle = C.white; R(c, s.x - 2, s.y, 4, 1); }
     else if (s.era === 1 && s.kind === 'unit') { c.fillStyle = '#5a4026'; R(c, s.x - 4, s.y, 8, 1); c.fillStyle = '#c9c9c0'; R(c, s.x + 3, s.y, 2, 1); }
     else if (s.era === 0) { c.fillStyle = '#4a4a48'; R(c, s.x - 1.5, s.y - 1.5, 3, 3); c.fillStyle = '#9a9a96'; R(c, s.x - 1, s.y - 1, 1, 1); }
     else { c.fillStyle = C.fire; R(c, s.x - 2.5, s.y, 5, 1); c.fillStyle = C.white; R(c, s.x, s.y, 1.5, 1); }
   }
 }
+// efeitos dos disparos das torres
+function drawTurretFx(c, C, f, t) {
+  const k = Math.max(0, f.t) / f.life; if (f.t < 0) return;
+  if (f.kind === 'dust') { // poeira levantada no impacto da pedra
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI + (i / 8) * Math.PI; const r = 3 + k * 14 * (0.6 + (i % 3) * 0.2);
+      c.globalAlpha = 0.75 * (1 - k); c.fillStyle = i % 2 ? '#b89a6a' : '#8a7048';
+      c.beginPath(); c.arc(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.55, 2 + k * 3.5, 0, 7); c.fill();
+    }
+    if (k < 0.3) { c.globalAlpha = 1; c.fillStyle = '#5a4a36'; for (let i = 0; i < 6; i++) R(c, f.x - 6 + i * 2.4, f.y - k * 30 - (i % 2) * 4, 1.5, 1.5); }
+    c.globalAlpha = 1; return;
+  }
+  if (f.kind === 'stick') { // virote cravado no alvo
+    c.globalAlpha = Math.min(1, (1 - k) * 2); c.fillStyle = '#4a3420'; R(c, f.dir > 0 ? f.x - 7 : f.x, f.y - 0.5, 7, 1.5); c.fillStyle = '#d8c9a0'; R(c, f.dir > 0 ? f.x - 8 : f.x + 6, f.y - 1, 2, 2.5);
+    if (k < 0.25) { c.fillStyle = '#fff3c0'; R(c, f.x - 1, f.y - 2, 2, 1); R(c, f.x + 1, f.y + 1, 1, 1); }
+    c.globalAlpha = 1; return;
+  }
+  if (f.kind === 'steam') { // jatos de vapor branco
+    for (let i = 0; i < (f.big ? 5 : 3); i++) {
+      const rr = (f.big ? 3 : 2) + k * (f.big ? 7 : 5);
+      c.globalAlpha = 0.6 * (1 - k); c.fillStyle = i % 2 ? '#f2f5f2' : '#d8dfdb';
+      c.beginPath(); c.arc(f.x - f.dir * k * (6 + i * 3), f.y - k * (10 + i * 3), rr, 0, 7); c.fill();
+    }
+    c.globalAlpha = 1; return;
+  }
+  if (f.kind === 'casing') { // cápsula a saltar
+    const tt = f.t; const x = f.x + f.vx * tt; const y = Math.min(WORLD.ground - 2, f.y + f.vy * tt + 120 * tt * tt);
+    c.globalAlpha = 1 - Math.max(0, k - 0.6) / 0.4; c.fillStyle = '#d9a640'; R(c, x, y, 1.6, 1); c.globalAlpha = 1; return;
+  }
+  if (f.kind === 'charge') { // energia a concentrar-se no núcleo
+    const r = 1 + k * 4 + Math.sin(t * 40) * 0.6;
+    c.globalAlpha = 0.35 + k * 0.5; c.fillStyle = C.laser; c.beginPath(); c.arc(f.x, f.y, r + 2, 0, 7); c.fill();
+    c.globalAlpha = 1; c.fillStyle = C.white; c.beginPath(); c.arc(f.x, f.y, r * 0.5, 0, 7); c.fill();
+    for (let i = 0; i < 4; i++) { const a = t * 9 + i * 1.57; const d = 9 * (1 - k); c.fillStyle = C.laser; R(c, f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, 1, 1); }
+    return;
+  }
+  if (f.kind === 'beam') { // feixe contínuo a pulsar
+    const w = (2.6 + Math.sin(t * 70) * 0.8) * (1 - k * 0.6);
+    c.lineCap = 'round';
+    c.globalAlpha = 0.45 * (1 - k); c.strokeStyle = C.laser; c.lineWidth = w + 3; c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x1, f.y1); c.stroke();
+    c.globalAlpha = 1 - k * 0.5; c.strokeStyle = C.laser; c.lineWidth = w; c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x1, f.y1); c.stroke();
+    c.strokeStyle = C.white; c.lineWidth = Math.max(0.6, w * 0.35); c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x1, f.y1); c.stroke();
+    c.globalAlpha = 1; return;
+  }
+  if (f.kind === 'burn') { // queimadura e faíscas no ponto de contacto
+    c.globalAlpha = 0.7 * (1 - k); c.fillStyle = '#ff8a2a'; c.beginPath(); c.arc(f.x, f.y, 2 + k * 3, 0, 7); c.fill();
+    c.fillStyle = C.white; c.beginPath(); c.arc(f.x, f.y, 1.2 * (1 - k), 0, 7); c.fill();
+    for (let i = 0; i < 6; i++) { const a = i * 1.05 + 0.4; const d = 2 + k * 8; c.fillStyle = i % 2 ? C.laser : '#ffd27a'; R(c, f.x + Math.cos(a) * d, f.y + Math.sin(a) * d - k * 4, 1, 1); }
+    c.globalAlpha = 0.35 * (1 - k); c.fillStyle = '#3a3a3a'; c.beginPath(); c.arc(f.x, f.y - 3 - k * 8, 2 + k * 3, 0, 7); c.fill();
+    c.globalAlpha = 1;
+  }
+}
+const TURRET_FX_KINDS = new Set(['dust', 'stick', 'steam', 'casing', 'beam', 'burn', 'charge']);
 function drawFx(c, C, fx, t) {
   let plane = null; const W = WORLD.w; const G = WORLD.ground;
   for (const f of fx) {
+    if (TURRET_FX_KINDS.has(f.kind)) { drawTurretFx(c, C, f, t); continue; }
     if (f.kind === 'boom') {
       const k = f.t / f.life; const flip = f.side === 1;
       if (f.src === 'meteor' && spr(c, k < 0.35 ? 'deb_fall' : 'deb_dust', f.x, G + 2, k < 0.35 ? 32 : 34, flip, 1 - Math.max(0, k - 0.6) / 0.4)) continue;
