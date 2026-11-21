@@ -80,6 +80,7 @@ Jogo original de defesa de base em pixel art retro, com uma só linha de combate
 
   Cada torre tem som próprio. O alcance segue a linha vermelha marcada no mapa, igual nos dois lados.
 - **Cerco:** a partir dos 10 minutos as duas bases vão perdendo vida.
+- **Ecrã inteiro:** o botão no canto do ecrã de jogo põe o jogo a ocupar o ecrã todo. Na horizontal, as caricas, o XP, evoluir e o especial ficam numa lateral estreita, o campo de batalha fica grande em cima e as cartas em baixo; na vertical fica tudo empilhado.
 - **Teclas:** `1` `2` `3` tropas, `Q` especial, `E` evoluir, `T` torre, `P` pausa.
 - **Som 8-bit** (Web Audio, `src/game/eraWar/audio.js`, sem ficheiros):
   - tilintar de carica ao ganhar ou gastar;

@@ -34,6 +34,7 @@ const TEMPLATE = `
   <span class="ew-audio"><button type="button" data-ew="mus" aria-pressed="true">&#9835; MÚSICA</button><button type="button" data-ew="snd" aria-pressed="true">&#9836; EFEITOS</button></span>
 </div>
 <div class="ew-screen" data-ew="screen">
+  <button type="button" class="ew-fsbtn" data-ew="fs" aria-pressed="false">&#10530; ECRÃ INTEIRO</button>
   <canvas data-ew="canvas" width="${CANVAS.w}" height="${CANVAS.h}" aria-label="Campo de batalha"></canvas>
   <span class="ew-hp l" data-ew="hp0">500 HP</span><span class="ew-hp r" data-ew="hp1">500 HP</span>
   <div class="ew-banner" data-ew="banner" hidden></div>
@@ -192,6 +193,25 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   on(el.mus, 'click', () => { audio.unlock(); audio.setPref('music', !audio.getPrefs().music); syncAudioBtns(); audio.ui.select(); });
   on(el.snd, 'click', () => { audio.unlock(); audio.setPref('sfx', !audio.getPrefs().sfx); syncAudioBtns(); audio.ui.select(); });
   syncAudioBtns();
+  // ---------- Ecrã inteiro ----------
+  let fsOn = false;
+  const setFs = (on) => {
+    fsOn = on; root.classList.toggle('ew-fs', on);
+    el.fs.setAttribute('aria-pressed', String(on)); el.fs.innerHTML = on ? '&#10529; SAIR DO ECRÃ INTEIRO' : '&#10530; ECRÃ INTEIRO';
+    document.documentElement.style.overflow = on ? 'hidden' : '';
+  };
+  on(el.fs, 'click', async () => {
+    audio.ui.select();
+    if (!fsOn) {
+      setFs(true);
+      try { await document.documentElement.requestFullscreen?.(); await screen.orientation?.lock?.('landscape'); } catch { /* o browser pode não deixar: fica em ecrã inteiro dentro da página */ }
+    } else {
+      setFs(false);
+      try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* sem efeito */ }
+    }
+  });
+  on(document, 'fullscreenchange', () => { if (!document.fullscreenElement && fsOn) setFs(false); });
+  on(window, 'keydown', (e) => { if (e.key === 'Escape' && fsOn && !document.fullscreenElement) setFs(false); });
   const tab = (n) => {
     [0, 1].forEach((k) => { el[`panel${k}`].hidden = k !== n; el[`tab${k}`].setAttribute('aria-selected', String(k === n)); });
   };
@@ -228,7 +248,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   return function destroy() {
     destroyed = true; cancelAnimationFrame(raf); clearTimeout(bannerTimer);
     audio.stopMusic(); audio.pauseAudio(false);
-    offs.forEach((f) => f()); themeWatch.disconnect();
+    offs.forEach((f) => f()); themeWatch.disconnect(); document.documentElement.style.overflow = '';
     root.innerHTML = ''; root.classList.remove('ew');
   };
 }

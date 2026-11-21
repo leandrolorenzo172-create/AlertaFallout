@@ -165,3 +165,50 @@
 .ew-screen::after { background-image: radial-gradient(ellipse at center, transparent 72%, rgb(0 0 0 / 0.28) 100%) !important; background-size: 100% 100% !important; }
 /* toques rápidos nos botões não fazem zoom */
 .ew, .ew * { touch-action: manipulation; }
+
+/* ===== Ecrã inteiro ===== */
+.ew-fsbtn { position: absolute; top: 6px; right: 6px; z-index: 6; font: inherit; font-size: clamp(9px, 1.2vw, 12px); letter-spacing: .1em; padding: 4px 8px; cursor: pointer;
+  color: rgb(var(--c)); background: rgb(0 0 0 / .6); border: 1.5px solid rgb(var(--c) / .5); border-radius: 3px; }
+.ew-fsbtn:hover, .ew-fsbtn:focus-visible { border-color: rgb(var(--c)); outline: none; }
+.ew.ew-fs { position: fixed; inset: 0; z-index: 2000; max-width: none; margin: 0; background: #020802; display: grid; gap: 6px; overflow: hidden;
+  padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  grid-template-columns: minmax(118px, 15.5%) 1fr; grid-template-rows: auto auto 1fr; grid-template-areas: 'side screen' 'side tabs' 'side panel'; align-items: stretch; }
+.ew-fs .ew-help, .ew-fs .ew-era { display: none !important; }
+.ew-fs .ew-screen { grid-area: screen; margin: 0; width: 100%; max-width: none !important; align-self: start; box-shadow: 0 0 24px rgb(var(--c) / .18); }
+.ew-fs .ew-hud { grid-column: 1; grid-row: 1 / 4; align-self: start; margin: 0; gap: 4px; display: grid; grid-template-columns: auto 1fr; grid-auto-rows: min-content; }
+.ew-fs .ew-hud > * { grid-column: 1 / -1 !important; }
+.ew-fs .ew-hud .ew-pause { grid-column: 1 / 2 !important; padding: 4px 6px; font-size: 12px; }
+.ew-fs .ew-hud .ew-stat.ew-caps { grid-column: 2 / 3 !important; }
+.ew-fs .ew-stat { padding: 2px 5px; }
+.ew-fs .ew-stat b { font-size: 8px; letter-spacing: .08em; }
+.ew-fs .ew-stat span { font-size: 12px; }
+.ew-fs .ew-caps > span { gap: 3px; }
+.ew-fs .ew-evolve, .ew-fs .ew-special { padding: 4px 6px; }
+.ew-fs .ew-evolve b, .ew-fs .ew-special b { font-size: 10px; letter-spacing: .02em; white-space: normal; }
+.ew-fs .ew-evolve span, .ew-fs .ew-special span { font-size: 8px; }
+.ew-fs .ew-queuebar { grid-column: 1; grid-row: 3; align-self: end; margin: 0; gap: 3px; font-size: 8px; }
+.ew-fs .ew-queue i { width: 14px; height: 9px; }
+.ew-fs .ew-audio button { font-size: 8px; padding: 2px 4px; }
+.ew-fs .ew-tabs { grid-area: tabs; margin: 0; }
+.ew-fs .ew-panel { grid-area: panel; align-self: stretch; align-items: stretch; grid-auto-rows: 1fr; padding: 4px; gap: 5px; min-height: 0; overflow: auto; }
+.ew-fs .ew-card { display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 13px 6px 4px; text-align: left; height: 100%; }
+.ew-fs .ew-card canvas { grid-row: 1 / 3; max-width: 64px; }
+.ew-fs .ew-card .ew-uname { align-self: end; }
+.ew-fs .ew-card .ew-cost { align-self: start; text-align: left; }
+.ew-fs .ew-sb { overflow: auto; }
+/* telemóvel na vertical em ecrã inteiro: tudo empilhado */
+@media (orientation: portrait) {
+  .ew.ew-fs { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto 1fr; grid-template-areas: 'screen' 'hud' 'queue' 'tabs' 'panel'; }
+  .ew-fs .ew-hud { grid-area: hud; grid-column: auto; grid-row: auto; grid-template-columns: auto 1fr 1fr; }
+  .ew-fs .ew-hud > * { grid-column: auto !important; }
+  .ew-fs .ew-hud .ew-evolve, .ew-fs .ew-hud .ew-special { grid-column: span 3 !important; }
+  .ew-fs .ew-queuebar { grid-area: queue; grid-column: auto; grid-row: auto; }
+}
+@media (orientation: portrait) {
+  .ew-fs .ew-panel { align-self: start; grid-auto-rows: auto; align-items: start; }
+  .ew-fs .ew-card { display: flex; flex-direction: column; align-items: center; text-align: center; height: auto; padding: 18px 6px 6px; }
+  .ew-fs .ew-card canvas { max-width: 96px; }
+  .ew-fs .ew-card .ew-uname, .ew-fs .ew-card .ew-cost { align-self: center; text-align: center; }
+  .ew-fs .ew-stat b { font-size: 9px; } .ew-fs .ew-stat span { font-size: 14px; }
+  .ew-fs .ew-evolve b, .ew-fs .ew-special b { font-size: 12px; }
+}
