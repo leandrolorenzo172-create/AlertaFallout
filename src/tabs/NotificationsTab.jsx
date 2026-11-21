@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
 
 const notifications = [
   { key: 'guerra_enabled', label: 'Guerra & Conflitos', desc: 'Notícias sobre guerras ativas e conflitos armados', icon: '⚔️', color: '#ff0000' },
@@ -52,7 +53,10 @@ export default function NotificationsTab() {
     load();
   }, []);
 
+  const [perm, setPerm] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
   const handleToggle = (key) => {
+    // ligar os avisos de greve pede logo autorização para notificações no telemóvel
+    if (key === 'greves_enabled' && !settings[key]) askPermission().then(setPerm);
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
     setSaved(false);
   };
@@ -73,6 +77,7 @@ export default function NotificationsTab() {
     }
     setSaving(false);
     setSaved(true);
+    checkStrikeAlerts();
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -139,6 +144,24 @@ export default function NotificationsTab() {
             />
           </motion.div>
         ))}
+      </div>
+
+      {/* Avisos de greve: autorização do sistema e teste */}
+      <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+        <p className="text-[10px] leading-relaxed mb-2" style={{ color: 'rgb(var(--c) / 0.55)' }}>
+          ✊ Avisos de greve: {ANTECEDENCIA_DIAS} dias antes e no próprio dia, por exemplo "ALERTA — Greve da Função Pública dia 26/11/26".
+          {perm === 'granted' && ' Notificações do telemóvel autorizadas.'}
+          {perm === 'denied' && ' As notificações estão bloqueadas nas definições do telemóvel: os avisos aparecem só dentro da app.'}
+          {perm === 'unsupported' && ' Este browser não mostra notificações: os avisos aparecem só dentro da app.'}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {perm === 'default' && (
+            <button type="button" onClick={() => askPermission().then(setPerm)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+              style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Autorizar notificações</button>
+          )}
+          <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+            style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Testar aviso</button>
+        </div>
       </div>
 
       <button

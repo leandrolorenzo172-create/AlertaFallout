@@ -44,6 +44,41 @@ const SECTORS = [
   [/recolha do lixo|lixo|limpeza urbana|autarquia|camara municipal/, 'Autarquias'],
   [/correios|ctt|banca|bancarios|comercio|industria|fabrica|call center/, 'Privado'],
 ];
+// ---------- Data da greve (o dia em que acontece, tirado do título/resumo) ----------
+// Reconhece: "12 de dezembro", "11 e 12 de dezembro", "de 3 a 5 de dezembro", "12/12", "amanhã", "hoje",
+// "esta/próxima sexta-feira", "no sábado". Datas relativas contam a partir da data da notícia.
+// Devolve os dias da greve em 'AAAA-MM-DD' (no máximo 7), ou [] se a notícia não diz o dia.
+const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const DIAS_SEMANA = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function strikeDays(text, pubTime) {
+  const pub = new Date(pubTime); pub.setHours(12, 0, 0, 0);
+  const at = (m, d) => { // dia/mês -> data, no ano que fica mais perto da notícia (dezembro -> janeiro passa o ano)
+    const x = new Date(pub.getFullYear(), m, d, 12);
+    if (x - pub > 200 * 86400000) x.setFullYear(x.getFullYear() - 1);
+    if (pub - x > 160 * 86400000) x.setFullYear(x.getFullYear() + 1);
+    return x;
+  };
+  const plus = (n) => new Date(pub.getTime() + n * 86400000);
+  let days = [];
+  const mes = MESES.join('|');
+  // intervalo: "de 3 a 5 de dezembro", "entre 3 e 5 de dezembro"
+  let m = text.match(new RegExp(`\\b(?:de|entre) (\\d{1,2}) (?:a|e) (\\d{1,2}) de (${mes})\\b`));
+  if (m) { const a = +m[1], b = +m[2], mo = MESES.indexOf(m[3]); if (b >= a && b - a < 7) for (let d = a; d <= b; d++) days.push(at(mo, d)); }
+  // lista ou dia simples: "11 e 12 de dezembro", "dia 12 de dezembro"
+  if (!days.length && (m = text.match(new RegExp(`\\b((?:\\d{1,2}(?:, | e ))*\\d{1,2}) de (${mes})\\b`)))) {
+    const mo = MESES.indexOf(m[2]); days = m[1].split(/, | e /).map(Number).filter((d) => d >= 1 && d <= 31).slice(0, 7).map((d) => at(mo, d));
+  }
+  if (!days.length && (m = text.match(/\b(\d{1,2})\/(\d{1,2})\b/)) && +m[2] >= 1 && +m[2] <= 12) days = [at(+m[2] - 1, +m[1])];
+  if (!days.length && /\bamanha\b/.test(text)) days = [plus(1)];
+  if (!days.length && (m = text.match(/\b(?:esta|nesta|proxima|na proxima|neste|no|na|de|desta) (segunda|terca|quarta|quinta|sexta|sabado|domingo)\b/))) {
+    const w = DIAS_SEMANA.indexOf(m[1]); let n = (w - pub.getDay() + 7) % 7; if (/proxim/.test(m[0]) && n === 0) n = 7; days = [plus(n)];
+  }
+  if (!days.length && /\b(hoje|esta manha|em curso|arranca|arrancou|comecou)\b/.test(text)) days = [pub];
+  // só datas plausíveis: de 2 dias antes da notícia até 90 dias depois
+  return [...new Set(days.filter((d) => d - pub > -2 * 86400000 && d - pub < 90 * 86400000).map(ymd))].sort();
+}
+
 const CYBER = /\b(ciberataque\w*|ciberseguranca|hackers?|pirat\w+ informatic\w+|ransomware|apagao|falha informatica|fuga de dados|malware)\b/;
 const REGIONS = [
   [/ucrania|russia|kiev|moscovo|kremlin|bielorrussia/, 'Europa de Leste'],
@@ -145,6 +180,9 @@ const strikeKey = (t) => norm(t).replace(/[^a-z0-9 ]/g, '').split(' ').filter((w
 const items = new Map((prevStrikes?.items || []).map((x) => [strikeKey(x.title), x]));
 for (const x of strikesNow) if (new Date(x.date).getFullYear() === year && !items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x);
 const strikeItems = [...items.values()].sort((x, y) => y.date - x.date);
+// greves desconvocadas/suspensas/adiadas não geram aviso (e anulam as do mesmo setor nesses dias)
+const CANCEL = /\b(suspens\w*|suspend\w*|desconvoc\w*|cancelad\w*|cancela\w*|adiad\w*|adia|sem efeito|levantad\w*|desmarcad\w*)\b/;
+for (const x of strikeItems) { const t = norm(`${x.title} ${x.summary || ''}`); x.days = strikeDays(t, x.date); x.cancelled = CANCEL.test(norm(x.title)); }
 const monthAgo = Date.now() - 30 * 86400000;
 const bySector = {};
 for (const x of strikeItems) bySector[x.sector] = (bySector[x.sector] || 0) + 1;
@@ -153,6 +191,18 @@ const strikes = {
   count: strikeItems.length, last30: strikeItems.filter((x) => x.date > monthAgo).length,
   level: Math.min(10, Math.round((1 + (strikeItems.length / REFERENCIA_ANUAL) * 9) * 10) / 10),
   bySector, items: strikeItems.slice(0, 400),
+  // greves com dia marcado de hoje em diante (a app usa esta lista para avisar com antecedência e no próprio dia)
+  upcoming: (() => {
+    const hoje = ymd(new Date()); const seenU = new Set(); const out = [];
+    const off = new Set(strikeItems.filter((x) => x.cancelled).flatMap((x) => x.days.map((d) => `${x.sector}|${d}`)));
+    for (const x of strikeItems.slice().sort((p, q) => q.date - p.date)) {
+      if (x.cancelled || !x.days?.length || x.days[x.days.length - 1] < hoje) continue;
+      if (x.days.some((d) => off.has(`${x.sector}|${d}`))) continue;
+      const k = `${x.sector}|${x.days[0]}`; if (seenU.has(k)) continue; seenU.add(k);
+      out.push({ id: k, sector: x.sector, days: x.days, title: x.title, url: x.url, source: x.source });
+    }
+    return out.sort((p, q) => p.days[0].localeCompare(q.days[0])).slice(0, 30);
+  })(),
 };
 
 // ---------- Histórico diário do índice económico (últimos 60 dias) ----------
@@ -163,4 +213,4 @@ const economy = { level: econLevel, total: econTotal, negative: econNeg, history
 
 mkdirSync('public/data', { recursive: true });
 writeFileSync('public/data/news.json', JSON.stringify({ generated: new Date().toISOString(), counts, war: war.slice(0, 30), economy, strikes }));
-console.log(`news.json: ${counts.total} notícias do mundo, ${war.length} sobre conflitos; economia ${econTotal} (${econNeg} negativas, índice ${econLevel}); greves no ano ${strikes.count} (${strikesNow.length} recentes)`);
+console.log(`news.json: ${counts.total} notícias do mundo, ${war.length} sobre conflitos; economia ${econTotal} (${econNeg} negativas, índice ${econLevel}); greves no ano ${strikes.count} (${strikesNow.length} recentes, ${strikes.upcoming.length} com dia marcado)`);

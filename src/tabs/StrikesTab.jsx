@@ -34,6 +34,22 @@ export default function StrikesTab() {
           <b>{data.count}</b> greves noticiadas em {data.year}. O índice chega a 10 com {data.reference} greves no ano.
         </p>
       </div>
+      {/* Próximas greves com dia marcado (as mesmas que geram os avisos) */}
+      {(data.upcoming || []).filter((u) => u.sector !== 'Internacional').length > 0 && (
+        <div className="p-4 rounded-sm mb-4" style={{ ...card, border: '1px solid #ffaa0055' }}>
+          <p className="text-[10px] uppercase tracking-wider mb-2 font-bold" style={{ color: '#ffaa00' }}>Próximas greves</p>
+          {data.upcoming.filter((u) => u.sector !== 'Internacional').map((u) => {
+            const f = (d) => d.split('-').reverse().join('/');
+            const when = u.days.length > 1 ? `${f(u.days[0])} a ${f(u.days[u.days.length - 1])}` : f(u.days[0]);
+            return (
+              <a key={u.id} href={u.url || undefined} target="_blank" rel="noreferrer" className="block mb-2 last:mb-0">
+                <p className="text-xs font-bold" style={{ color: 'rgb(var(--c) / 0.9)' }}>📅 {when} · {u.sector}</p>
+                <p className="text-[11px] leading-snug" style={{ color: 'rgb(var(--c) / 0.6)' }}>{u.title}</p>
+              </a>
+            );
+          })}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <Stat label="No ano" value={data.count} sub={`desde ${since}`} />
         <Stat label="30 dias" value={data.last30} sub="mais recentes" />

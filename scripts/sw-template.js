@@ -82,3 +82,42 @@ self.addEventListener('fetch', (event) => {
   }
   // Tudo o resto (APIs ao vivo, emissoras, mapas) vai diretamente para a rede.
 });
+
+// ---------- Avisos de greve com a app fechada (Periodic Background Sync, Chrome/Android com a app instalada) ----------
+// Mesma regra de src/notify/strikeAlerts.js: avisa ANTECEDENCIA_DIAS antes e no próprio dia. Estado partilhado na Cache Storage.
+const ANTECEDENCIA_DIAS = 2;
+const SECTOR_TXT = { 'Função pública': 'Greve da Função Pública', Saúde: 'Greve na Saúde', Educação: 'Greve nas escolas', Transportes: 'Greve nos Transportes',
+  'Greve geral': 'Greve geral', Justiça: 'Greve na Justiça', Segurança: 'Greve nas forças de segurança', Autarquias: 'Greve nas autarquias' };
+const dmy = (d) => { const [y, m, dd] = d.split('-'); return `${dd}/${m}/${y.slice(2)}`; };
+const ymdLocal = (t = new Date()) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+async function checkStrikes() {
+  const c = await caches.open('pipboy-avisos'); const key = BASE + '__avisos-greve.json';
+  const st = await c.match(key).then((r) => (r ? r.json() : { enabled: true, shown: {} })).catch(() => ({ enabled: true, shown: {} }));
+  if (!st.enabled) return;
+  const news = await fetch(BASE + 'data/news.json', { cache: 'no-cache' }).then((r) => r.json());
+  const today = ymdLocal();
+  for (const s of news?.strikes?.upcoming || []) {
+    if (!s.days?.length || s.sector === 'Internacional') continue;
+    const first = s.days[0], last = s.days[s.days.length - 1];
+    const until = Math.round((new Date(first + 'T12:00') - new Date(today + 'T12:00')) / 86400000);
+    const what = SECTOR_TXT[s.sector] || 'Greve';
+    let k = null, title = null;
+    if (today >= first && today <= last) { k = `${s.id}|dia|${today}`; title = `ALERTA — HOJE: ${what} (${dmy(today)})`; }
+    else if (until > 0 && until <= ANTECEDENCIA_DIAS) { k = `${s.id}|pre`; title = `ALERTA — ${what} ${s.days.length > 1 ? `de ${dmy(first)} a ${dmy(last)}` : `dia ${dmy(first)}`}`; }
+    if (!k || st.shown[k]) continue;
+    await self.registration.showNotification(title, { body: s.title, tag: 'greve-' + k, icon: BASE + 'icons/icon-192.png', badge: BASE + 'icons/icon-192.png', data: { url: BASE + '#/greves' } });
+    st.shown[k] = Date.now();
+  }
+  await c.put(key, new Response(JSON.stringify(st), { headers: { 'content-type': 'application/json' } }));
+}
+self.addEventListener('periodicsync', (event) => { if (event.tag === 'avisos-greve') event.waitUntil(checkStrikes().catch(() => {})); });
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || './#/greves', BASE).href;
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const w = wins.find((x) => x.url.startsWith(BASE));
+    if (w) { await w.focus(); return w.navigate(url).catch(() => {}); }
+    return self.clients.openWindow(url);
+  })());
+});

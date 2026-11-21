@@ -10,6 +10,7 @@ import DashboardTab from './tabs/DashboardTab';
 import WarNewsTab from './tabs/WarNewsTab';
 import EconomyTab from './tabs/EconomyTab';
 import StrikesTab from './tabs/StrikesTab';
+import StrikeBanner from './notify/StrikeBanner';
 import CatastropheTab from './tabs/CatastropheTab';
 import WeatherTab from './tabs/WeatherTab';
 import RadioTab from './tabs/RadioTab';
@@ -62,6 +63,7 @@ export default function App() {
     <div className="crt min-h-full">
       <div className="sticky z-30" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <StatusBar threatLevel={threatLevel} />
+        {!IS_ARTIFACT && <StrikeBanner />}
         {IS_ARTIFACT && SIMULATED.includes(activeTab) && (
           <div className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-center" style={{ background: '#331a00', color: '#ffaa00', borderBottom: '1px solid #ffaa0044' }}>
             Simulação — dados gerados por IA sem internet. Não são reais.
