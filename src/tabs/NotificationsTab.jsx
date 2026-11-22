@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { getPushCode, pushSupported } from '@/notify/push';
+import { enableNotifications, isRegistered, pushSupported } from '@/notify/push';
 import { testWeatherAlert } from '@/notify/strikeAlerts';
 import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
 
@@ -55,14 +55,14 @@ export default function NotificationsTab() {
     load();
   }, []);
 
-  const [pushCode, setPushCode] = useState('');
+  const [registered, setRegistered] = useState(false);
   const [pushMsg, setPushMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { isRegistered().then(setRegistered); }, []);
   const activatePush = async () => {
-    setPushMsg('');
-    try { const c = await getPushCode(); setPushCode(c); setPerm('granted'); } catch (e) { setPushMsg(e.message); }
-  };
-  const copyPush = async () => {
-    try { await navigator.clipboard.writeText(pushCode); setPushMsg('Código copiado.'); } catch { setPushMsg('Não deu para copiar: seleciona o texto e copia à mão.'); }
+    setPushMsg(''); setBusy(true);
+    try { await enableNotifications(); setRegistered(true); setPerm('granted'); setPushMsg('✔ Pronto! Este telemóvel passa a receber os avisos, mesmo com a app fechada.'); }
+    catch (e) { setPushMsg(e.message); } finally { setBusy(false); }
   };
   const [perm, setPerm] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
   const handleToggle = (key) => {
@@ -169,7 +169,7 @@ export default function NotificationsTab() {
 
         {/* estado deste telemóvel */}
         <p className="mb-3 p-2 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.5)', border: `1px solid ${perm === 'granted' ? 'rgb(var(--c) / 0.3)' : '#ffaa0055'}`, color: perm === 'granted' ? 'rgb(var(--c) / 0.85)' : '#ffaa00' }}>
-          {perm === 'granted' && '✔ Este telemóvel tem as notificações autorizadas.'}
+          {perm === 'granted' && (registered ? '✔ Notificações ativas neste telemóvel.' : '⚠ Notificações autorizadas, mas falta ativar: carrega em "Ativar notificações no telemóvel".')}
           {perm === 'default' && '⚠ As notificações ainda não foram autorizadas neste telemóvel: carrega em "Ativar notificações no telemóvel".'}
           {perm === 'denied' && '✖ As notificações estão bloqueadas nas definições do telemóvel. Desbloqueia-as para esta app; até lá os avisos só aparecem dentro da app.'}
           {perm === 'unsupported' && '✖ Este browser não mostra notificações. Usa o Chrome com a app instalada no ecrã inicial; até lá os avisos só aparecem dentro da app.'}
@@ -178,9 +178,11 @@ export default function NotificationsTab() {
         <div className="space-y-3">
           {pushSupported() && (
             <div>
-              <button type="button" onClick={activatePush} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-                style={{ border: '1px solid #ffaa00', color: '#ffaa00' }}>Ativar notificações no telemóvel</button>
-              <p className="mt-1">Só é preciso uma vez (ou num telemóvel novo). Gera o código que liga este telemóvel aos avisos enviados com a app fechada.</p>
+              <button type="button" onClick={activatePush} disabled={busy} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+                style={{ border: '1px solid #ffaa00', color: '#ffaa00', opacity: busy ? 0.6 : 1 }}>
+                {busy ? 'A ativar…' : registered ? 'Notificações ativas ✔ (tocar para renovar)' : 'Ativar notificações no telemóvel'}
+              </button>
+              <p className="mt-1">Um toque e fica feito: o telemóvel regista-se sozinho, sem códigos. Os interruptores acima passam a valer também com a app fechada.</p>
             </div>
           )}
           <div>
@@ -193,18 +195,6 @@ export default function NotificationsTab() {
             <p className="mt-1">Mostram agora um aviso de exemplo, com a personagem na cor da app. No do tempo, cada toque mostra outro estado (chuva, sol, geada, vento, nevoeiro, nublado).</p>
           </div>
         </div>
-        {pushCode && (
-          <div className="mt-3">
-            <p className="mb-1" style={{ color: 'rgb(var(--c) / 0.75)' }}>
-              Código deste telemóvel: copia-o e envia-o a quem gere a app (fica guardado no GitHub como PUSH_SUBSCRIPTIONS).
-              A partir daí os avisos chegam mesmo com a app fechada.
-            </p>
-            <textarea readOnly value={pushCode} rows={4} onFocus={(e) => e.target.select()} className="w-full p-2 rounded-sm text-[9px] font-mono"
-              style={{ background: 'rgb(var(--cb))', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c) / 0.8)' }} />
-            <button type="button" onClick={copyPush} className="mt-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-              style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Copiar código</button>
-          </div>
-        )}
         {pushMsg && <p className="mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
       </div>
 

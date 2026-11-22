@@ -146,3 +146,13 @@ Cada envio para o ramo `main` compila a app e publica-a no GitHub Pages (ver `.g
 
 - `radio-steeldeck.html` é o rádio sozinho, num único ficheiro (com a lista de emissoras e o hls.js lá dentro), gerado por `scripts/build-radio.mjs`. Aceita links como `radio-steeldeck.html#f=97.4`.
 - `scripts/sw-template.js` é o service worker: guarda a app para abrir sem internet e nunca guarda streams de áudio nem pedidos às APIs de dados ao vivo. A versão da cache muda em cada build.
+
+## Notificações automáticas (registo dos telemóveis)
+
+- Na app, **Definições → Notificações → "Ativar notificações no telemóvel"**: o telemóvel regista-se sozinho, sem códigos.
+- O registo é guardado num serviço pequeno na Cloudflare (`worker/push-registry.js`, Worker `steeldeck-push` com KV `steeldeck-push-subs`,
+  em `https://steeldeck-push.steeldeck.workers.dev`). Guarda só o endereço de envio do browser, os interruptores e a cor de cada telemóvel.
+- O GitHub Actions (`scripts/send-push.mjs`) lê a lista com um JWT assinado pela chave VAPID privada (secret `VAPID_PRIVATE_KEY`) — não há segredos novos —,
+  envia a cada telemóvel só as categorias ligadas e apaga os registos que deixaram de existir.
+- Para voltar a publicar o Worker: API da Cloudflare `PUT /accounts/{conta}/workers/scripts/steeldeck-push` com o ficheiro e as ligações
+  `SUBS` (KV), `VAPID_PUBLIC` e `ALLOWED_ORIGINS=https://steeldeck.github.io`.

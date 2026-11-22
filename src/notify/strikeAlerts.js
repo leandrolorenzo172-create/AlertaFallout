@@ -6,6 +6,7 @@
 //   (Periodic Background Sync, só na app instalada no Chrome/Android).
 // O registo dos avisos já mostrados fica na Cache Storage, partilhado entre a página e o service worker.
 import { IS_ARTIFACT } from '@/api/base44Client';
+import { syncPush } from './push';
 
 export const ANTECEDENCIA_DIAS = 2;
 const STATE_CACHE = 'pipboy-avisos';
@@ -138,6 +139,7 @@ export async function checkStrikeAlerts() {
       for (const k of Object.keys(st.shown)) if (st.shown[k] < old) delete st.shown[k];
     }
     await writeState(st);
+    syncPush(); // interruptores e cor também no serviço de registo (só se mudaram)
   } catch { /* sem rede: tenta mais tarde */ } finally { running = false; }
 }
 

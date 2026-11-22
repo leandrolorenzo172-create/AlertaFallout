@@ -10,14 +10,18 @@
 //  - tensao_global : uma vez por dia, se a tensão geopolítica estiver em >= 7/10 ou subir 1 ponto face a ontem
 //  - pizza_index   : uma vez por dia, se o Índice Pizza estiver em >= 7/10
 //
-// Precisa de: secret VAPID_PRIVATE_KEY e secret PUSH_SUBSCRIPTIONS (lista JSON dos códigos dos telemóveis, obtidos na app em
-// Definições > Notificações > "Ativar notificações no telemóvel"). Teste manual: Actions > Run workflow > "Enviar uma notificação de teste" (um exemplo de cada categoria).
+// Precisa de: secret VAPID_PRIVATE_KEY. Os telemóveis registam-se sozinhos no serviço PUSH_REGISTRY (worker/push-registry.js)
+// ao carregar em "Ativar notificações no telemóvel"; o secret PUSH_SUBSCRIPTIONS (lista JSON) ainda é aceite para registos antigos. Teste manual: Actions > Run workflow > "Enviar uma notificação de teste" (um exemplo de cada categoria).
 // Os avisos já enviados ficam em news.json (pushSent), lido do site publicado na execução seguinte.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import webpush from 'web-push';
+import { createPrivateKey, sign } from 'node:crypto';
 
 export const VAPID_PUBLIC = 'BJUMloYPF_iiynd3u8ispKS3NqXUXDwR2Nc7-MIy0BcBF5d9TaNQaYNkvXQFpj-PtuBMzZcbNLaQTg0UAcj9xi0';
 const ANTECEDENCIA_DIAS = 2;
+// serviço onde a app regista cada telemóvel automaticamente (worker/push-registry.js na Cloudflare)
+const PUSH_REGISTRY = process.env.PUSH_REGISTRY || 'https://steeldeck-push.steeldeck.workers.dev';
+const PREF_KEY = { greves: 'greves_enabled', meteorologia: 'meteorologia_enabled', catastrofes: 'catastrofes_enabled', guerra: 'guerra_enabled', tensao_global: 'tensao_global_enabled', pizza_index: 'pizza_index_enabled' };
 const DISTRITO = { id: 'BRG', nome: 'Braga', cidade: 1030300 }; // código do distrito nos avisos e da cidade na previsão do IPMA
 const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://steeldeck.github.io/SteelDeck/data/news.json';
 const SECTOR_TXT = {
@@ -30,10 +34,30 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const round1 = (v) => Math.round(v * 10) / 10;
 
 const priv = process.env.VAPID_PRIVATE_KEY;
-let subs = [];
-try { subs = JSON.parse(process.env.PUSH_SUBSCRIPTIONS || '[]'); } catch { console.log('PUSH_SUBSCRIPTIONS inválido'); }
-if (!subs.length && existsSync('push-subscriptions.json')) subs = JSON.parse(readFileSync('push-subscriptions.json', 'utf8'));
-if (!Array.isArray(subs)) subs = [subs];
+const b64u = (b) => Buffer.from(b).toString('base64url');
+// O GitHub prova ao serviço de registo quem é: JWT curto assinado com a chave VAPID privada (o serviço confirma com a pública)
+function registryToken() {
+  const pub = Buffer.from(VAPID_PUBLIC, 'base64url');
+  const key = createPrivateKey({ key: { kty: 'EC', crv: 'P-256', d: priv, x: b64u(pub.subarray(1, 33)), y: b64u(pub.subarray(33, 65)) }, format: 'jwk' });
+  const data = `${b64u(JSON.stringify({ alg: 'ES256', typ: 'JWT' }))}.${b64u(JSON.stringify({ aud: 'steeldeck-push', exp: Math.floor(Date.now() / 1000) + 300 }))}`;
+  return `${data}.${b64u(sign('sha256', Buffer.from(data), { key, dsaEncoding: 'ieee-p1363' }))}`;
+}
+// Lista de telemóveis: os registados automaticamente (com os interruptores de cada um) + os antigos do secret PUSH_SUBSCRIPTIONS
+let targets = [];
+if (priv) {
+  try {
+    const r = await fetch(`${PUSH_REGISTRY}/list`, { headers: { Authorization: `Bearer ${registryToken()}` }, signal: AbortSignal.timeout(20000) });
+    const j = r.ok ? await r.json() : null;
+    if (j?.ok) targets = j.records.map((x) => ({ sub: x.sub, prefs: x.prefs || {} }));
+    console.log(`registo automático: ${targets.length} telemóveis${r.ok ? '' : ` (erro ${r.status})`}`);
+  } catch (e) { console.log('registo automático indisponível:', e.message); }
+}
+let legacy = [];
+try { legacy = JSON.parse(process.env.PUSH_SUBSCRIPTIONS || '[]'); } catch { console.log('PUSH_SUBSCRIPTIONS inválido'); }
+if (!legacy.length && existsSync('push-subscriptions.json')) legacy = JSON.parse(readFileSync('push-subscriptions.json', 'utf8'));
+if (!Array.isArray(legacy)) legacy = [legacy];
+for (const sub of legacy) if (sub?.endpoint && !targets.some((t) => t.sub.endpoint === sub.endpoint)) targets.push({ sub, prefs: {} });
+const subs = targets.map((t) => t.sub);
 const newsPath = 'public/data/news.json';
 const news = JSON.parse(readFileSync(newsPath, 'utf8'));
 
@@ -182,13 +206,24 @@ if (!priv || !subs.length) {
   for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.title}`);
 } else if (due.length) {
   webpush.setVapidDetails('https://steeldeck.github.io/SteelDeck/', VAPID_PUBLIC, priv);
+  const gone = new Set();
   for (const d of due.slice(0, 10)) { // nunca mais de 10 de uma vez
     const payload = JSON.stringify({ cat: d.cat, title: d.title, body: d.body, tag: d.key.slice(0, 120), url: d.url, icon: `./icons/tempo/${d.icon || 'base'}.png` });
-    const results = await Promise.allSettled(subs.map((s) => webpush.sendNotification(s, payload, { TTL: 12 * 3600, urgency: 'high' })));
+    // só para quem tem esta categoria ligada (os registos antigos, sem interruptores, recebem tudo e o telemóvel filtra)
+    const to = targets.filter((t) => !PREF_KEY[d.cat] || t.prefs[PREF_KEY[d.cat]] !== false).filter((t) => !gone.has(t.sub.endpoint));
+    const results = await Promise.allSettled(to.map((t) => webpush.sendNotification(t.sub, payload, { TTL: 12 * 3600, urgency: 'high' })));
     const ok = results.filter((r) => r.status === 'fulfilled').length;
-    results.forEach((r) => { if (r.status === 'rejected') console.log('push falhou:', r.reason?.statusCode, r.reason?.body || r.reason?.message); });
-    if (ok) sent[d.key] = Date.now();
-    console.log(`push [${d.cat}]: "${d.title}" -> ${ok}/${subs.length} telemóveis`);
+    results.forEach((r, i) => {
+      if (r.status !== 'rejected') return;
+      if ([404, 410].includes(r.reason?.statusCode)) gone.add(to[i].sub.endpoint); // telemóvel desinstalou ou desligou: apagar
+      else console.log('push falhou:', r.reason?.statusCode, r.reason?.body || r.reason?.message);
+    });
+    if (ok || !to.length) sent[d.key] = Date.now();
+    console.log(`push [${d.cat}]: "${d.title}" -> ${ok}/${to.length} telemóveis`);
+  }
+  if (gone.size) {
+    console.log(`a apagar ${gone.size} registo(s) expirado(s)`);
+    await fetch(`${PUSH_REGISTRY}/remove`, { method: 'POST', headers: { Authorization: `Bearer ${registryToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoints: [...gone] }) }).catch(() => {});
   }
 } else console.log('push: nenhum aviso para enviar agora');
 
