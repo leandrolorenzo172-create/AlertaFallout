@@ -1,5 +1,5 @@
 // Sintonizador de rádio analógico (JavaScript puro, sem dependências).
-// Usado no separador Rádio da app e no ficheiro autónomo radio-fallout-pt.html.
+// Usado no separador Rádio da app e no ficheiro autónomo radio-steeldeck.html.
 import { themedCtx } from './canvasTheme';
 import { DEFAULT_STATIONS } from './defaultStations';
 import stationsPT from '../data/stationsPT.json';

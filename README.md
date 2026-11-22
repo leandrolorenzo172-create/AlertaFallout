@@ -144,5 +144,5 @@ Cada envio para o ramo `main` compila a app e publica-a no GitHub Pages (ver `.g
 
 ## Ficheiros
 
-- `radio-fallout-pt.html` é o rádio sozinho, num único ficheiro (com a lista de emissoras e o hls.js lá dentro), gerado por `scripts/build-radio.mjs`. Aceita links como `radio-fallout-pt.html#f=97.4`.
+- `radio-steeldeck.html` é o rádio sozinho, num único ficheiro (com a lista de emissoras e o hls.js lá dentro), gerado por `scripts/build-radio.mjs`. Aceita links como `radio-steeldeck.html#f=97.4`.
 - `scripts/sw-template.js` é o service worker: guarda a app para abrir sem internet e nunca guarda streams de áudio nem pedidos às APIs de dados ao vivo. A versão da cache muda em cada build.

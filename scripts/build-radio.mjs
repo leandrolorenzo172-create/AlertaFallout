@@ -1,4 +1,4 @@
-// Gera o ficheiro autónomo radio-fallout-pt.html a partir do sintonizador da app.
+// Gera o ficheiro autónomo radio-steeldeck.html a partir do sintonizador da app.
 // Tudo fica dentro do HTML (lista de emissoras e hls.js), para não depender de outros sites.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
@@ -66,7 +66,7 @@ start();
 </body>
 </html>
 `;
-writeFileSync('radio-fallout-pt.html', html);
+writeFileSync('radio-steeldeck.html', html);
 mkdirSync('public', { recursive: true });
-writeFileSync('public/radio-fallout-pt.html', html);
-console.log('radio-fallout-pt.html', html.length, 'bytes,', stations.stations.length, 'emissoras extra');
+writeFileSync('public/radio-steeldeck.html', html);
+console.log('radio-steeldeck.html', html.length, 'bytes,', stations.stations.length, 'emissoras extra');
