@@ -16,7 +16,7 @@ const SERVERS = ['de1', 'fi1', 'nl1', 'at1', 'de2'].map((s) => `https://${s}.api
 const QUERY = '/json/stations/search?countrycode=PT&hidebroken=true&order=clickcount&reverse=true&limit=500';
 const PROBE_MS = 5000;
 const PARALLEL = 16;
-const UA = 'AlertaFallout/1.0 (+https://github.com/steeldeck/SteelDeck)';
+const UA = 'SteelDeck/1.0 (+https://github.com/steeldeck/SteelDeck)';
 
 // ---------- 1. Ir buscar a lista, tentando os vários servidores ----------
 async function fetchList() {

@@ -1,4 +1,4 @@
-// Service worker do Pip-Boy Terminal (gerado em cada build por vite.config.js).
+// Service worker do SteelDeck (gerado em cada build por vite.config.js).
 // - Guarda a app (HTML, JS, CSS, ícones, manual e dados) para abrir sem internet.
 // - NUNCA guarda nem interceta streams de áudio (.m3u8, .aac, .mp3...) nem as APIs de dados ao vivo:
 //   esses pedidos seguem diretamente para a rede, como se o service worker não existisse.
@@ -116,7 +116,7 @@ self.addEventListener('periodicsync', (event) => { if (event.tag === 'avisos-gre
 const PREF_KEY = { greves: 'greves_enabled', meteorologia: 'meteorologia_enabled', catastrofes: 'catastrofes_enabled', guerra: 'guerra_enabled', tensao_global: 'tensao_global_enabled', pizza_index: 'pizza_index_enabled' };
 const PREF_DEFAULTS = { pizza_index_enabled: false }; // as outras vêm ligadas por omissão
 self.addEventListener('push', (event) => {
-  let d = {}; try { d = event.data ? event.data.json() : {}; } catch { d = { title: 'Pip-Boy Terminal', body: event.data?.text() }; }
+  let d = {}; try { d = event.data ? event.data.json() : {}; } catch { d = { title: 'SteelDeck', body: event.data?.text() }; }
   event.waitUntil((async () => {
     const st = await caches.open('pipboy-avisos').then((c) => c.match(BASE + '__avisos-greve.json')).then((r) => (r ? r.json() : {})).catch(() => ({}));
     const key = PREF_KEY[d.cat];

@@ -702,7 +702,7 @@ export function mountRadio(root, opts = {}) {
     const st = state.station || stationAt(state.band, state.freq[state.band]);
     const title = st ? `${st.name} · ${fmtFreq(st)}` : `${settledFreq()} ${band().unit}`;
     if (navigator.share) {
-      try { await navigator.share({ title: `Rádio — ${title}`, text: `Ouve ${title} no Pip-Boy Terminal`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.share({ title: `Rádio — ${title}`, text: `Ouve ${title} no SteelDeck`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
     try { await navigator.clipboard.writeText(url); shareMsg('LINK COPIADO'); } catch (e) { shareMsg(`Copia o link: ${url}`); }
   });

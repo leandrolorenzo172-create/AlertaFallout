@@ -1,7 +1,7 @@
 {
-  "name": "Pip-Boy Terminal",
-  "short_name": "Pip-Boy",
-  "description": "Terminal de sobrevivência em estilo retro: rádio, alertas, meteorologia, manual e assistente.",
+  "name": "SteelDeck",
+  "short_name": "SteelDeck",
+  "description": "SteelDeck — o painel central do Mr. Steel: rádio, alertas, jogos e ferramentas num só sítio.",
   "lang": "pt-PT",
   "start_url": "./#/dashboard",
   "scope": "./",
