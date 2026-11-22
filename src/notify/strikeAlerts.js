@@ -58,9 +58,13 @@ function readPrefs() {
 function enabledInSettings() { return readPrefs().greves_enabled !== false; }
 
 // ---------- entrega ----------
-async function systemNotify({ title, body }, tag) {
+// cor da app escolhida (as miniaturas das notificações existem nas 5 cores)
+const themeId = () => { try { const t = JSON.parse(localStorage.getItem('pb_settings') || '{}').theme; return /^(green|white|amber|blue|red)$/.test(t) ? t : 'green'; } catch { return 'green'; } };
+const thumb = (mode = 'base') => `./icons/tempo/${themeId()}/${mode}.png`;
+
+async function systemNotify({ title, body, icon, url }, tag) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  const opts = { body, tag, icon: './icons/icon-192.png', badge: './icons/icon-192.png', data: { url: './#/greves' } };
+  const opts = { body, tag, icon: icon || thumb('base'), badge: './icons/icon-192.png', data: { url: url || './#/greves' } };
   try {
     // espera pelo service worker (na primeira abertura ainda pode estar a instalar)
     const reg = navigator.serviceWorker ? await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(() => r(null), 5000))]) : null;
@@ -68,8 +72,8 @@ async function systemNotify({ title, body }, tag) {
   } catch { /* cai para a Notification normal */ }
   try { new Notification(title, opts); } catch { /* Android sem service worker não aceita new Notification */ }
 }
-function banner({ title, body }) {
-  window.dispatchEvent(new CustomEvent('pb-strike-alert', { detail: { title, body } }));
+function banner({ title, body, icon, url }) {
+  window.dispatchEvent(new CustomEvent('pb-strike-alert', { detail: { title, body, icon, url } }));
 }
 
 // Pede autorização para notificações do sistema (tem de ser chamado a partir de um toque do utilizador).
@@ -90,9 +94,26 @@ async function registerBackground() {
 }
 
 // Aviso de teste (botão nas Notificações)
+// Exemplos (botões nas Notificações): mostram na hora a faixa na app e a notificação do telemóvel, com a miniatura na cor da app.
 export async function testAlert() {
-  const msg = strikeMessage({ sector: 'Função pública', days: [ymdLocal(new Date(Date.now() + 2 * 86400000))], title: 'Exemplo: assim chegam os avisos de greve.' }, 'pre');
+  const msg = { ...strikeMessage({ sector: 'Função pública', days: [ymdLocal(new Date(Date.now() + 2 * 86400000))], title: 'Exemplo: assim chegam os avisos de greve.' }, 'pre'), icon: thumb('base'), url: './#/greves' };
   banner(msg); await systemNotify(msg, 'greve-teste');
+}
+// cada toque mostra o estado do tempo seguinte, para se verem todos
+const TEMPO_EX = [
+  ['rain', 'Aguaceiros · 11°/16°', 'Chuva 85% · Vento moderado (SW). Leva impermeável ou guarda-chuva.'],
+  ['sun', 'Céu limpo · 9°/21°', 'Chuva 0% · Vento fraco (N). Aproveita o dia ao ar livre!'],
+  ['cold', 'Geada · -1°/9°', 'Chuva 5% · Vento fraco (NE). Agasalha-te bem.'],
+  ['wind', 'Céu nublado · 10°/15°', 'Chuva 30% · Vento forte (W). Atenção a objetos soltos com o vento.'],
+  ['fog', 'Nevoeiro · 7°/14°', 'Chuva 10% · Vento fraco (E). Visibilidade reduzida: cuidado na estrada.'],
+  ['cloud', 'Céu parcialmente nublado · 8°/18°', 'Chuva 35% · Vento fraco (W). Dia sem grandes surpresas.'],
+];
+let tempoIdx = 0;
+export async function testWeatherAlert() {
+  const [mode, tipo, body] = TEMPO_EX[tempoIdx++ % TEMPO_EX.length];
+  const msg = { title: `Tempo hoje em Braga: ${tipo} (EXEMPLO)`, body, icon: thumb(mode), url: './#/meteo' };
+  banner(msg); await systemNotify(msg, `tempo-exemplo-${mode}`);
+  return mode;
 }
 
 let running = false;
@@ -103,6 +124,8 @@ export async function checkStrikeAlerts() {
     const st = await readState();
     st.enabled = enabled;
     st.prefs = readPrefs();
+    // cor da app escolhida neste telemóvel: as miniaturas das notificações usam a mesma (public/icons/tempo/<cor>/)
+    try { st.theme = JSON.parse(localStorage.getItem('pb_settings') || '{}').theme || 'green'; } catch { st.theme = 'green'; }
     if (enabled) {
       const res = await fetch('./data/news.json', { cache: 'no-cache' });
       const news = res.ok ? await res.json() : null;

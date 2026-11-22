@@ -124,7 +124,9 @@ self.addEventListener('push', (event) => {
     if (!on) return; // categoria desligada nas Definições
     await self.registration.showNotification(d.title || 'ALERTA', {
       // icon: miniatura da personagem à esquerda (muda com o tempo); badge: ícone pequeno da barra de estado
-      body: d.body || '', tag: d.tag || d.cat || 'alerta', icon: new URL(d.icon || './icons/tempo/base.png', BASE).href, badge: BASE + 'icons/icon-192.png',
+      // a miniatura vem na cor escolhida na app: ./icons/tempo/rain.png -> ./icons/tempo/<cor>/rain.png
+      body: d.body || '', tag: d.tag || d.cat || 'alerta', badge: BASE + 'icons/icon-192.png',
+      icon: new URL((d.icon || './icons/tempo/base.png').replace('/tempo/', `/tempo/${/^(green|white|amber|blue|red)$/.test(st.theme) ? st.theme : 'green'}/`), BASE).href,
       data: { url: new URL(d.url || './#/dashboard', BASE).href },
     });
   })());

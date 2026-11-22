@@ -31,7 +31,11 @@ export function getSettings() { return state; }
 export function setSettings(patch) {
   state = { ...state, ...patch };
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* sem armazenamento */ }
-  if (patch.theme) applyTheme(state.theme);
+  if (patch.theme) {
+    applyTheme(state.theme);
+    // as miniaturas das notificações passam logo a usar a cor nova
+    import('./notify/strikeAlerts').then((m) => m.checkStrikeAlerts()).catch(() => {});
+  }
   listeners.forEach((l) => l());
 }
 export function resetSettings() { setSettings({ ...DEFAULTS }); }

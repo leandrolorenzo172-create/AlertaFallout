@@ -5,6 +5,7 @@ import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucid
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { getPushCode, pushSupported } from '@/notify/push';
+import { testWeatherAlert } from '@/notify/strikeAlerts';
 import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
 
 const notifications = [
@@ -183,9 +184,13 @@ export default function NotificationsTab() {
             </div>
           )}
           <div>
-            <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-              style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Ver exemplo de aviso</button>
-            <p className="mt-1">Mostra agora um aviso de exemplo, para veres como fica.</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>✊ Exemplo de greve</button>
+              <button type="button" onClick={testWeatherAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>🌦️ Exemplo do tempo</button>
+            </div>
+            <p className="mt-1">Mostram agora um aviso de exemplo, com a personagem na cor da app. No do tempo, cada toque mostra outro estado (chuva, sol, geada, vento, nevoeiro, nublado).</p>
           </div>
         </div>
         {pushCode && (
