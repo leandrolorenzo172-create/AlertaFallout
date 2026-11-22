@@ -123,7 +123,8 @@ self.addEventListener('push', (event) => {
     const on = key ? (st.prefs?.[key] ?? PREF_DEFAULTS[key] ?? true) : true;
     if (!on) return; // categoria desligada nas Definições
     await self.registration.showNotification(d.title || 'ALERTA', {
-      body: d.body || '', tag: d.tag || d.cat || 'alerta', icon: BASE + 'icons/icon-192.png', badge: BASE + 'icons/icon-192.png',
+      // icon: miniatura da personagem à esquerda (muda com o tempo); badge: ícone pequeno da barra de estado
+      body: d.body || '', tag: d.tag || d.cat || 'alerta', icon: new URL(d.icon || './icons/tempo/base.png', BASE).href, badge: BASE + 'icons/icon-192.png',
       data: { url: new URL(d.url || './#/dashboard', BASE).href },
     });
   })());

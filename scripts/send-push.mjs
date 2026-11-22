@@ -4,7 +4,7 @@
 //
 // Categorias e quando avisam (só entre as 8h e as 23h de Lisboa):
 //  - greves        : ANTECEDENCIA_DIAS antes e no próprio dia (data tirada das notícias)
-//  - meteorologia  : avisos do IPMA (amarelo, laranja, vermelho) para o distrito DISTRITO, no próprio dia
+//  - meteorologia  : previsão do dia (uma vez, depois das 8h) e avisos do IPMA (amarelo, laranja, vermelho) para o DISTRITO, no próprio dia
 //  - catastrofes   : no próprio dia: alertas vermelhos do GDACS, sismos de magnitude >= 6.5 no mundo e >= 4 em Portugal
 //  - guerra        : no próprio dia, notícias de conflitos muito graves (gravidade >= 8), no máximo 2 por dia
 //  - tensao_global : uma vez por dia, se a tensão geopolítica estiver em >= 7/10 ou subir 1 ponto face a ontem
@@ -18,7 +18,7 @@ import webpush from 'web-push';
 
 export const VAPID_PUBLIC = 'BJUMloYPF_iiynd3u8ispKS3NqXUXDwR2Nc7-MIy0BcBF5d9TaNQaYNkvXQFpj-PtuBMzZcbNLaQTg0UAcj9xi0';
 const ANTECEDENCIA_DIAS = 2;
-const DISTRITO = { id: 'BRG', nome: 'Braga' };
+const DISTRITO = { id: 'BRG', nome: 'Braga', cidade: 1030300 }; // código do distrito nos avisos e da cidade na previsão do IPMA
 const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://leandrolorenzo172-create.github.io/AlertaFallout/data/news.json';
 const SECTOR_TXT = {
   'Função pública': 'Greve da Função Pública', Saúde: 'Greve na Saúde', Educação: 'Greve nas escolas', Transportes: 'Greve nos Transportes',
@@ -54,7 +54,19 @@ for (const k of Object.keys(sent)) if (sent[k] < old) delete sent[k];
 const sentToday = (cat) => Object.keys(sent).filter((k) => k.startsWith(`${cat}|`) && k.includes(today)).length;
 
 const due = [];
-const add = (cat, key, title, body, url) => { if (!sent[key]) due.push({ cat, key, title, body, url }); };
+// icon: miniatura da personagem (public/icons/tempo/<modo>.png) que aparece à esquerda na notificação
+const add = (cat, key, title, body, url, icon = 'base') => { if (!sent[key]) due.push({ cat, key, title, body, url, icon }); };
+// modo da personagem a partir da descrição do tempo (igual ao painel Alertas e clima da app)
+const modeFrom = (txt = '', tmin = 10, wind = 0) => {
+  const c = txt.toLowerCase();
+  if (/chuva|aguaceiro|chuvisco|trovoada|granizo/.test(c)) return 'rain';
+  if (/neve|geada/.test(c) || tmin <= 3) return 'cold';
+  if (/nevoeiro|neblina/.test(c)) return 'fog';
+  if (wind >= 40) return 'wind';
+  if (/limpo|pouco nublado|sol/.test(c)) return 'sun';
+  return 'cloud';
+};
+const CONSELHO = { rain: 'Leva impermeável ou guarda-chuva.', sun: 'Aproveita o dia ao ar livre!', wind: 'Atenção a objetos soltos com o vento.', fog: 'Visibilidade reduzida: cuidado na estrada.', cold: 'Agasalha-te bem.', cloud: 'Dia sem grandes surpresas.' };
 
 if (hour >= 8 && hour < 23) {
   // ---- Greves: antecedência e no próprio dia ----
@@ -68,8 +80,26 @@ if (hour >= 8 && hour < 23) {
     else if (until > 0 && until <= ANTECEDENCIA_DIAS) { const k = `${s.id}|pre`; if (!sent[k]) add('greves', k, `ALERTA — ${what} ${s.days.length > 1 ? `de ${dmy(first)} a ${dmy(last)}` : `dia ${dmy(first)}`}`, s.title, './#/greves'); }
   }
 
+  // ---- Meteorologia: previsão do dia, uma vez por dia (primeira verificação depois das 8h) ----
+  const [prev, types] = await Promise.all([
+    getJson(`https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/${DISTRITO.cidade}.json`),
+    getJson('https://api.ipma.pt/open-data/weather-type-classe.json'),
+  ]);
+  const hoje = (prev?.data || []).find((d) => d.forecastDate === today);
+  if (hoje) {
+    const tipo = (types?.data || []).find((t) => t.idWeatherType === hoje.idWeatherType)?.descWeatherTypePT || 'Tempo variável';
+    const VENTO = { 1: 'fraco', 2: 'moderado', 3: 'forte', 4: 'muito forte' }; const VENTO_KMH = { 1: 10, 2: 25, 3: 45, 4: 65 };
+    const mode = modeFrom(tipo, Number(hoje.tMin), VENTO_KMH[hoje.classWindSpeed] || 0);
+    const chuva = Math.round(Number(hoje.precipitaProb) || 0);
+    add('meteorologia', `meteorologia|${today}|previsao`,
+      `Tempo hoje em ${DISTRITO.nome}: ${tipo} · ${Math.round(hoje.tMin)}°/${Math.round(hoje.tMax)}°`,
+      `Chuva ${chuva}% · Vento ${VENTO[hoje.classWindSpeed] || '—'}${hoje.predWindDir ? ` (${hoje.predWindDir})` : ''}. ${CONSELHO[mode]}`,
+      './#/meteo', mode);
+  }
+
   // ---- Meteorologia: avisos do IPMA para o distrito, ativos hoje ----
   const LV = { yellow: 'AMARELO', orange: 'LARANJA', red: 'VERMELHO' };
+  const AVISO_MODO = (t = '') => (/precipita|trovoada/i.test(t) ? 'rain' : /vento|agita/i.test(t) ? 'wind' : /nevoeiro/i.test(t) ? 'fog' : /frio|neve/i.test(t) ? 'cold' : /quente/i.test(t) ? 'sun' : 'cloud');
   const warnings = await getJson('https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json');
   for (const w of warnings || []) {
     if (w.idAreaAviso !== DISTRITO.id || !LV[w.awarenessLevelID]) continue;
@@ -77,7 +107,7 @@ if (hour >= 8 && hour < 23) {
     if (today < s || today > e || new Date(w.endTime) < new Date()) continue;
     add('meteorologia', `meteorologia|${today}|${w.awarenessLevelID}|${w.awarenessTypeName}|${w.startTime}`,
       `ALERTA ${LV[w.awarenessLevelID]} — ${w.awarenessTypeName} em ${DISTRITO.nome} hoje (${hm(w.startTime)} às ${hm(w.endTime)})`,
-      w.text || `Aviso ${LV[w.awarenessLevelID].toLowerCase()} do IPMA.`, './#/meteo');
+      w.text || `Aviso ${LV[w.awarenessLevelID].toLowerCase()} do IPMA.`, './#/meteo', AVISO_MODO(w.awarenessTypeName));
   }
 
   // ---- Catástrofes: GDACS vermelho e sismos fortes, de hoje ----
@@ -124,13 +154,14 @@ if (process.env.PUSH_TEST) {
   const t = Date.now();
   const EX = [
     ['greves', 'ALERTA — Greve da Função Pública dia 00/00/00 (TESTE)', 'Exemplo de aviso de greve: chega 2 dias antes e no próprio dia.', './#/greves'],
-    ['meteorologia', `ALERTA AMARELO — Precipitação em ${DISTRITO.nome} hoje (TESTE)`, 'Exemplo de aviso do IPMA para o teu distrito.', './#/meteo'],
+    ['meteorologia', `Tempo hoje em ${DISTRITO.nome}: Aguaceiros · 12°/17° (TESTE)`, 'Chuva 80% · Vento moderado (NW). Leva impermeável ou guarda-chuva.', './#/meteo', 'rain'],
+    ['meteorologia', `ALERTA AMARELO — Precipitação em ${DISTRITO.nome} hoje (TESTE)`, 'Exemplo de aviso do IPMA para o teu distrito.', './#/meteo', 'rain'],
     ['catastrofes', 'ALERTA — Sismo de magnitude 6.8 hoje (TESTE)', 'Exemplo de aviso de catástrofe (GDACS / USGS).', './#/catastrofes'],
     ['guerra', 'ALERTA — Guerra & Conflitos (TESTE)', 'Exemplo de notícia de conflito muito grave.', './#/guerra'],
     ['tensao_global', 'ALERTA — Tensão global hoje: 7.4/10 (TESTE)', 'Exemplo de aviso de tensão global alta ou a subir.', './#/dashboard'],
     ['pizza_index', 'ALERTA — Índice Pizza hoje: 7.2/10 (TESTE)', 'Exemplo do Índice Pizza (desligado por omissão).', './#/pizza'],
   ];
-  for (const [cat, title, body, url] of EX) due.push({ cat, key: `teste-${cat}-${t}`, title, body, url });
+  EX.forEach(([cat, title, body, url, icon], i) => due.push({ cat, key: `teste-${cat}-${i}-${t}`, title, body, url, icon: icon || 'base' }));
 }
 
 if (!priv || !subs.length) {
@@ -139,7 +170,7 @@ if (!priv || !subs.length) {
 } else if (due.length) {
   webpush.setVapidDetails('https://leandrolorenzo172-create.github.io/AlertaFallout/', VAPID_PUBLIC, priv);
   for (const d of due.slice(0, 10)) { // nunca mais de 10 de uma vez
-    const payload = JSON.stringify({ cat: d.cat, title: d.title, body: d.body, tag: d.key.slice(0, 120), url: d.url });
+    const payload = JSON.stringify({ cat: d.cat, title: d.title, body: d.body, tag: d.key.slice(0, 120), url: d.url, icon: `./icons/tempo/${d.icon || 'base'}.png` });
     const results = await Promise.allSettled(subs.map((s) => webpush.sendNotification(s, payload, { TTL: 12 * 3600, urgency: 'high' })));
     const ok = results.filter((r) => r.status === 'fulfilled').length;
     results.forEach((r) => { if (r.status === 'rejected') console.log('push falhou:', r.reason?.statusCode, r.reason?.body || r.reason?.message); });

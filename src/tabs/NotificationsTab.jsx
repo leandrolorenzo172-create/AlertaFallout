@@ -156,32 +156,43 @@ export default function NotificationsTab() {
         ))}
       </div>
 
-      {/* Avisos de greve: autorização do sistema e teste */}
-      <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
-        <p className="text-[10px] leading-relaxed mb-2" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-          ✊ Avisos de greve: {ANTECEDENCIA_DIAS} dias antes e no próprio dia, por exemplo "ALERTA — Greve da Função Pública dia 26/11/26".
-          As outras categorias avisam só no próprio dia (ex.: "ALERTA AMARELO — Precipitação em Braga hoje"). Só recebes as que estiverem ligadas acima: depois de mudar, carrega em Guardar.
-          {perm === 'granted' && ' Notificações do telemóvel autorizadas.'}
-          {perm === 'denied' && ' As notificações estão bloqueadas nas definições do telemóvel: os avisos aparecem só dentro da app.'}
-          {perm === 'unsupported' && ' Este browser não mostra notificações: os avisos aparecem só dentro da app.'}
+      {/* Como funcionam os avisos: explicação, estado deste telemóvel, ativação e exemplo */}
+      <div className="p-3 rounded-sm mb-4 text-[10px] leading-relaxed" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)', color: 'rgb(var(--c) / 0.6)' }}>
+        <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.85)' }}>Como funcionam os avisos</p>
+        <ul className="space-y-1.5 mb-3">
+          <li>📲 Chegam como <b>notificação no telemóvel</b>, mesmo com a app fechada, entre as 8h e as 23h.</li>
+          <li>✊ <b>Greves:</b> {ANTECEDENCIA_DIAS} dias antes e no próprio dia. Ex.: "ALERTA — Greve da Função Pública dia 26/11/26".</li>
+          <li>🌧️ 🌋 ⚔️ 🌍 🍕 <b>Restantes:</b> só no próprio dia e só quando há algo importante. Ex.: "ALERTA AMARELO — Precipitação em Braga hoje".</li>
+          <li>✅ Só recebes as categorias <b>ligadas acima</b>. Depois de mudar, carrega em <b>Guardar definições</b>.</li>
+        </ul>
+
+        {/* estado deste telemóvel */}
+        <p className="mb-3 p-2 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.5)', border: `1px solid ${perm === 'granted' ? 'rgb(var(--c) / 0.3)' : '#ffaa0055'}`, color: perm === 'granted' ? 'rgb(var(--c) / 0.85)' : '#ffaa00' }}>
+          {perm === 'granted' && '✔ Este telemóvel tem as notificações autorizadas.'}
+          {perm === 'default' && '⚠ As notificações ainda não foram autorizadas neste telemóvel: carrega em "Ativar notificações no telemóvel".'}
+          {perm === 'denied' && '✖ As notificações estão bloqueadas nas definições do telemóvel. Desbloqueia-as para esta app; até lá os avisos só aparecem dentro da app.'}
+          {perm === 'unsupported' && '✖ Este browser não mostra notificações. Usa o Chrome com a app instalada no ecrã inicial; até lá os avisos só aparecem dentro da app.'}
         </p>
-        <div className="flex flex-wrap gap-2">
-          {perm === 'default' && (
-            <button type="button" onClick={() => askPermission().then(setPerm)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-              style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Autorizar notificações</button>
-          )}
+
+        <div className="space-y-3">
           {pushSupported() && (
-            <button type="button" onClick={activatePush} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-              style={{ border: '1px solid #ffaa00', color: '#ffaa00' }}>Ativar notificações no telemóvel</button>
+            <div>
+              <button type="button" onClick={activatePush} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+                style={{ border: '1px solid #ffaa00', color: '#ffaa00' }}>Ativar notificações no telemóvel</button>
+              <p className="mt-1">Só é preciso uma vez (ou num telemóvel novo). Gera o código que liga este telemóvel aos avisos enviados com a app fechada.</p>
+            </div>
           )}
-          <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-            style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Testar aviso</button>
+          <div>
+            <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+              style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Ver exemplo de aviso</button>
+            <p className="mt-1">Mostra agora um aviso de exemplo, para veres como fica.</p>
+          </div>
         </div>
         {pushCode && (
           <div className="mt-3">
-            <p className="text-[10px] leading-relaxed mb-1" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-              Código deste telemóvel. Copia-o e envia-o ao Claude (ou guarda-o no GitHub como secret PUSH_SUBSCRIPTIONS, entre [ ]).
-              A partir daí os avisos de greve chegam mesmo com a app fechada.
+            <p className="mb-1" style={{ color: 'rgb(var(--c) / 0.75)' }}>
+              Código deste telemóvel: copia-o e envia-o a quem gere a app (fica guardado no GitHub como PUSH_SUBSCRIPTIONS).
+              A partir daí os avisos chegam mesmo com a app fechada.
             </p>
             <textarea readOnly value={pushCode} rows={4} onFocus={(e) => e.target.select()} className="w-full p-2 rounded-sm text-[9px] font-mono"
               style={{ background: 'rgb(var(--cb))', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c) / 0.8)' }} />
@@ -189,7 +200,7 @@ export default function NotificationsTab() {
               style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>Copiar código</button>
           </div>
         )}
-        {pushMsg && <p className="text-[10px] mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
+        {pushMsg && <p className="mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
       </div>
 
       <button
