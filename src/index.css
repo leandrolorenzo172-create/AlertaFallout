@@ -119,3 +119,7 @@ body {
 .md th { background: rgb(var(--c) / 0.1); }
 .md-streaming > :last-child::after { content: '▍'; margin-left: 2px; animation: ai-blink 1s steps(2) infinite; }
 @keyframes ai-blink { 50% { opacity: 0; } }
+
+/* Telemóvel de cabeça para baixo (src/autoFlip.js): a app roda 180°; o body passa a ser o que faz scroll */
+html.pb-flip { overflow: hidden; height: 100%; } /* sem isto o overflow do body passa para a janela e o body não faz scroll */
+html.pb-flip body { position: fixed; inset: 0; overflow-y: auto; overscroll-behavior: contain; transform: rotate(180deg); }
