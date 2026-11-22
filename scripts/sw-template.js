@@ -112,12 +112,21 @@ async function checkStrikes() {
 }
 self.addEventListener('periodicsync', (event) => { if (event.tag === 'avisos-greve') event.waitUntil(checkStrikes().catch(() => {})); });
 // Notificações push enviadas pelo GitHub Actions (scripts/send-push.mjs)
+// Cada notificação traz a categoria (cat); só aparece se o interruptor dessa categoria estiver ligado na app.
+const PREF_KEY = { greves: 'greves_enabled', meteorologia: 'meteorologia_enabled', catastrofes: 'catastrofes_enabled', guerra: 'guerra_enabled', tensao_global: 'tensao_global_enabled', pizza_index: 'pizza_index_enabled' };
+const PREF_DEFAULTS = { pizza_index_enabled: false }; // as outras vêm ligadas por omissão
 self.addEventListener('push', (event) => {
   let d = {}; try { d = event.data ? event.data.json() : {}; } catch { d = { title: 'Pip-Boy Terminal', body: event.data?.text() }; }
-  event.waitUntil(self.registration.showNotification(d.title || 'ALERTA — Greve', {
-    body: d.body || '', tag: d.tag || 'greve', icon: BASE + 'icons/icon-192.png', badge: BASE + 'icons/icon-192.png',
-    data: { url: new URL(d.url || './#/greves', BASE).href },
-  }));
+  event.waitUntil((async () => {
+    const st = await caches.open('pipboy-avisos').then((c) => c.match(BASE + '__avisos-greve.json')).then((r) => (r ? r.json() : {})).catch(() => ({}));
+    const key = PREF_KEY[d.cat];
+    const on = key ? (st.prefs?.[key] ?? PREF_DEFAULTS[key] ?? true) : true;
+    if (!on) return; // categoria desligada nas Definições
+    await self.registration.showNotification(d.title || 'ALERTA', {
+      body: d.body || '', tag: d.tag || d.cat || 'alerta', icon: BASE + 'icons/icon-192.png', badge: BASE + 'icons/icon-192.png',
+      data: { url: new URL(d.url || './#/dashboard', BASE).href },
+    });
+  })());
 });
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

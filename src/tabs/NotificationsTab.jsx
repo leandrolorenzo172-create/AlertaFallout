@@ -121,7 +121,7 @@ export default function NotificationsTab() {
 
       <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
         <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.47)' }}>
-          🔔 Configure quais notificações deseja receber. Os dados são atualizados diariamente às 4:00 AM.
+          🔔 Configure quais notificações deseja receber. Os dados são verificados de hora a hora e os avisos chegam como notificações no telemóvel, entre as 8h e as 23h.
         </p>
       </div>
 
@@ -160,6 +160,7 @@ export default function NotificationsTab() {
       <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
         <p className="text-[10px] leading-relaxed mb-2" style={{ color: 'rgb(var(--c) / 0.55)' }}>
           ✊ Avisos de greve: {ANTECEDENCIA_DIAS} dias antes e no próprio dia, por exemplo "ALERTA — Greve da Função Pública dia 26/11/26".
+          As outras categorias avisam só no próprio dia (ex.: "ALERTA AMARELO — Precipitação em Braga hoje"). Só recebes as que estiverem ligadas acima: depois de mudar, carrega em Guardar.
           {perm === 'granted' && ' Notificações do telemóvel autorizadas.'}
           {perm === 'denied' && ' As notificações estão bloqueadas nas definições do telemóvel: os avisos aparecem só dentro da app.'}
           {perm === 'unsupported' && ' Este browser não mostra notificações: os avisos aparecem só dentro da app.'}

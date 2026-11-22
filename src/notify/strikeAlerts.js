@@ -50,9 +50,12 @@ async function readState() {
 async function writeState(st) {
   try { await (await caches.open(STATE_CACHE)).put(STATE_URL, new Response(JSON.stringify(st), { headers: { 'content-type': 'application/json' } })); } catch { /* sem cache */ }
 }
-function enabledInSettings() {
-  try { const rows = JSON.parse(localStorage.getItem('b44_NotificationSettings') || '[]'); return rows[0]?.greves_enabled !== false; } catch { return true; }
+// Interruptores de Definições > Notificações (o service worker usa-os para filtrar as notificações push)
+const PREF_DEFAULTS = { guerra_enabled: true, catastrofes_enabled: true, meteorologia_enabled: true, tensao_global_enabled: true, pizza_index_enabled: false, greves_enabled: true };
+function readPrefs() {
+  try { const rows = JSON.parse(localStorage.getItem('b44_NotificationSettings') || '[]'); const r = rows[0] || {}; return Object.fromEntries(Object.keys(PREF_DEFAULTS).map((k) => [k, r[k] ?? PREF_DEFAULTS[k]])); } catch { return { ...PREF_DEFAULTS }; }
 }
+function enabledInSettings() { return readPrefs().greves_enabled !== false; }
 
 // ---------- entrega ----------
 async function systemNotify({ title, body }, tag) {
@@ -99,6 +102,7 @@ export async function checkStrikeAlerts() {
     const enabled = enabledInSettings();
     const st = await readState();
     st.enabled = enabled;
+    st.prefs = readPrefs();
     if (enabled) {
       const res = await fetch('./data/news.json', { cache: 'no-cache' });
       const news = res.ok ? await res.json() : null;
