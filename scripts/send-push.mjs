@@ -164,6 +164,19 @@ if (process.env.PUSH_TEST) {
   EX.forEach(([cat, title, body, url, icon], i) => due.push({ cat, key: `teste-${cat}-${i}-${t}`, title, body, url, icon: icon || 'base' }));
 }
 
+// teste do tempo: uma previsão de exemplo para cada estado, cada uma com a sua miniatura
+if (process.env.PUSH_TEST_TEMPO) {
+  const t = Date.now();
+  [
+    ['rain', 'Aguaceiros · 11°/16°', 'Chuva 85% · Vento moderado (SW). Leva impermeável ou guarda-chuva.'],
+    ['sun', 'Céu limpo · 9°/21°', 'Chuva 0% · Vento fraco (N). Aproveita o dia ao ar livre!'],
+    ['cold', 'Geada · -1°/9°', 'Chuva 5% · Vento fraco (NE). Agasalha-te bem.'],
+    ['wind', 'Céu nublado · 10°/15°', 'Chuva 30% · Vento forte (W). Atenção a objetos soltos com o vento.'],
+    ['fog', 'Nevoeiro · 7°/14°', 'Chuva 10% · Vento fraco (E). Visibilidade reduzida: cuidado na estrada.'],
+    ['cloud', 'Céu parcialmente nublado · 8°/18°', 'Chuva 35% · Vento fraco (W). Dia sem grandes surpresas.'],
+  ].forEach(([icon, tipo, body]) => due.push({ cat: 'meteorologia', key: `teste-tempo-${icon}-${t}`, title: `Tempo hoje em ${DISTRITO.nome}: ${tipo} (TESTE)`, body, url: './#/meteo', icon }));
+}
+
 if (!priv || !subs.length) {
   console.log(`push: ${due.length} avisos por enviar, mas falta ${!priv ? 'VAPID_PRIVATE_KEY' : 'algum telemóvel registado'} — nada enviado`);
   for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.title}`);

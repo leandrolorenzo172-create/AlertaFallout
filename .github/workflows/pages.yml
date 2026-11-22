@@ -11,6 +11,10 @@ on:
         description: 'Enviar uma notificação de teste de cada categoria para os telemóveis registados'
         type: boolean
         default: false
+      teste_tempo:
+        description: 'Enviar uma notificação de teste de cada estado do tempo (chuva, sol, frio, vento, nevoeiro, nublado)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,6 +45,7 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
           PUSH_TEST: ${{ inputs.teste_push && '1' || '' }}
+          PUSH_TEST_TEMPO: ${{ inputs.teste_tempo && '1' || '' }}
       - name: Recolher emissoras portuguesas
         run: node scripts/fetch-stations.mjs
         continue-on-error: true
