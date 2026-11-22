@@ -49,6 +49,8 @@ if (hour >= 8 && hour < 23) {
   }
 }
 const todo = due.filter((d) => !sent[d.key]);
+// teste manual (Actions > Publicar no GitHub Pages > Run workflow > "Enviar uma notificação de teste"): envia sempre, a qualquer hora
+if (process.env.PUSH_TEST) todo.push({ key: `teste-${Date.now()}`, title: 'ALERTA — Greve da Função Pública dia 00/00/00 (TESTE)', body: 'Teste enviado pelo GitHub: os avisos de greve chegam a este telemóvel mesmo com a app fechada.' });
 
 if (!priv || !subs.length) {
   console.log(`push: ${todo.length} avisos por enviar, mas falta ${!priv ? 'VAPID_PRIVATE_KEY' : 'algum telemóvel registado'} — nada enviado`);
