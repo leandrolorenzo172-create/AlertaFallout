@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { usePipBoySound } from './usePipBoySound';
+import { t } from '@/i18n';
 
 export default function TabBar({ tabs, activeTab, onTabChange, compact = false }) {
   const { playTabSound } = usePipBoySound();
@@ -25,7 +26,7 @@ export default function TabBar({ tabs, activeTab, onTabChange, compact = false }
           key={tab.id}
           onClick={() => handleTabClick(tab.id)}
           className="relative px-3 py-3 text-xs uppercase tracking-wider whitespace-nowrap transition-all flex flex-col items-center gap-1 flex-1 shrink-0"
-          aria-label={tab.label}
+          aria-label={t(tab.label)}
           style={{
             color: activeTab === tab.id ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.33)',
             background: activeTab === tab.id ? 'rgb(var(--c) / 0.06)' : 'transparent',
@@ -34,7 +35,7 @@ export default function TabBar({ tabs, activeTab, onTabChange, compact = false }
           }}
         >
           {tab.icon && <tab.icon size={16} />}
-          {!compact && <span className="truncate w-full text-center">{tab.label}</span>}
+          {!compact && <span className="truncate w-full text-center">{t(tab.label)}</span>}
           
           {activeTab === tab.id && (
             <motion.div

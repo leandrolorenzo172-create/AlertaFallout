@@ -9,6 +9,7 @@ import { renderMarkdown } from '@/lib/ai/markdown';
 import { requestOpen } from '@/lib/kb';
 import { aiSuggestions } from '@/data/survivalKnowledge';
 import Mascot from '../pipboy/Mascot';
+import { t } from '@/i18n';
 
 // Histórico guardado no dispositivo, para consulta mesmo sem rede
 const STORE = 'pb_ai_chat_v2';
@@ -17,17 +18,17 @@ const saveChat = (msgs) => { try { localStorage.setItem(STORE, JSON.stringify(ms
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const SOURCE_PILL = {
-  online: { label: 'IA online', color: 'rgb(var(--c))' },
-  local: { label: 'Base local', color: '#ffaa00' },
-  offline: { label: 'Offline · base local', color: '#ffaa00' },
+  online: { label: t('IA online'), color: 'rgb(var(--c))' },
+  local: { label: t('Base local'), color: '#ffaa00' },
+  offline: { label: t('Offline · base local'), color: '#ffaa00' },
 };
 
 function StatusBadge({ net, provider }) {
   const navigate = useNavigate();
-  let dot = '#22cc55'; let text = `Online (IA Completa · ${providerName(provider)})`; let action = null;
-  if (net !== 'online') { dot = '#ff9900'; text = 'Offline (Base de Conhecimento Local)'; } else if (!provider) {
-    dot = '#e6c200'; text = 'Online · IA não configurada (respostas locais)';
-    action = <button type="button" onClick={() => navigate('/definicoes')} className="underline ml-1" style={{ color: 'rgb(var(--c))' }}>Configurar</button>;
+  let dot = '#22cc55'; let text = t('Online (IA Completa · {p})', { p: providerName(provider) }); let action = null;
+  if (net !== 'online') { dot = '#ff9900'; text = t('Offline (Base de Conhecimento Local)'); } else if (!provider) {
+    dot = '#e6c200'; text = t('Online · IA não configurada (respostas locais)');
+    action = <button type="button" onClick={() => navigate('/definicoes')} className="underline ml-1" style={{ color: 'rgb(var(--c))' }}>{t('Configurar')}</button>;
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-wide" role="status" aria-live="polite"
@@ -63,21 +64,21 @@ function AiMessage({ m, streaming }) {
   return (
     <div className="ai-msg">
       <div className="flex items-center gap-2 mb-1.5 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-        <span style={{ color: 'rgb(var(--c))' }}>◆ Assistente</span>
+        <span style={{ color: 'rgb(var(--c))' }}>{t('◆ Assistente')}</span>
         {pill && <span style={{ color: pill.color }}>· {pill.label}{m.source === 'online' && m.provider ? ` · ${m.provider}` : ''}</span>}
       </div>
       {m.notice && <p className="text-[11px] mb-2" style={{ color: '#ffaa00' }}>{m.notice}</p>}
       {m.text ? (
         <div className={`md ${streaming ? 'md-streaming' : ''}`} dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <div className="ai-typing" aria-label="A escrever"><i /><i /><i /><span>{m.source === 'online' ? 'A pensar…' : 'A consultar a base local…'}</span></div>
+        <div className="ai-typing" aria-label={t('A escrever')}><i /><i /><i /><span>{m.source === 'online' ? t('A pensar…') : t('A consultar a base local…')}</span></div>
       )}
       {!streaming && m.refs?.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">{m.refs.map((r, i) => <RefChip key={i} r={r} />)}</div>
       )}
       {!streaming && m.text && (
-        <button type="button" onClick={copy} className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.5)' }} aria-label="Copiar resposta">
-          {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? 'Copiado' : 'Copiar'}
+        <button type="button" onClick={copy} className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.5)' }} aria-label={t('Copiar resposta')}>
+          {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? t('Copiado') : t('Copiar')}
         </button>
       )}
     </div>
@@ -104,11 +105,11 @@ export default function SurvivalAITab() {
     topics(6, true).then((t) => {
       if (!alive) return;
       const fromDocs = t.slice(0, 2).map((x) => (x.source === 'kb'
-        ? { q: `O que diz "${x.title}"?`, sub: 'Da tua base de conhecimento' }
-        : { q: `Resume: ${x.title}`, sub: 'Do manual incluído' }));
-      const fixed = aiSuggestions.slice(0, 4 - Math.min(2, fromDocs.length)).map((q) => ({ q, sub: 'Sobrevivência' }));
+        ? { q: t('O que diz "{x}"?', { x: x.title }), sub: t('Da tua base de conhecimento') }
+        : { q: `Resume: ${x.title}`, sub: t('Do manual incluído') }));
+      const fixed = aiSuggestions.slice(0, 4 - Math.min(2, fromDocs.length)).map((q) => ({ q, sub: t('Sobrevivência') }));
       setStarters([...fromDocs, ...fixed].slice(0, 4));
-    }).catch(() => setStarters(aiSuggestions.slice(0, 4).map((q) => ({ q, sub: 'Sobrevivência' }))));
+    }).catch(() => setStarters(aiSuggestions.slice(0, 4).map((q) => ({ q, sub: t('Sobrevivência') }))));
     return () => { alive = false; };
   }, []);
 
@@ -163,18 +164,18 @@ export default function SurvivalAITab() {
     <div className="ai-tab px-4 pt-3 flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm uppercase tracking-wider font-bold">Assistente</h2>
+          <h2 className="text-sm uppercase tracking-wider font-bold">{t('Assistente')}</h2>
           <StatusBadge net={net} provider={provider} />
         </div>
         {!empty && (confirmClear ? (
           <span className="flex items-center gap-2 text-[11px]">
-            Apagar a conversa?
-            <button type="button" onClick={() => { ctrlRef.current?.abort(); setMessages([]); saveChat([]); setConfirmClear(false); }} className="px-2 py-1 rounded-sm" style={{ border: '1px solid #ff6666', color: '#ff8888' }}>Apagar</button>
-            <button type="button" onClick={() => setConfirmClear(false)} className="px-2 py-1 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.3)' }}>Cancelar</button>
+            {t('Apagar a conversa?')}
+            <button type="button" onClick={() => { ctrlRef.current?.abort(); setMessages([]); saveChat([]); setConfirmClear(false); }} className="px-2 py-1 rounded-sm" style={{ border: '1px solid #ff6666', color: '#ff8888' }}>{t('Apagar')}</button>
+            <button type="button" onClick={() => setConfirmClear(false)} className="px-2 py-1 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.3)' }}>{t('Cancelar')}</button>
           </span>
         ) : (
           <button type="button" onClick={() => setConfirmClear(true)} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-            <Trash2 size={12} /> Nova conversa
+            <Trash2 size={12} />{' '}{t('Nova conversa')}
           </button>
         ))}
       </div>
@@ -183,11 +184,11 @@ export default function SurvivalAITab() {
         {empty ? (
           <div className="ai-empty">
             <Mascot mode="base" style={{ width: 64 }} />
-            <p className="text-lg mt-2">Em que posso ajudar?</p>
+            <p className="text-lg mt-2">{t('Em que posso ajudar?')}</p>
             <p className="text-[11px] mt-1 mb-4" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-              {net !== 'online' ? 'Sem internet: respondo com o manual, os dados da app e os documentos da aba Conhecimento.'
-                : provider ? 'Pergunta o que quiseres. Uso também os teus documentos e os dados da app.'
-                  : 'Sem chave de IA configurada respondo com a base local. Podes ligar a IA completa nas Definições.'}
+              {net !== 'online' ? t('Sem internet: respondo com o manual, os dados da app e os documentos da aba Conhecimento.')
+                : provider ? t('Pergunta o que quiseres. Uso também os teus documentos e os dados da app.')
+                  : t('Sem chave de IA configurada respondo com a base local. Podes ligar a IA completa nas Definições.')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
               {starters.map((s) => (
@@ -199,7 +200,7 @@ export default function SurvivalAITab() {
             </div>
             {net === 'online' && !provider && (
               <button type="button" onClick={() => navigate('/definicoes')} className="mt-4 inline-flex items-center gap-1.5 text-[11px] underline" style={{ color: 'rgb(var(--c) / 0.8)' }}>
-                <Settings size={12} /> Ligar a IA completa nas Definições
+                <Settings size={12} />{' '}{t('Ligar a IA completa nas Definições')}
               </button>
             )}
           </div>
@@ -211,7 +212,7 @@ export default function SurvivalAITab() {
               <div key={m.id} data-msg={m.id}>
                 <AiMessage m={m} streaming={busyId === m.id} />
                 {m.id === lastAi?.id && busyId !== m.id && m.followups?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3" aria-label="Sugestões de seguimento">
+                  <div className="flex flex-wrap gap-2 mt-3" aria-label={t('Sugestões de seguimento')}>
                     {m.followups.map((f) => <button key={f} type="button" className="ai-chip" onClick={() => send(f)}>{f}</button>)}
                   </div>
                 )}
@@ -230,13 +231,13 @@ export default function SurvivalAITab() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder={net !== 'online' ? 'Pergunta à base local...' : 'Escreve a tua pergunta...'}
-          aria-label="Mensagem para o assistente"
+          placeholder={net !== 'online' ? t('Pergunta à base local...') : t('Escreve a tua pergunta...')}
+          aria-label={t('Mensagem para o assistente')}
         />
         {busyId ? (
-          <button type="button" onClick={() => ctrlRef.current?.abort()} className="ai-send" aria-label="Parar a resposta"><Square size={14} fill="currentColor" /></button>
+          <button type="button" onClick={() => ctrlRef.current?.abort()} className="ai-send" aria-label={t('Parar a resposta')}><Square size={14} fill="currentColor" /></button>
         ) : (
-          <button type="submit" disabled={!input.trim()} className="ai-send" aria-label="Enviar"><ArrowUp size={18} /></button>
+          <button type="submit" disabled={!input.trim()} className="ai-send" aria-label={t('Enviar')}><ArrowUp size={18} /></button>
         )}
       </form>
     </div>

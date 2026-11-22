@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { alpha } from '../theme';
+import { t } from '@/i18n';
 
 function severityColor(sev) {
   if (sev >= 8) return '#ff0000';
@@ -32,10 +33,10 @@ export default function NewsCard({ article, index = 0 }) {
       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.4)' }}>
         {article.region && <span>{article.region}</span>}
         {(article.category || article.type) && <span>{String(article.category || article.type).replace(/_/g, ' ')}</span>}
-        {article.source && <span>Fonte: {article.source}</span>}
+        {article.source && <span>{t('Fonte:')}{' '}{article.source}</span>}
         {article.url && (
           <a href={article.url} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'rgb(var(--c))' }}>
-            Ler notícia ↗
+            {t('Ler notícia ↗')}
           </a>
         )}
       </div>

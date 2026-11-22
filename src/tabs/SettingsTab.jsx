@@ -1,9 +1,10 @@
 import React from 'react';
-import { Settings, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell } from 'lucide-react';
+import { Settings, Languages, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell } from 'lucide-react';
 import { THEMES, useSettings, setSettings, resetSettings, orderTabs } from '../theme';
 import { TABS } from '../HotBar';
 import NotificationsTab from './NotificationsTab';
 import AiSettings from '../pipboy/AiSettings';
+import { t, LANGS, useLang } from '@/i18n';
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c))' };
@@ -18,10 +19,11 @@ function Title({ icon: Icon, children }) {
 
 export default function SettingsTab() {
   const s = useSettings();
+  const lang = useLang();
   const tabs = orderTabs(TABS, s.order);
 
   const move = (id, dir) => {
-    const ids = tabs.map((t) => t.id);
+    const ids = tabs.map((x) => x.id);
     const i = ids.indexOf(id); const j = i + dir;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
@@ -36,21 +38,39 @@ export default function SettingsTab() {
     <div className="p-4">
       <div className="flex items-center gap-2 mb-4">
         <Settings size={16} style={{ color: 'rgb(var(--c))' }} />
-        <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>Definições</h2>
+        <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>{t('Definições')}</h2>
       </div>
+
+      {/* Idioma da app */}
+      <section className="p-3 rounded-sm mb-4" style={box}>
+        <Title icon={Languages}>{t('Idioma')}</Title>
+        <div className="grid grid-cols-2 gap-2">
+          {LANGS.map((l) => {
+            const on = lang === l.id;
+            return (
+              <button key={l.id} type="button" onClick={() => { if (lang === l.id) return; setSettings({ lang: l.id }); setTimeout(() => location.reload(), 50); }} aria-pressed={on}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-sm text-xs text-left"
+                style={{ ...btn, border: `1px solid rgb(var(--c) / ${on ? 1 : 0.3})`, boxShadow: on ? '0 0 10px rgb(var(--c) / 0.5)' : 'none' }}>
+                <span className="text-base leading-none">{l.flag}</span>
+                <span className="min-w-0">{l.label}{on ? ' ✓' : ''}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Tema de cores */}
       <section className="p-3 rounded-sm mb-4" style={box}>
-        <Title icon={Palette}>Tema de cores</Title>
+        <Title icon={Palette}>{t('Tema de cores')}</Title>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {THEMES.map((t) => {
-            const on = s.theme === t.id;
+          {THEMES.map((th) => {
+            const on = s.theme === th.id;
             return (
-              <button key={t.id} type="button" onClick={() => setSettings({ theme: t.id })} aria-pressed={on}
+              <button key={th.id} type="button" onClick={() => setSettings({ theme: th.id })} aria-pressed={on}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-sm text-xs text-left"
-                style={{ background: `rgb(${t.cd})`, border: `1px solid rgb(${t.c} / ${on ? 1 : 0.35})`, color: `rgb(${t.c})`, boxShadow: on ? `0 0 10px rgb(${t.c} / 0.5)` : 'none' }}>
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: `rgb(${t.c})`, boxShadow: `0 0 6px rgb(${t.c})` }} />
-                <span className="min-w-0">{t.label}{on ? ' ✓' : ''}</span>
+                style={{ background: `rgb(${th.cd})`, border: `1px solid rgb(${th.c} / ${on ? 1 : 0.35})`, color: `rgb(${th.c})`, boxShadow: on ? `0 0 10px rgb(${th.c} / 0.5)` : 'none' }}>
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: `rgb(${th.c})`, boxShadow: `0 0 6px rgb(${th.c})` }} />
+                <span className="min-w-0">{t(th.label)}{on ? ' ✓' : ''}</span>
               </button>
             );
           })}
@@ -59,21 +79,21 @@ export default function SettingsTab() {
 
       {/* Barra de navegação */}
       <section className="p-3 rounded-sm mb-4" style={box}>
-        <Title icon={LayoutGrid}>Barra de navegação</Title>
+        <Title icon={LayoutGrid}>{t('Barra de navegação')}</Title>
         <p className="text-[10px] mb-3" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          Usa as setas para mudar a ordem e o olho para esconder separadores que não usas. Vale para a barra de baixo e para o menu rápido.
+          {t('Usa as setas para mudar a ordem e o olho para esconder separadores que não usas. Vale para a barra de baixo e para o menu rápido.')}
         </p>
         <ul className="flex flex-col gap-1.5">
-          {tabs.map((t, i) => {
-            const hidden = s.hidden.includes(t.id);
-            const Icon = t.icon;
+          {tabs.map((tb, i) => {
+            const hidden = s.hidden.includes(tb.id);
+            const Icon = tb.icon;
             return (
-              <li key={t.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm" style={{ ...btn, opacity: hidden ? 0.45 : 1 }}>
+              <li key={tb.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm" style={{ ...btn, opacity: hidden ? 0.45 : 1 }}>
                 <Icon size={15} />
-                <span className="flex-1 min-w-0 text-xs uppercase tracking-wider truncate">{t.label}</span>
-                <button type="button" onClick={() => move(t.id, -1)} disabled={i === 0} aria-label={`Subir ${t.label}`} className="p-1.5 rounded-sm disabled:opacity-25" style={btn}><ArrowUp size={14} /></button>
-                <button type="button" onClick={() => move(t.id, 1)} disabled={i === tabs.length - 1} aria-label={`Descer ${t.label}`} className="p-1.5 rounded-sm disabled:opacity-25" style={btn}><ArrowDown size={14} /></button>
-                <button type="button" onClick={() => toggle(t.id)} disabled={t.id === 'definicoes'} aria-label={`${hidden ? 'Mostrar' : 'Esconder'} ${t.label}`} aria-pressed={!hidden} className="p-1.5 rounded-sm disabled:opacity-25" style={btn}>
+                <span className="flex-1 min-w-0 text-xs uppercase tracking-wider truncate">{t(tb.label)}</span>
+                <button type="button" onClick={() => move(tb.id, -1)} disabled={i === 0} aria-label={t('Subir {x}', { x: t(tb.label) })} className="p-1.5 rounded-sm disabled:opacity-25" style={btn}><ArrowUp size={14} /></button>
+                <button type="button" onClick={() => move(tb.id, 1)} disabled={i === tabs.length - 1} aria-label={t('Descer {x}', { x: t(tb.label) })} className="p-1.5 rounded-sm disabled:opacity-25" style={btn}><ArrowDown size={14} /></button>
+                <button type="button" onClick={() => toggle(tb.id)} disabled={tb.id === 'definicoes'} aria-label={`${hidden ? t('Mostrar') : t('Esconder')} ${t(tb.label)}`} aria-pressed={!hidden} className="p-1.5 rounded-sm disabled:opacity-25" style={btn}>
                   {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </li>
@@ -82,10 +102,10 @@ export default function SettingsTab() {
         </ul>
         <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer" style={{ color: 'rgb(var(--c) / 0.85)' }}>
           <input id="set-compact" type="checkbox" checked={s.compact} onChange={(e) => setSettings({ compact: e.target.checked })} style={{ accentColor: 'rgb(var(--c))' }} />
-          Modo compacto: só ícones na barra de baixo (melhor em ecrãs pequenos)
+          {t('Modo compacto: só ícones na barra de baixo (melhor em ecrãs pequenos)')}
         </label>
         <button type="button" onClick={resetSettings} className="flex items-center gap-2 mt-3 px-3 py-2 rounded-sm text-xs uppercase tracking-wider" style={btn}>
-          <RotateCcw size={13} /> Repor tema e barra originais
+          <RotateCcw size={13} />{' '}{t('Repor tema e barra originais')}
         </button>
       </section>
 
@@ -93,7 +113,7 @@ export default function SettingsTab() {
 
       {/* Notificações (antigo separador Alertas) */}
       <section className="rounded-sm" style={box}>
-        <div className="px-3 pt-3"><Title icon={Bell}>Notificações</Title></div>
+        <div className="px-3 pt-3"><Title icon={Bell}>{t('Notificações')}</Title></div>
         <NotificationsTab />
       </section>
     </div>

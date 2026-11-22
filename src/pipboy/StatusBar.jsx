@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Radio, Shield, Wifi, WifiOff } from 'lucide-react';
+import { t, locale } from '@/i18n';
 
 export default function StatusBar({ threatLevel = 0 }) {
   const [time, setTime] = useState(new Date());
@@ -30,10 +31,10 @@ export default function StatusBar({ threatLevel = 0 }) {
   };
   
   const getStatusText = () => {
-    if (threatLevel >= 8) return 'PERIGO EXTREMO';
-    if (threatLevel >= 6) return 'ALERTA ELEVADO';
-    if (threatLevel >= 4) return 'VIGILÂNCIA';
-    return 'ESTÁVEL';
+    if (threatLevel >= 8) return t('PERIGO EXTREMO');
+    if (threatLevel >= 6) return t('ALERTA ELEVADO');
+    if (threatLevel >= 4) return t('VIGILÂNCIA');
+    return t('ESTÁVEL');
   };
   
   const color = getStatusColor();
@@ -59,7 +60,7 @@ export default function StatusBar({ threatLevel = 0 }) {
         <div className="flex items-center gap-1.5">
           <Shield size={10} style={{ color: 'rgb(var(--c) / 0.53)' }} />
           <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-            NÍVEL {Math.round(threatLevel)}
+            {t('NÍVEL')}{' '}{Math.round(threatLevel)}
           </span>
         </div>
         
@@ -75,7 +76,7 @@ export default function StatusBar({ threatLevel = 0 }) {
             </motion.div>
           )}
           <span className="text-[10px] tabular-nums" style={{ color: isOnline ? 'rgb(var(--c) / 0.67)' : '#ff6600aa' }}>
-            {time.toLocaleTimeString('pt-PT')}
+            {time.toLocaleTimeString(locale())}
           </span>
         </div>
       </div>

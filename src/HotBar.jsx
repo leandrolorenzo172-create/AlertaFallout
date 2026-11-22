@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2, TrendingDown, Megaphone } from 'lucide-react';
 import { usePipBoySound } from './usePipBoySound';
 import { useSettings, orderTabs } from './theme';
+import { t } from '@/i18n';
 
 // Separadores visíveis, pela ordem escolhida nas Definições
 export function useVisibleTabs() {
@@ -93,7 +94,7 @@ export default function HotBar() {
                 }}
               >
                 {tab.icon && <tab.icon size={16} />}
-                <span className="text-xs uppercase tracking-wider flex-1 text-left">{tab.label}</span>
+                <span className="text-xs uppercase tracking-wider flex-1 text-left">{t(tab.label)}</span>
                 {tab.alert && (
                   <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#ff0000' }} />
                 )}
@@ -107,7 +108,7 @@ export default function HotBar() {
       <motion.button
         onClick={handleToggle}
         whileTap={{ scale: 0.9 }}
-        aria-label="Menu de navegação rápida"
+        aria-label={t('Menu de navegação rápida')}
         className="fixed z-50 flex items-center justify-center"
         style={{
           right: '16px',

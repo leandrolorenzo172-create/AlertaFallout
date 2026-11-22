@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Cloud, RefreshCw, Loader2, Thermometer, Wind, Droplets, Eye, Sun, CloudRain, Waves, Anchor, Compass, SunMedium } from 'lucide-react';
 import { alpha } from '../theme';
+import { t } from '@/i18n';
 
 export default function WeatherTab() {
   const [weather, setWeather] = useState(null);
@@ -105,7 +106,7 @@ Inclui:
     
     setWeather(data);
     } catch (err) {
-      setError(err.message || 'Erro ao carregar meteorologia');
+      setError(err.message || t('Erro ao carregar meteorologia'));
     }
     setLoading(false);
   };
@@ -127,7 +128,7 @@ Inclui:
           <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
         </motion.div>
         <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-          A RECEBER DADOS METEOROLÓGICOS...
+          {t('A RECEBER DADOS METEOROLÓGICOS...')}
         </p>
       </div>
     );
@@ -136,13 +137,13 @@ Inclui:
   if (error || !weather) {
     return (
       <div className="p-4 text-center py-12">
-        <p className="text-xs" style={{ color: '#ff6600' }}>⚠️ Sem dados meteorológicos: {error || 'resposta vazia'}</p>
+        <p className="text-xs" style={{ color: '#ff6600' }}>{t('⚠️ Sem dados meteorológicos:')}{' '}{error || 'resposta vazia'}</p>
         <button
           onClick={fetchWeather}
           className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
           style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
         >
-          Tentar Novamente
+          {t('Tentar Novamente')}
         </button>
       </div>
     );
@@ -154,7 +155,7 @@ Inclui:
         <div className="flex items-center gap-2">
           <Cloud size={16} style={{ color: '#00aaff' }} />
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Meteorologia Portugal
+            {t('Meteorologia Portugal')}
           </h2>
         </div>
         <button onClick={fetchWeather} className="p-2 rounded-sm hover:bg-white/5" style={{ color: 'rgb(var(--c) / 0.53)' }}>
@@ -176,7 +177,7 @@ Inclui:
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] px-1.5 py-0.5 rounded-sm uppercase font-bold"
                   style={{ background: '#ff000022', color: '#ff6666' }}>
-                  ⚠️ ALERTA {alert.severity}
+                  {t('⚠️ ALERTA')}{' '}{alert.severity}
                 </span>
                 <span className="text-[10px]" style={{ color: '#ff666688' }}>{alert.city}</span>
               </div>
@@ -212,7 +213,7 @@ Inclui:
                 </div>
                 <div className="flex items-center gap-1">
                   <Wind size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
-                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.wind_kmh} km/h</span>
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.wind_kmh}{' '}{t('km/h')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Compass size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
@@ -220,7 +221,7 @@ Inclui:
                 </div>
                 <div className="flex items-center gap-1">
                   <SunMedium size={10} style={{ color: city.uv_index >= 8 ? '#ff0000' : city.uv_index >= 6 ? '#ff6600' : city.uv_index >= 3 ? '#ffaa00' : 'rgb(var(--c))' }} />
-                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>UV {city.uv_index ?? '-'}</span>
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('UV')}{' '}{city.uv_index ?? '-'}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Thermometer size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
@@ -236,7 +237,7 @@ Inclui:
       {weather?.forecast_days?.length > 0 && (
         <div className="mb-4">
           <h3 className="text-xs uppercase tracking-wider mb-3 font-bold" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-            Previsão Próximos Dias
+            {t('Previsão Próximos Dias')}
           </h3>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {weather.forecast_days.map((day, i) => (
@@ -259,7 +260,7 @@ Inclui:
           <div className="flex items-center gap-2 mb-3">
             <Anchor size={14} style={{ color: '#00aaff' }} />
             <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: '#00aaff' }}>
-              Tempestades Vindas do Mar / Avisos Marítimos
+              {t('Tempestades Vindas do Mar / Avisos Marítimos')}
             </h3>
           </div>
           {weather.sea_storms.map((storm, i) => {
@@ -282,21 +283,21 @@ Inclui:
                   {storm.is_active && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-sm uppercase font-bold animate-pulse"
                       style={{ background: `${alpha(sevColor, '22')}`, color: sevColor }}>
-                      ● ATIVO
+                      {t('● ATIVO')}
                     </span>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <div className="flex items-center gap-1">
                     <Waves size={10} style={{ color: '#00aaff66' }} />
-                    <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>Ondas: {storm.wave_height_m}m</span>
+                    <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>{t('Ondas:')}{' '}{storm.wave_height_m}m</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Wind size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
                     <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.53)' }}>{storm.wind_intensity}</span>
                   </div>
                 </div>
-                <p className="text-[10px] mb-1" style={{ color: 'rgb(var(--c) / 0.4)' }}>Direção: {storm.wind_direction}</p>
+                <p className="text-[10px] mb-1" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('Direção:')}{' '}{storm.wind_direction}</p>
                 <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>{storm.description}</p>
               </motion.div>
             );
@@ -310,7 +311,7 @@ Inclui:
           <div className="flex items-center gap-2 mb-3">
             <Cloud size={14} style={{ color: 'rgb(var(--c))' }} />
             <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-              Previsão 15 Dias - Braga (IPMA)
+              {t('Previsão 15 Dias - Braga (IPMA)')}
             </h3>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -336,7 +337,7 @@ Inclui:
                     </div>
                     <div className="flex items-center gap-1">
                       <Wind size={9} style={{ color: 'rgb(var(--c) / 0.4)' }} />
-                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.wind_kmh}km/h</span>
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.wind_kmh}{t('km/h')}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Compass size={9} style={{ color: 'rgb(var(--c) / 0.4)' }} />
@@ -344,7 +345,7 @@ Inclui:
                     </div>
                     <div className="flex items-center gap-1">
                       <SunMedium size={9} style={{ color: day.uv_index >= 8 ? '#ff0000' : day.uv_index >= 6 ? '#ff6600' : day.uv_index >= 3 ? '#ffaa00' : 'rgb(var(--c))' }} />
-                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>UV {day.uv_index ?? '-'}</span>
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('UV')}{' '}{day.uv_index ?? '-'}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <CloudRain size={9} style={{ color: precipColor }} />

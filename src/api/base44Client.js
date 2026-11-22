@@ -5,6 +5,7 @@
 import { getInstructions } from '@/lib/aiInstructions';
 import { searchDocs, getDoc, refOf } from '@/lib/kb';
 import { fetchWeather, fetchCatastrophes, fetchWarNews, fetchDashboard, fetchPizza } from './liveData';
+import { locale } from '../i18n';
 
 export const IS_ARTIFACT = typeof window !== 'undefined' && !!window.claude?.use;
 
@@ -79,7 +80,7 @@ async function askMestre({ question }) {
   const full = await Promise.all(hits.map((h) => getDoc(h.docId)));
   const used = [...new Set(hits.map((h) => h.name))];
   const filesText = hits.map((h, k) => `\n\n### [${refOf(h)}]\n${(full[k]?.pages?.[h.page - 1] || h.excerpt).slice(0, 4000)}`).join('');
-  const telemetry = `Hora local do dispositivo: ${new Date().toLocaleString('pt-PT')}. Ligação à internet: ${navigator.onLine ? 'sim' : 'não'}.`;
+  const telemetry = `Hora local do dispositivo: ${new Date().toLocaleString(locale())}. Ligação à internet: ${navigator.onLine ? 'sim' : 'não'}.`;
   const rules = `${getInstructions()}\n\nTELEMETRIA DO DISPOSITIVO: ${telemetry}\n\n${filesText ? `MANUAIS E DOCUMENTOS DO UTILIZADOR (cita sempre o nome do documento e a página ou secção de onde tiraste a informação):${filesText}` : 'Não há documentos do utilizador carregados.'}`;
   const { text } = await sample(
     [{ role: 'user', content: rules }, { role: 'assistant', content: 'Entendido. Pronto.' }, { role: 'user', content: question }],

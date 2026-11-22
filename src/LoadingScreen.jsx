@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { t } from '@/i18n';
 
-export default function LoadingScreen({ message = 'A CARREGAR DADOS...' }) {
+export default function LoadingScreen({ message = t('A CARREGAR DADOS...') }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <motion.div

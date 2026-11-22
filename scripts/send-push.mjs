@@ -48,7 +48,7 @@ if (priv) {
   try {
     const r = await fetch(`${PUSH_REGISTRY}/list`, { headers: { Authorization: `Bearer ${registryToken()}` }, signal: AbortSignal.timeout(20000) });
     const j = r.ok ? await r.json() : null;
-    if (j?.ok) targets = j.records.map((x) => ({ sub: x.sub, prefs: x.prefs || {} }));
+    if (j?.ok) targets = j.records.map((x) => ({ sub: x.sub, prefs: x.prefs || {}, lang: x.lang || 'pt' }));
     console.log(`registo automático: ${targets.length} telemóveis${r.ok ? '' : ` (erro ${r.status})`}`);
   } catch (e) { console.log('registo automático indisponível:', e.message); }
 }
@@ -78,8 +78,39 @@ for (const k of Object.keys(sent)) if (sent[k] < old) delete sent[k];
 const sentToday = (cat) => Object.keys(sent).filter((k) => k.startsWith(`${cat}|`) && k.includes(today)).length;
 
 const due = [];
-// icon: miniatura da personagem (public/icons/tempo/<modo>.png) que aparece à esquerda na notificação
-const add = (cat, key, title, body, url, icon = 'base') => { if (!sent[key]) due.push({ cat, key, title, body, url, icon }); };
+// Idiomas: cada telemóvel recebe no idioma escolhido na app (lang no registo: 'pt' ou 'en').
+// T(lang, 'texto em português com {vars}', vars) -> tradução de EN abaixo quando lang === 'en'.
+const EN = {
+  'Greve da Função Pública': 'Public sector strike', 'Greve na Saúde': 'Healthcare strike', 'Greve nas escolas': 'School strike',
+  'Greve nos Transportes': 'Transport strike', 'Greve geral': 'General strike', 'Greve na Justiça': 'Justice sector strike',
+  'Greve nas forças de segurança': 'Security forces strike', 'Greve nas autarquias': 'Local government strike', Greve: 'Strike',
+  'ALERTA — HOJE: {w} ({d})': 'ALERT — TODAY: {w} ({d})', 'ALERTA — {w} de {a} a {b}': 'ALERT — {w} from {a} to {b}', 'ALERTA — {w} dia {a}': 'ALERT — {w} on {a}',
+  'Tempo hoje em {c}: {t} · {min}°/{max}°': 'Weather today in {c}: {t} · {min}°/{max}°',
+  'Chuva {p}% · Vento {v}{dir}. {c}': 'Rain {p}% · Wind {v}{dir}. {c}',
+  fraco: 'light', moderado: 'moderate', forte: 'strong', 'muito forte': 'very strong',
+  'Leva impermeável ou guarda-chuva.': 'Take a raincoat or umbrella.', 'Aproveita o dia ao ar livre!': 'Enjoy the day outdoors!',
+  'Atenção a objetos soltos com o vento.': 'Watch out for loose objects in the wind.', 'Visibilidade reduzida: cuidado na estrada.': 'Low visibility: drive carefully.',
+  'Agasalha-te bem.': 'Wrap up warm.', 'Dia sem grandes surpresas.': 'A day without big surprises.', 'Tempo variável': 'Variable weather',
+  AMARELO: 'YELLOW', LARANJA: 'ORANGE', VERMELHO: 'RED',
+  'ALERTA {l} — {t} em {c} hoje ({a} às {b})': '{l} ALERT — {t} in {c} today ({a} to {b})', 'Aviso {l} do IPMA.': 'IPMA {l} warning.',
+  Precipitação: 'Rain', Vento: 'Wind', Nevoeiro: 'Fog', Neve: 'Snow', Trovoada: 'Thunderstorms', 'Agitação Marítima': 'Rough seas', 'Tempo Frio': 'Cold weather', 'Tempo Quente': 'Hot weather',
+  Sismo: 'Earthquake', 'Ciclone tropical': 'Tropical cyclone', Cheias: 'Floods', 'Erupção vulcânica': 'Volcanic eruption', Seca: 'Drought', 'Incêndio florestal': 'Wildfire', Tsunami: 'Tsunami',
+  'ALERTA VERMELHO — {k}: {w}': 'RED ALERT — {k}: {w}', 'ALERTA — Sismo de magnitude {m} hoje{pt}': 'ALERT — Magnitude {m} earthquake today{pt}',
+  '{p}, às {h}.{ts}': '{p}, at {h}.{ts}', ' Possível tsunami.': ' Possible tsunami.',
+  'ALERTA — Guerra & Conflitos ({r})': 'ALERT — War & Conflicts ({r})',
+  'ALERTA — Tensão global hoje: {v}/10': 'ALERT — Global tension today: {v}/10', 'Ontem: {y}/10. ': 'Yesterday: {y}/10. ',
+  '{a} de {b} notícias falam de conflitos ou preparação militar.': '{a} of {b} news stories are about conflicts or military build-up.',
+  'ALERTA — Índice Pizza hoje: {v}/10': 'ALERT — Pizza Index today: {v}/10', 'Muitas notícias sobre conflitos e atividade militar.': 'Lots of news about conflicts and military activity.',
+  ' (TESTE)': ' (TEST)', 'Exemplo de aviso de greve: chega 2 dias antes e no próprio dia.': 'Sample strike alert: arrives 2 days before and on the day.',
+  'Exemplo de aviso do IPMA para o teu distrito.': 'Sample IPMA warning for your district.', 'Exemplo de aviso de catástrofe (GDACS / USGS).': 'Sample disaster alert (GDACS / USGS).',
+  'Exemplo de notícia de conflito muito grave.': 'Sample very serious conflict news.', 'Exemplo de aviso de tensão global alta ou a subir.': 'Sample alert for high or rising global tension.',
+  'Exemplo do Índice Pizza (desligado por omissão).': 'Sample Pizza Index alert (off by default).',
+  Aguaceiros: 'Showers', 'Céu limpo': 'Clear sky', Geada: 'Frost', 'Céu nublado': 'Cloudy', 'Céu parcialmente nublado': 'Partly cloudy',
+};
+const T = (lang, pt, vars = {}) => { let x = lang === 'en' ? (EN[pt] ?? pt) : pt; return x.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)); };
+const dmyL = (lang, d) => { const [y, m, dd] = d.split('-'); return lang === 'en' ? `${m}/${dd}/${y.slice(2)}` : `${dd}/${m}/${y.slice(2)}`; };
+// icon: miniatura da personagem (public/icons/tempo/<modo>.png); make(lang) devolve { title, body } nesse idioma
+const add = (cat, key, make, url, icon = 'base') => { if (!sent[key]) due.push({ cat, key, make, url, icon }); };
 // modo da personagem a partir da descrição do tempo (igual ao painel Alertas e clima da app)
 const modeFrom = (txt = '', tmin = 10, wind = 0) => {
   const c = txt.toLowerCase();
@@ -93,15 +124,18 @@ const modeFrom = (txt = '', tmin = 10, wind = 0) => {
 const CONSELHO = { rain: 'Leva impermeável ou guarda-chuva.', sun: 'Aproveita o dia ao ar livre!', wind: 'Atenção a objetos soltos com o vento.', fog: 'Visibilidade reduzida: cuidado na estrada.', cold: 'Agasalha-te bem.', cloud: 'Dia sem grandes surpresas.' };
 
 if (hour >= 8 && hour < 23) {
-  // ---- Greves: antecedência e no próprio dia ----
+  // ---- Greves: antecedência e no próprio dia (o título da notícia fica no original) ----
   for (const s of news.strikes?.upcoming || []) {
     if (!s.days?.length || s.sector === 'Internacional') continue;
     const first = s.days[0], last = s.days[s.days.length - 1];
     const until = Math.round((new Date(first + 'T12:00Z') - new Date(today + 'T12:00Z')) / 86400000);
     const what = SECTOR_TXT[s.sector] || 'Greve';
     // as chaves antigas (sem "greves|") continuam a contar como já enviadas
-    if (today >= first && today <= last) { const k = `${s.id}|dia|${today}`; if (!sent[k]) add('greves', k, `ALERTA — HOJE: ${what} (${dmy(today)})`, s.title, './#/greves'); }
-    else if (until > 0 && until <= ANTECEDENCIA_DIAS) { const k = `${s.id}|pre`; if (!sent[k]) add('greves', k, `ALERTA — ${what} ${s.days.length > 1 ? `de ${dmy(first)} a ${dmy(last)}` : `dia ${dmy(first)}`}`, s.title, './#/greves'); }
+    if (today >= first && today <= last) { const k = `${s.id}|dia|${today}`; add('greves', k, (l) => ({ title: T(l, 'ALERTA — HOJE: {w} ({d})', { w: T(l, what), d: dmyL(l, today) }), body: s.title }), './#/greves'); }
+    else if (until > 0 && until <= ANTECEDENCIA_DIAS) {
+      const k = `${s.id}|pre`;
+      add('greves', k, (l) => ({ title: s.days.length > 1 ? T(l, 'ALERTA — {w} de {a} a {b}', { w: T(l, what), a: dmyL(l, first), b: dmyL(l, last) }) : T(l, 'ALERTA — {w} dia {a}', { w: T(l, what), a: dmyL(l, first) }), body: s.title }), './#/greves');
+    }
   }
 
   // ---- Meteorologia: previsão do dia, uma vez por dia (primeira verificação depois das 8h) ----
@@ -111,27 +145,29 @@ if (hour >= 8 && hour < 23) {
   ]);
   const hoje = (prev?.data || []).find((d) => d.forecastDate === today);
   if (hoje) {
-    const tipo = (types?.data || []).find((t) => t.idWeatherType === hoje.idWeatherType)?.descWeatherTypePT || 'Tempo variável';
+    const ty = (types?.data || []).find((x) => x.idWeatherType === hoje.idWeatherType);
+    const tipo = ty?.descWeatherTypePT || 'Tempo variável';
     const VENTO = { 1: 'fraco', 2: 'moderado', 3: 'forte', 4: 'muito forte' }; const VENTO_KMH = { 1: 10, 2: 25, 3: 45, 4: 65 };
     const mode = modeFrom(tipo, Number(hoje.tMin), VENTO_KMH[hoje.classWindSpeed] || 0);
     const chuva = Math.round(Number(hoje.precipitaProb) || 0);
-    add('meteorologia', `meteorologia|${today}|previsao`,
-      `Tempo hoje em ${DISTRITO.nome}: ${tipo} · ${Math.round(hoje.tMin)}°/${Math.round(hoje.tMax)}°`,
-      `Chuva ${chuva}% · Vento ${VENTO[hoje.classWindSpeed] || '—'}${hoje.predWindDir ? ` (${hoje.predWindDir})` : ''}. ${CONSELHO[mode]}`,
-      './#/meteo', mode);
+    add('meteorologia', `meteorologia|${today}|previsao`, (l) => ({
+      title: T(l, 'Tempo hoje em {c}: {t} · {min}°/{max}°', { c: DISTRITO.nome, t: l === 'en' ? (ty?.descWeatherTypeEN || T(l, tipo)) : tipo, min: Math.round(hoje.tMin), max: Math.round(hoje.tMax) }),
+      body: T(l, 'Chuva {p}% · Vento {v}{dir}. {c}', { p: chuva, v: T(l, VENTO[hoje.classWindSpeed] || '—'), dir: hoje.predWindDir ? ` (${hoje.predWindDir})` : '', c: T(l, CONSELHO[mode]) }),
+    }), './#/meteo', mode);
   }
 
-  // ---- Meteorologia: avisos do IPMA para o distrito, ativos hoje ----
+  // ---- Meteorologia: avisos do IPMA para o distrito, ativos hoje (o texto do IPMA fica em português) ----
   const LV = { yellow: 'AMARELO', orange: 'LARANJA', red: 'VERMELHO' };
-  const AVISO_MODO = (t = '') => (/precipita|trovoada/i.test(t) ? 'rain' : /vento|agita/i.test(t) ? 'wind' : /nevoeiro/i.test(t) ? 'fog' : /frio|neve/i.test(t) ? 'cold' : /quente/i.test(t) ? 'sun' : 'cloud');
+  const AVISO_MODO = (x = '') => (/precipita|trovoada/i.test(x) ? 'rain' : /vento|agita/i.test(x) ? 'wind' : /nevoeiro/i.test(x) ? 'fog' : /frio|neve/i.test(x) ? 'cold' : /quente/i.test(x) ? 'sun' : 'cloud');
   const warnings = await getJson('https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json');
   for (const w of warnings || []) {
     if (w.idAreaAviso !== DISTRITO.id || !LV[w.awarenessLevelID]) continue;
     const s = dayOf(w.startTime), e = dayOf(w.endTime);
     if (today < s || today > e || new Date(w.endTime) < new Date()) continue;
-    add('meteorologia', `meteorologia|${today}|${w.awarenessLevelID}|${w.awarenessTypeName}|${w.startTime}`,
-      `ALERTA ${LV[w.awarenessLevelID]} — ${w.awarenessTypeName} em ${DISTRITO.nome} hoje (${hm(w.startTime)} às ${hm(w.endTime)})`,
-      w.text || `Aviso ${LV[w.awarenessLevelID].toLowerCase()} do IPMA.`, './#/meteo', AVISO_MODO(w.awarenessTypeName));
+    add('meteorologia', `meteorologia|${today}|${w.awarenessLevelID}|${w.awarenessTypeName}|${w.startTime}`, (l) => ({
+      title: T(l, 'ALERTA {l} — {t} em {c} hoje ({a} às {b})', { l: T(l, LV[w.awarenessLevelID]), t: T(l, w.awarenessTypeName), c: DISTRITO.nome, a: hm(w.startTime), b: hm(w.endTime) }),
+      body: w.text || T(l, 'Aviso {l} do IPMA.', { l: T(l, LV[w.awarenessLevelID]).toLowerCase() }),
+    }), './#/meteo', AVISO_MODO(w.awarenessTypeName));
   }
 
   // ---- Catástrofes: GDACS vermelho e sismos fortes, de hoje ----
@@ -142,21 +178,21 @@ if (hour >= 8 && hour < 23) {
   const GT = { EQ: 'Sismo', TC: 'Ciclone tropical', FL: 'Cheias', VO: 'Erupção vulcânica', DR: 'Seca', WF: 'Incêndio florestal', TS: 'Tsunami' };
   for (const f of gdacs?.features || []) {
     const p = f.properties; if (!/red/i.test(p.alertlevel) || dayOf(p.fromdate) !== today) continue;
-    add('catastrofes', `catastrofes|${today}|gdacs-${p.eventtype}-${p.eventid}`, `ALERTA VERMELHO — ${GT[p.eventtype] || p.eventtype}: ${p.country || p.name}`, `${p.name}. ${p.severitydata?.severitytext || ''}`.trim(), './#/catastrofes');
+    add('catastrofes', `catastrofes|${today}|gdacs-${p.eventtype}-${p.eventid}`, (l) => ({ title: T(l, 'ALERTA VERMELHO — {k}: {w}', { k: T(l, GT[p.eventtype] || p.eventtype), w: p.country || p.name }), body: `${p.name}. ${p.severitydata?.severitytext || ''}`.trim() }), './#/catastrofes');
   }
   for (const f of (quakes?.features || []).sort((a, b) => b.properties.mag - a.properties.mag)) {
     if (sentToday('catastrofes') + due.filter((d) => d.cat === 'catastrofes').length >= 3) break; // máx. 3 por dia
     const p = f.properties; const pt = /portugal|azores|madeira|açores/i.test(p.place || '');
     if (dayOf(p.time) !== today || !(p.mag >= 6.5 || (pt && p.mag >= 4))) continue;
-    add('catastrofes', `catastrofes|${today}|usgs-${f.id}`, `ALERTA — Sismo de magnitude ${p.mag.toFixed(1)} hoje${pt ? ' (Portugal)' : ''}`, `${p.place}, às ${hm(p.time)}.${p.tsunami ? ' Possível tsunami.' : ''}`, './#/catastrofes');
+    add('catastrofes', `catastrofes|${today}|usgs-${f.id}`, (l) => ({ title: T(l, 'ALERTA — Sismo de magnitude {m} hoje{pt}', { m: p.mag.toFixed(1), pt: pt ? ' (Portugal)' : '' }), body: T(l, '{p}, às {h}.{ts}', { p: p.place, h: hm(p.time), ts: p.tsunami ? T(l, ' Possível tsunami.') : '' }) }), './#/catastrofes');
   }
 
-  // ---- Guerra: notícias muito graves de hoje (máx. 2 por dia) ----
+  // ---- Guerra: notícias muito graves de hoje (máx. 2 por dia; o título da notícia fica no original) ----
   let n = sentToday('guerra');
   for (const a of (news.war || []).filter((x) => x.severity >= 8 && dayOf(x.date) === today).sort((x, y) => y.severity - x.severity)) {
     if (n >= 2) break;
     const k = `guerra|${today}|${a.title.slice(0, 60)}`; if (sent[k]) continue;
-    add('guerra', k, `ALERTA — Guerra & Conflitos (${a.region})`, `${a.title} (${a.source})`, './#/guerra'); n++;
+    add('guerra', k, (l) => ({ title: T(l, 'ALERTA — Guerra & Conflitos ({r})', { r: a.region }), body: `${a.title} (${a.source})` }), './#/guerra'); n++;
   }
 
   // ---- Tensão global e Índice Pizza: uma vez por dia (mesmas contas que a app) ----
@@ -167,51 +203,53 @@ if (hour >= 8 && hour < 23) {
   if (meta.tension_day !== today) { meta.tension_prev = meta.tension; meta.tension_day = today; }
   meta.tension = tension;
   if (tension >= 7 || (yesterday != null && tension - yesterday >= 1)) {
-    add('tensao_global', `tensao_global|${today}`, `ALERTA — Tensão global hoje: ${tension.toFixed(1)}/10`, yesterday != null ? `Ontem: ${Number(yesterday).toFixed(1)}/10. ${c.war + c.prep} de ${c.total} notícias falam de conflitos ou preparação militar.` : `${c.war + c.prep} de ${c.total} notícias falam de conflitos ou preparação militar.`, './#/dashboard');
+    add('tensao_global', `tensao_global|${today}`, (l) => ({
+      title: T(l, 'ALERTA — Tensão global hoje: {v}/10', { v: tension.toFixed(1) }),
+      body: (yesterday != null ? T(l, 'Ontem: {y}/10. ', { y: Number(yesterday).toFixed(1) }) : '') + T(l, '{a} de {b} notícias falam de conflitos ou preparação militar.', { a: c.war + c.prep, b: c.total }),
+    }), './#/dashboard');
   }
-  if (pizza >= 7) add('pizza_index', `pizza_index|${today}`, `ALERTA — Índice Pizza hoje: ${pizza.toFixed(1)}/10`, 'Muitas notícias sobre conflitos e atividade militar.', './#/pizza');
+  if (pizza >= 7) add('pizza_index', `pizza_index|${today}`, (l) => ({ title: T(l, 'ALERTA — Índice Pizza hoje: {v}/10', { v: pizza.toFixed(1) }), body: T(l, 'Muitas notícias sobre conflitos e atividade militar.') }), './#/pizza');
 }
 
 // teste manual: envia um exemplo de cada categoria, a qualquer hora. Cada um leva a sua categoria,
-// por isso o telemóvel só mostra os das categorias ligadas em Definições > Notificações (serve para testar os interruptores).
+// por isso cada telemóvel só recebe os das categorias ligadas em Definições > Notificações.
 if (process.env.PUSH_TEST) {
-  const t = Date.now();
+  const now = Date.now();
   const EX = [
-    ['greves', 'ALERTA — Greve da Função Pública dia 00/00/00 (TESTE)', 'Exemplo de aviso de greve: chega 2 dias antes e no próprio dia.', './#/greves'],
-    ['meteorologia', `Tempo hoje em ${DISTRITO.nome}: Aguaceiros · 12°/17° (TESTE)`, 'Chuva 80% · Vento moderado (NW). Leva impermeável ou guarda-chuva.', './#/meteo', 'rain'],
-    ['meteorologia', `ALERTA AMARELO — Precipitação em ${DISTRITO.nome} hoje (TESTE)`, 'Exemplo de aviso do IPMA para o teu distrito.', './#/meteo', 'rain'],
-    ['catastrofes', 'ALERTA — Sismo de magnitude 6.8 hoje (TESTE)', 'Exemplo de aviso de catástrofe (GDACS / USGS).', './#/catastrofes'],
-    ['guerra', 'ALERTA — Guerra & Conflitos (TESTE)', 'Exemplo de notícia de conflito muito grave.', './#/guerra'],
-    ['tensao_global', 'ALERTA — Tensão global hoje: 7.4/10 (TESTE)', 'Exemplo de aviso de tensão global alta ou a subir.', './#/dashboard'],
-    ['pizza_index', 'ALERTA — Índice Pizza hoje: 7.2/10 (TESTE)', 'Exemplo do Índice Pizza (desligado por omissão).', './#/pizza'],
+    ['greves', (l) => T(l, 'ALERTA — {w} dia {a}', { w: T(l, 'Greve da Função Pública'), a: '00/00/00' }) + T(l, ' (TESTE)'), 'Exemplo de aviso de greve: chega 2 dias antes e no próprio dia.', './#/greves'],
+    ['meteorologia', (l) => T(l, 'Tempo hoje em {c}: {t} · {min}°/{max}°', { c: DISTRITO.nome, t: T(l, 'Aguaceiros'), min: 12, max: 17 }) + T(l, ' (TESTE)'), (l) => T(l, 'Chuva {p}% · Vento {v}{dir}. {c}', { p: 80, v: T(l, 'moderado'), dir: ' (NW)', c: T(l, CONSELHO.rain) }), './#/meteo', 'rain'],
+    ['meteorologia', (l) => T(l, 'ALERTA {l} — {t} em {c} hoje ({a} às {b})', { l: T(l, 'AMARELO'), t: T(l, 'Precipitação'), c: DISTRITO.nome, a: '15:00', b: '21:00' }) + T(l, ' (TESTE)'), 'Exemplo de aviso do IPMA para o teu distrito.', './#/meteo', 'rain'],
+    ['catastrofes', (l) => T(l, 'ALERTA — Sismo de magnitude {m} hoje{pt}', { m: '6.8', pt: '' }) + T(l, ' (TESTE)'), 'Exemplo de aviso de catástrofe (GDACS / USGS).', './#/catastrofes'],
+    ['guerra', (l) => T(l, 'ALERTA — Guerra & Conflitos ({r})', { r: l === 'en' ? 'TEST' : 'TESTE' }), 'Exemplo de notícia de conflito muito grave.', './#/guerra'],
+    ['tensao_global', (l) => T(l, 'ALERTA — Tensão global hoje: {v}/10', { v: '7.4' }) + T(l, ' (TESTE)'), 'Exemplo de aviso de tensão global alta ou a subir.', './#/dashboard'],
+    ['pizza_index', (l) => T(l, 'ALERTA — Índice Pizza hoje: {v}/10', { v: '7.2' }) + T(l, ' (TESTE)'), 'Exemplo do Índice Pizza (desligado por omissão).', './#/pizza'],
   ];
-  EX.forEach(([cat, title, body, url, icon], i) => due.push({ cat, key: `teste-${cat}-${i}-${t}`, title, body, url, icon: icon || 'base' }));
+  EX.forEach(([cat, ti, bo, url, icon], i) => due.push({ cat, key: `teste-${cat}-${i}-${now}`, make: (l) => ({ title: ti(l), body: typeof bo === 'function' ? bo(l) : T(l, bo) }), url, icon: icon || 'base' }));
 }
 
 // teste do tempo: uma previsão de exemplo para cada estado, cada uma com a sua miniatura
 if (process.env.PUSH_TEST_TEMPO) {
-  const t = Date.now();
+  const now = Date.now();
   [
-    ['rain', 'Aguaceiros · 11°/16°', 'Chuva 85% · Vento moderado (SW). Leva impermeável ou guarda-chuva.'],
-    ['sun', 'Céu limpo · 9°/21°', 'Chuva 0% · Vento fraco (N). Aproveita o dia ao ar livre!'],
-    ['cold', 'Geada · -1°/9°', 'Chuva 5% · Vento fraco (NE). Agasalha-te bem.'],
-    ['wind', 'Céu nublado · 10°/15°', 'Chuva 30% · Vento forte (W). Atenção a objetos soltos com o vento.'],
-    ['fog', 'Nevoeiro · 7°/14°', 'Chuva 10% · Vento fraco (E). Visibilidade reduzida: cuidado na estrada.'],
-    ['cloud', 'Céu parcialmente nublado · 8°/18°', 'Chuva 35% · Vento fraco (W). Dia sem grandes surpresas.'],
-  ].forEach(([icon, tipo, body]) => due.push({ cat: 'meteorologia', key: `teste-tempo-${icon}-${t}`, title: `Tempo hoje em ${DISTRITO.nome}: ${tipo} (TESTE)`, body, url: './#/meteo', icon }));
+    ['rain', 'Aguaceiros', 11, 16, 85, 'moderado', 'SW'], ['sun', 'Céu limpo', 9, 21, 0, 'fraco', 'N'], ['cold', 'Geada', -1, 9, 5, 'fraco', 'NE'],
+    ['wind', 'Céu nublado', 10, 15, 30, 'forte', 'W'], ['fog', 'Nevoeiro', 7, 14, 10, 'fraco', 'E'], ['cloud', 'Céu parcialmente nublado', 8, 18, 35, 'fraco', 'W'],
+  ].forEach(([icon, tipo, min, max, p, v, dir]) => due.push({ cat: 'meteorologia', key: `teste-tempo-${icon}-${now}`, url: './#/meteo', icon, make: (l) => ({
+    title: T(l, 'Tempo hoje em {c}: {t} · {min}°/{max}°', { c: DISTRITO.nome, t: T(l, tipo), min, max }) + T(l, ' (TESTE)'),
+    body: T(l, 'Chuva {p}% · Vento {v}{dir}. {c}', { p, v: T(l, v), dir: ` (${dir})`, c: T(l, CONSELHO[icon]) }),
+  }) }));
 }
 
 if (!priv || !subs.length) {
   console.log(`push: ${due.length} avisos por enviar, mas falta ${!priv ? 'VAPID_PRIVATE_KEY' : 'algum telemóvel registado'} — nada enviado`);
-  for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.title}`);
+  for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.make('pt').title}  |  EN: ${d.make('en').title}`);
 } else if (due.length) {
   webpush.setVapidDetails('https://steeldeck.github.io/SteelDeck/', VAPID_PUBLIC, priv);
   const gone = new Set();
   for (const d of due.slice(0, 10)) { // nunca mais de 10 de uma vez
-    const payload = JSON.stringify({ cat: d.cat, title: d.title, body: d.body, tag: d.key.slice(0, 120), url: d.url, icon: `./icons/tempo/${d.icon || 'base'}.png` });
+    const payload = (lang) => { const m = d.make(lang); return JSON.stringify({ cat: d.cat, title: m.title, body: m.body, tag: d.key.slice(0, 120), url: d.url, icon: `./icons/tempo/${d.icon || 'base'}.png` }); };
     // só para quem tem esta categoria ligada (os registos antigos, sem interruptores, recebem tudo e o telemóvel filtra)
     const to = targets.filter((t) => !PREF_KEY[d.cat] || t.prefs[PREF_KEY[d.cat]] !== false).filter((t) => !gone.has(t.sub.endpoint));
-    const results = await Promise.allSettled(to.map((t) => webpush.sendNotification(t.sub, payload, { TTL: 12 * 3600, urgency: 'high' })));
+    const results = await Promise.allSettled(to.map((t) => webpush.sendNotification(t.sub, payload(t.lang === 'en' ? 'en' : 'pt'), { TTL: 12 * 3600, urgency: 'high' })));
     const ok = results.filter((r) => r.status === 'fulfilled').length;
     results.forEach((r, i) => {
       if (r.status !== 'rejected') return;
@@ -219,7 +257,7 @@ if (!priv || !subs.length) {
       else console.log('push falhou:', r.reason?.statusCode, r.reason?.body || r.reason?.message);
     });
     if (ok || !to.length) sent[d.key] = Date.now();
-    console.log(`push [${d.cat}]: "${d.title}" -> ${ok}/${to.length} telemóveis`);
+    console.log(`push [${d.cat}]: "${d.make('pt').title}" -> ${ok}/${to.length} telemóveis`);
   }
   if (gone.size) {
     console.log(`a apagar ${gone.size} registo(s) expirado(s)`);

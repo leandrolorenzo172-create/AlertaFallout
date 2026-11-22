@@ -7,6 +7,7 @@ import {
 import { render, themeColors, drawIcon, capIcon, CANVAS } from './render';
 import * as audio from './audio';
 import { card, spritesReady } from './sprites';
+import { locale, t as tr } from '../../i18n';
 
 const STATS_KEY = 'pb_erawar_stats';
 export function loadStats() {
@@ -21,38 +22,38 @@ function saveResult(diff, won) {
 
 const TEMPLATE = `
 <div class="ew-hud">
-  <button type="button" class="ew-btn ew-pause" data-ew="pause" aria-label="Pausa">&#10074;&#10074;</button>
-  <div class="ew-stat ew-caps"><b>CARICAS</b><span><img class="ew-cap" data-ew="capimg" alt="" width="12" height="12" /><span data-ew="gold">0</span></span></div>
+  <button type="button" class="ew-btn ew-pause" data-ew="pause" aria-label="${tr('Pausa')}">&#10074;&#10074;</button>
+  <div class="ew-stat ew-caps"><b>${tr('CARICAS')}</b><span><img class="ew-cap" data-ew="capimg" alt="" width="12" height="12" /><span data-ew="gold">0</span></span></div>
   <div class="ew-stat"><b>XP</b><span data-ew="xp">0</span></div>
-  <button type="button" class="ew-btn ew-evolve" data-ew="evolve"><b>EVOLUIR</b><span data-ew="evolveinfo"></span></button>
-  <button type="button" class="ew-btn ew-special" data-ew="special"><b data-ew="spname">ESPECIAL</b><span data-ew="spinfo"></span><i data-ew="spbar"></i></button>
+  <button type="button" class="ew-btn ew-evolve" data-ew="evolve"><b>${tr('EVOLUIR')}</b><span data-ew="evolveinfo"></span></button>
+  <button type="button" class="ew-btn ew-special" data-ew="special"><b data-ew="spname">${tr('ESPECIAL')}</b><span data-ew="spinfo"></span><i data-ew="spbar"></i></button>
 </div>
 <div class="ew-queuebar">
-  <span class="ew-label">TREINO</span>
+  <span class="ew-label">${tr('TREINO')}</span>
   <div class="ew-queue" data-ew="queue"></div>
   <span class="ew-era" data-ew="eras"></span>
-  <span class="ew-audio"><button type="button" data-ew="mus" aria-pressed="true">&#9835; MÚSICA</button><button type="button" data-ew="snd" aria-pressed="true">&#9836; EFEITOS</button></span>
+  <span class="ew-audio"><button type="button" data-ew="mus" aria-pressed="true">${tr('&#9835; MÚSICA')}</button><button type="button" data-ew="snd" aria-pressed="true">${tr('&#9836; EFEITOS')}</button></span>
 </div>
 <div class="ew-screen" data-ew="screen">
-  <button type="button" class="ew-fsbtn" data-ew="fs" aria-pressed="false">&#10530; ECRÃ INTEIRO</button>
-  <canvas data-ew="canvas" width="${CANVAS.w}" height="${CANVAS.h}" aria-label="Campo de batalha"></canvas>
+  <button type="button" class="ew-fsbtn" data-ew="fs" aria-pressed="false">${tr('&#10530; ECRÃ INTEIRO')}</button>
+  <canvas data-ew="canvas" width="${CANVAS.w}" height="${CANVAS.h}" aria-label="${tr('Campo de batalha')}"></canvas>
   <span class="ew-hp l" data-ew="hp0">500 HP</span><span class="ew-hp r" data-ew="hp1">500 HP</span>
   <div class="ew-banner" data-ew="banner" hidden></div>
   <div class="ew-overlay" data-ew="overlay" hidden></div>
 </div>
 <div class="ew-tabs" role="tablist">
-  <button type="button" role="tab" aria-selected="true" data-ew="tab0">TROPAS</button>
-  <button type="button" role="tab" aria-selected="false" data-ew="tab1">DEFESAS</button>
+  <button type="button" role="tab" aria-selected="true" data-ew="tab0">${tr('TROPAS')}</button>
+  <button type="button" role="tab" aria-selected="false" data-ew="tab1">${tr('DEFESAS')}</button>
 </div>
 <div class="ew-panel" data-ew="panel0">
   ${[0, 1, 2].map((i) => `<button type="button" class="ew-unit ew-card" data-ew="unit${i}"><span class="ew-no" data-ew="uno${i}">No.01</span><canvas width="120" height="96" data-ew="icon${i}"></canvas><span class="ew-uname" data-ew="uname${i}"></span><span class="ew-cost" data-ew="ucost${i}"></span><kbd>${i + 1}</kbd></button>`).join('')}
 </div>
 <div class="ew-panel" data-ew="panel1" hidden>
   <button type="button" class="ew-unit" data-ew="buyturret"><span class="ew-uname" data-ew="tname"></span><span class="ew-cost" data-ew="tcost"></span></button>
-  <button type="button" class="ew-unit" data-ew="sellturret"><span class="ew-uname">Vender torre</span><span class="ew-cost">recupera metade</span></button>
-  <button type="button" class="ew-unit" data-ew="addslot"><span class="ew-uname">Novo espaço</span><span class="ew-cost" data-ew="slotcost"></span></button>
+  <button type="button" class="ew-unit" data-ew="sellturret"><span class="ew-uname">${tr('Vender torre')}</span><span class="ew-cost">${tr('recupera metade')}</span></button>
+  <button type="button" class="ew-unit" data-ew="addslot"><span class="ew-uname">${tr('Novo espaço')}</span><span class="ew-cost" data-ew="slotcost"></span></button>
 </div>
-<p class="ew-help">Teclas: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tropas · <kbd>Q</kbd> especial · <kbd>E</kbd> evoluir · <kbd>T</kbd> torre · <kbd>P</kbd> pausa</p>`;
+<p class="ew-help">${tr('Teclas:')} <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> ${tr('tropas')} · <kbd>Q</kbd> ${tr('especial')} · <kbd>E</kbd> ${tr('evoluir')} · <kbd>T</kbd> ${tr('torre')} · <kbd>P</kbd> ${tr('pausa')}</p>`;
 
 export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } = {}) {
   root.classList.add('ew');
@@ -68,7 +69,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
 
   const setText = (n, v) => { const s = String(v); if (n.textContent !== s) n.textContent = s; };
   const setDis = (n, d) => { if (n.disabled !== d) n.disabled = d; };
-  const fmt = (n) => Math.floor(n).toLocaleString('pt-PT');
+  const fmt = (n) => Math.floor(n).toLocaleString(locale());
 
   function banner(text) {
     el.banner.textContent = text; el.banner.hidden = false;
@@ -80,15 +81,15 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     const me = g.sides[0]; const ai = g.sides[1];
     setText(el.gold, fmt(me.gold)); setText(el.xp, fmt(me.xp));
     const need = nextEraXp(me);
-    setText(el.evolveinfo, need == null ? 'era máxima' : `${ERAS[me.era + 1].short} · ${fmt(need)} XP`);
+    setText(el.evolveinfo, need == null ? tr('era máxima') : `${ERAS[me.era + 1].short} · ${fmt(need)} XP`);
     setDis(el.evolve, !canEvolve(g, 0));
     el.evolve.classList.toggle('ready', canEvolve(g, 0));
     setText(el.spname, ERAS[me.era].special.toUpperCase());
-    setText(el.spinfo, me.specialCd > 0 ? `recarga ${Math.ceil(me.specialCd)} s` : 'pronto');
+    setText(el.spinfo, me.specialCd > 0 ? tr('recarga {n} s', { n: Math.ceil(me.specialCd) }) : tr('pronto'));
     el.spbar.style.width = `${(1 - me.specialCd / SPECIAL_CD) * 100}%`;
     setDis(el.special, !canSpecial(g, 0));
     setText(el.hp0, `${Math.ceil(me.hp)} HP`); setText(el.hp1, `${Math.ceil(ai.hp)} HP`);
-    setText(el.eras, `TU: ${ERAS[me.era].short} · IA (${DIFFICULTY[g.difficulty].label}): ${ERAS[ai.era].short}`);
+    setText(el.eras, `${tr('TU')}: ${ERAS[me.era].short} · ${tr('IA')} (${DIFFICULTY[g.difficulty].label}): ${ERAS[ai.era].short}`);
     // fila de treino: 5 casas, a primeira com barra de progresso
     const q = me.queue;
     if (el.queue.childElementCount !== QUEUE_MAX) el.queue.innerHTML = Array.from({ length: QUEUE_MAX }, () => '<i><b></b></i>').join('');
@@ -99,14 +100,14 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     });
     for (let i = 0; i < 3; i++) {
       const st = unitStats(me.era, i);
-      const cd = card(me.era, i); setText(el[`uname${i}`], cd.name); setText(el[`uno${i}`], `No.${String(cd.no).padStart(2, '0')}`); el[`unit${i}`].title = ERAS[me.era].units[i]; setText(el[`ucost${i}`], `${fmt(st.cost)} caricas`);
+      const cd = card(me.era, i); setText(el[`uname${i}`], cd.name); setText(el[`uno${i}`], `No.${String(cd.no).padStart(2, '0')}`); el[`unit${i}`].title = ERAS[me.era].units[i]; setText(el[`ucost${i}`], tr('{n} caricas', { n: fmt(st.cost) }));
       setDis(el[`unit${i}`], !canTrain(g, 0, i));
     }
     const ts = turretStats(me.era);
-    setText(el.tname, `${ERAS[me.era].turret}`); setText(el.tcost, `${fmt(ts.cost)} caricas · espaços ${me.turrets.slice(0, me.slots).filter(Boolean).length}/${me.slots}`);
+    setText(el.tname, `${ERAS[me.era].turret}`); setText(el.tcost, tr('{n} caricas · espaços {a}/{b}', { n: fmt(ts.cost), a: me.turrets.slice(0, me.slots).filter(Boolean).length, b: me.slots }));
     setDis(el.buyturret, !canBuyTurret(g, 0));
     setDis(el.sellturret, !me.turrets.some(Boolean) || !!g.over);
-    setText(el.slotcost, me.slots >= MAX_SLOTS ? 'máximo de espaços' : `${fmt(SLOT_COST[me.slots])} caricas`);
+    setText(el.slotcost, me.slots >= MAX_SLOTS ? tr('máximo de espaços') : tr('{n} caricas', { n: fmt(SLOT_COST[me.slots]) }));
     setDis(el.addslot, !canAddSlot(g, 0));
     if (iconEra !== me.era) {
       iconEra = me.era;
@@ -126,13 +127,13 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     g.sfx.length = 0;
     const danger = !g.over && g.sides[0].hp < BASE_HP * 0.3;
     audio.setTension(danger || (!g.over && g.t > 600));
-    if (danger && !sirenDone) { sirenDone = true; audio.siren(); banner('BASE EM PERIGO!'); }
+    if (danger && !sirenDone) { sirenDone = true; audio.siren(); banner(tr('BASE EM PERIGO!')); }
     for (const e of g.events) {
       if (e.type === 'evolve') { audio.evolveSfx(e.side === 0); if (e.side === 0) audio.setMusicEra(e.era); }
-      if (e.type === 'special') { audio.specialSfx(e.kind, e.side); if (e.kind === 'nuke' && e.side === 1) banner('ALERTA: MINI NUKE INIMIGA!'); }
+      if (e.type === 'special') { audio.specialSfx(e.kind, e.side); if (e.kind === 'nuke' && e.side === 1) banner(tr('ALERTA: MINI NUKE INIMIGA!')); }
       if (e.type === 'nukeHit') { el.screen.classList.remove('ew-shake'); void el.screen.offsetWidth; el.screen.classList.add('ew-shake'); }
-      if (e.type === 'evolve') banner(e.side === 0 ? `NOVA ERA: ${ERAS[e.era].name.toUpperCase()}` : `A IA AVANÇOU PARA: ${ERAS[e.era].name.toUpperCase()}`);
-      if (e.type === 'special' && e.side === 1) banner(`IA: ${ERAS[g.sides[1].era].special.toUpperCase()}!`);
+      if (e.type === 'evolve') banner(e.side === 0 ? `${tr('NOVA ERA:')} ${ERAS[e.era].name.toUpperCase()}` : `${tr('A IA AVANÇOU PARA:')} ${ERAS[e.era].name.toUpperCase()}`);
+      if (e.type === 'special' && e.side === 1) banner(`${tr('IA')}: ${ERAS[g.sides[1].era].special.toUpperCase()}!`);
     }
     g.events.length = 0;
     if (g.over && !recorded) {
@@ -140,10 +141,10 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
       const won = g.over.winner === 0; saveResult(g.difficulty, won);
       audio.jingle(won);
       const me = g.sides[0]; const m = Math.floor(g.t / 60); const s = Math.floor(g.t % 60);
-      overlay(`<h2>${won ? 'VITÓRIA' : 'DERROTA'}</h2>
-        <p>${won ? 'A base inimiga caiu.' : 'A tua base caiu.'}${g.over.siege ? ' (decidido pelo cerco)' : ''}</p>
-        <p class="ew-small">Tempo ${m}m${String(s).padStart(2, '0')}s · Era ${ERAS[me.era].name} · ${me.kills} baixas inimigas · ${me.lost} tropas perdidas</p>
-        <div class="ew-row"><button type="button" class="ew-btn" data-act="again">JOGAR OUTRA VEZ</button><button type="button" class="ew-btn" data-act="exit">MENU</button></div>`);
+      overlay(`<h2>${won ? tr('VITÓRIA') : tr('DERROTA')}</h2>
+        <p>${won ? tr('A base inimiga caiu.') : tr('A tua base caiu.')}${g.over.siege ? tr(' (decidido pelo cerco)') : ''}</p>
+        <p class="ew-small">${tr('Tempo {m}m{s}s · Era {e} · {k} baixas inimigas · {l} tropas perdidas', { m, s: String(s).padStart(2, '0'), e: ERAS[me.era].name, k: me.kills, l: me.lost })}</p>
+        <div class="ew-row"><button type="button" class="ew-btn" data-act="again">${tr('JOGAR OUTRA VEZ')}</button><button type="button" class="ew-btn" data-act="exit">${tr('MENU')}</button></div>`);
     }
   }
 
@@ -151,8 +152,8 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     if (g.over) return;
     paused = p;
     audio.pauseAudio(p);
-    overlay(p ? `<h2>PAUSA</h2><p class="ew-small">Dificuldade: ${DIFFICULTY[g.difficulty].label}</p>
-      <div class="ew-row"><button type="button" class="ew-btn" data-act="resume">CONTINUAR</button><button type="button" class="ew-btn" data-act="restart">RECOMEÇAR</button><button type="button" class="ew-btn" data-act="exit">SAIR</button></div>` : '');
+    overlay(p ? `<h2>${tr('PAUSA')}</h2><p class="ew-small">${tr('Dificuldade:')} ${DIFFICULTY[g.difficulty].label}</p>
+      <div class="ew-row"><button type="button" class="ew-btn" data-act="resume">${tr('CONTINUAR')}</button><button type="button" class="ew-btn" data-act="restart">${tr('RECOMEÇAR')}</button><button type="button" class="ew-btn" data-act="exit">${tr('SAIR')}</button></div>` : '');
     if (!p) last = performance.now();
   }
   function restart() {

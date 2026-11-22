@@ -7,6 +7,7 @@
 // O registo dos avisos já mostrados fica na Cache Storage, partilhado entre a página e o service worker.
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { syncPush } from './push';
+import { t, isEn } from '@/i18n';
 
 export const ANTECEDENCIA_DIAS = 2;
 const STATE_CACHE = 'pipboy-avisos';
@@ -15,18 +16,18 @@ const SKIP_SECTORS = new Set(['Internacional']); // só greves em Portugal
 
 // ---------- texto dos avisos ----------
 const SECTOR_TXT = {
-  'Função pública': 'Greve da Função Pública', Saúde: 'Greve na Saúde', Educação: 'Greve nas escolas',
-  Transportes: 'Greve nos Transportes', 'Greve geral': 'Greve geral', Justiça: 'Greve na Justiça',
-  Segurança: 'Greve nas forças de segurança', Autarquias: 'Greve nas autarquias',
+  'Função pública': t('Greve da Função Pública'), Saúde: t('Greve na Saúde'), Educação: t('Greve nas escolas'),
+  Transportes: t('Greve nos Transportes'), 'Greve geral': t('Greve geral'), Justiça: t('Greve na Justiça'),
+  Segurança: t('Greve nas forças de segurança'), Autarquias: t('Greve nas autarquias'),
 };
-const dmy = (d) => { const [y, m, dd] = d.split('-'); return `${dd}/${m}/${y.slice(2)}`; };
+const dmy = (d) => { const [y, m, dd] = d.split('-'); return isEn() ? `${m}/${dd}/${y.slice(2)}` : `${dd}/${m}/${y.slice(2)}`; }; // EUA: mês/dia/ano
 const ymdLocal = (t = new Date()) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 const daysBetween = (a, b) => Math.round((new Date(`${b}T12:00`) - new Date(`${a}T12:00`)) / 86400000);
 
 export function strikeMessage(s, kind) {
-  const what = SECTOR_TXT[s.sector] || 'Greve';
-  const when = s.days.length > 1 ? `de ${dmy(s.days[0])} a ${dmy(s.days[s.days.length - 1])}` : `dia ${dmy(s.days[0])}`;
-  const title = kind === 'dia' ? `ALERTA — HOJE: ${what} (${dmy(ymdLocal())})` : `ALERTA — ${what} ${when}`;
+  const what = SECTOR_TXT[s.sector] || t('Greve');
+  const when = s.days.length > 1 ? t('de {a} a {b}', { a: dmy(s.days[0]), b: dmy(s.days[s.days.length - 1]) }) : t('dia {a}', { a: dmy(s.days[0]) });
+  const title = kind === 'dia' ? `${t('ALERTA — HOJE:')} ${what} (${dmy(ymdLocal())})` : `${t('ALERTA')} — ${what} ${when}`;
   return { title, body: s.title };
 }
 
@@ -97,22 +98,22 @@ async function registerBackground() {
 // Aviso de teste (botão nas Notificações)
 // Exemplos (botões nas Notificações): mostram na hora a faixa na app e a notificação do telemóvel, com a miniatura na cor da app.
 export async function testAlert() {
-  const msg = { ...strikeMessage({ sector: 'Função pública', days: [ymdLocal(new Date(Date.now() + 2 * 86400000))], title: 'Exemplo: assim chegam os avisos de greve.' }, 'pre'), icon: thumb('base'), url: './#/greves' };
+  const msg = { ...strikeMessage({ sector: 'Função pública', days: [ymdLocal(new Date(Date.now() + 2 * 86400000))], title: t('Exemplo: assim chegam os avisos de greve.') }, 'pre'), icon: thumb('base'), url: './#/greves' };
   banner(msg); await systemNotify(msg, 'greve-teste');
 }
 // cada toque mostra o estado do tempo seguinte, para se verem todos
 const TEMPO_EX = [
-  ['rain', 'Aguaceiros · 11°/16°', 'Chuva 85% · Vento moderado (SW). Leva impermeável ou guarda-chuva.'],
-  ['sun', 'Céu limpo · 9°/21°', 'Chuva 0% · Vento fraco (N). Aproveita o dia ao ar livre!'],
-  ['cold', 'Geada · -1°/9°', 'Chuva 5% · Vento fraco (NE). Agasalha-te bem.'],
-  ['wind', 'Céu nublado · 10°/15°', 'Chuva 30% · Vento forte (W). Atenção a objetos soltos com o vento.'],
-  ['fog', 'Nevoeiro · 7°/14°', 'Chuva 10% · Vento fraco (E). Visibilidade reduzida: cuidado na estrada.'],
-  ['cloud', 'Céu parcialmente nublado · 8°/18°', 'Chuva 35% · Vento fraco (W). Dia sem grandes surpresas.'],
+  ['rain', t('Aguaceiros · 11°/16°'), t('Chuva 85% · Vento moderado (SW). Leva impermeável ou guarda-chuva.')],
+  ['sun', t('Céu limpo · 9°/21°'), t('Chuva 0% · Vento fraco (N). Aproveita o dia ao ar livre!')],
+  ['cold', t('Geada · -1°/9°'), t('Chuva 5% · Vento fraco (NE). Agasalha-te bem.')],
+  ['wind', t('Céu nublado · 10°/15°'), t('Chuva 30% · Vento forte (W). Atenção a objetos soltos com o vento.')],
+  ['fog', t('Nevoeiro · 7°/14°'), t('Chuva 10% · Vento fraco (E). Visibilidade reduzida: cuidado na estrada.')],
+  ['cloud', t('Céu parcialmente nublado · 8°/18°'), t('Chuva 35% · Vento fraco (W). Dia sem grandes surpresas.')],
 ];
 let tempoIdx = 0;
 export async function testWeatherAlert() {
   const [mode, tipo, body] = TEMPO_EX[tempoIdx++ % TEMPO_EX.length];
-  const msg = { title: `Tempo hoje em Braga: ${tipo} (EXEMPLO)`, body, icon: thumb(mode), url: './#/meteo' };
+  const msg = { title: `${t('Tempo hoje em Braga:')} ${tipo} (${t('EXEMPLO')})`, body, icon: thumb(mode), url: './#/meteo' };
   banner(msg); await systemNotify(msg, `tempo-exemplo-${mode}`);
   return mode;
 }

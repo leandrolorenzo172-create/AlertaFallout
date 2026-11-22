@@ -2,9 +2,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, RefreshCw, ExternalLink } from 'lucide-react';
+import { t, locale } from '@/i18n';
 
 export const card = { background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' };
-export const fmtDate = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+export const fmtDate = (t) => new Date(t).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export function Loading({ text }) {
   return (
@@ -23,7 +24,7 @@ export function Header({ icon: Icon, title, onRefresh }) {
       <Icon size={16} />
       <h2 className="text-sm uppercase tracking-wider font-bold flex-1">{title}</h2>
       {onRefresh && (
-        <button type="button" onClick={onRefresh} aria-label="Atualizar" className="p-1.5 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.2)' }}>
+        <button type="button" onClick={onRefresh} aria-label={t('Atualizar')} className="p-1.5 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.2)' }}>
           <RefreshCw size={13} />
         </button>
       )}

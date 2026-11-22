@@ -156,3 +156,11 @@ Cada envio para o ramo `main` compila a app e publica-a no GitHub Pages (ver `.g
   envia a cada telemóvel só as categorias ligadas e apaga os registos que deixaram de existir.
 - Para voltar a publicar o Worker: API da Cloudflare `PUT /accounts/{conta}/workers/scripts/steeldeck-push` com o ficheiro e as ligações
   `SUBS` (KV), `VAPID_PUBLIC` e `ALLOWED_ORIGINS=https://steeldeck.github.io`.
+
+## Idiomas (Português e English)
+
+- Em **Definições → Idioma** escolhe-se **Português (PT)** ou **English (US)**; sem escolha, segue o idioma do telemóvel.
+- Os textos estão em português no código e passam por `t('texto')` (`src/i18n/index.js`); as traduções inglesas estão em `src/i18n/en.js`
+  (chave = texto em português). Se faltar uma tradução, aparece o português.
+- As notificações push também saem no idioma de cada telemóvel (o idioma vai no registo automático).
+- Ficam em português: títulos das notícias (jornais portugueses), textos livres dos avisos do IPMA e, por agora, o Manual.

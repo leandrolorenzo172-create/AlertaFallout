@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import mascotPng from '../assets/mascote.png';
+import { t } from '@/i18n';
 
 // Mascote da app: o explorador de chapéu escolhido pelo utilizador (src/assets/mascote.png).
 // A imagem é usada como máscara, por isso o boneco é pintado com a cor do tema ativo.
@@ -14,7 +15,7 @@ export default function Mascot({ mode = 'base', className = '', style }) {
   const fog = mode === 'fog'; const cold = mode === 'cold'; const cloud = mode === 'cloud';
   const acc = { fill: 'currentColor', stroke: INK, strokeWidth: 4, strokeLinejoin: 'round' };
   return (
-    <svg viewBox="-42 -64 344 497" className={`mc ${cold ? 'mc-shiver' : ''} ${wind ? 'mc-lean' : ''} ${className}`} style={{ color: 'rgb(var(--c))', filter: 'drop-shadow(0 0 6px rgb(var(--c) / 0.45))', ...style }} role="img" aria-label="Mascote: o explorador">
+    <svg viewBox="-42 -64 344 497" className={`mc ${cold ? 'mc-shiver' : ''} ${wind ? 'mc-lean' : ''} ${className}`} style={{ color: 'rgb(var(--c))', filter: 'drop-shadow(0 0 6px rgb(var(--c) / 0.45))', ...style }} role="img" aria-label={t('Mascote: o explorador')}>
       <defs>
         <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
           <image href={mascotPng} x="0" y="0" width={W} height={H} />

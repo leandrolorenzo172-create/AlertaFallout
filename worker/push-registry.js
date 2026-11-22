@@ -2,7 +2,7 @@
 // A app regista aqui cada telemóvel quando se carrega em "Ativar notificações" (sem códigos para copiar).
 // O GitHub Actions (scripts/send-push.mjs) lê a lista para enviar os avisos e apaga os registos que expiraram.
 //
-//  POST /subscribe   { subscription, prefs, theme }   (público, só da app; guarda ou atualiza o registo)
+//  POST /subscribe   { subscription, prefs, theme, lang }   (público, só da app; guarda ou atualiza o registo)
 //  POST /unsubscribe { endpoint }                     (público; apaga o registo desse telemóvel)
 //  GET  /list                                         (só o GitHub Actions: Authorization: Bearer <JWT assinado com a chave VAPID privada>)
 //  POST /remove      { endpoints: [...] }             (só o GitHub Actions, mesmo JWT)
@@ -61,7 +61,8 @@ export default {
         if (typeof s.keys?.p256dh !== 'string' || typeof s.keys?.auth !== 'string' || s.keys.p256dh.length > 200 || s.keys.auth.length > 100) return json({ ok: false, error: 'chaves inválidas' }, 400, h);
         const prefs = Object.fromEntries(PREF_KEYS.map((k) => [k, typeof body.prefs?.[k] === 'boolean' ? body.prefs[k] : k !== 'pizza_index_enabled']));
         const theme = THEMES.includes(body.theme) ? body.theme : 'green';
-        const rec = { sub: { endpoint: ep, expirationTime: null, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, prefs, theme, updated: new Date().toISOString() };
+        const lang = body.lang === 'en' ? 'en' : 'pt'; // idioma das notificações
+        const rec = { sub: { endpoint: ep, expirationTime: null, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, prefs, theme, lang, updated: new Date().toISOString() };
         await env.SUBS.put(await keyOf(ep), JSON.stringify(rec));
         return json({ ok: true }, 200, h);
       }

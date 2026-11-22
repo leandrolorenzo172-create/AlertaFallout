@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Loader2, Shield, Skull, AlertTriangle, Globe, TrendingUp } from 'lucide-react';
 import PipBoyHero from '../pipboy/PipBoyHero';
 import { alpha } from '../theme';
+import { t, locale } from '@/i18n';
 
 export default function DashboardTab({ onThreatLevelChange }) {
   const [data, setData] = useState(null);
@@ -85,7 +86,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
         if (onThreatLevelChange) onThreatLevelChange(cachedData.data.global_threat_level || 0);
         setIsOffline(true);
       } else {
-        setError(err.message || 'Erro ao carregar dados');
+        setError(err.message || t('Erro ao carregar dados'));
       }
       setLoading(false);
     }
@@ -134,7 +135,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          A ANALISAR AMEAÇAS GLOBAIS...
+          {t('A ANALISAR AMEAÇAS GLOBAIS...')}
         </motion.p>
       </div>
     );
@@ -145,7 +146,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
       <div className="flex flex-col items-center py-16 px-4">
         <AlertTriangle size={40} style={{ color: '#ff6600' }} />
         <p className="mt-4 text-xs uppercase tracking-wider text-center" style={{ color: '#ff6600' }}>
-          ERRO AO CARREGAR DADOS
+          {t('ERRO AO CARREGAR DADOS')}
         </p>
         <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: 'rgb(var(--c) / 0.53)' }}>
           {error}
@@ -155,7 +156,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
           className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
           style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
         >
-          Tentar Novamente
+          {t('Tentar Novamente')}
         </button>
       </div>
     );
@@ -178,8 +179,8 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
         }}>
           <AlertTriangle size={14} style={{ color: '#ff6600' }} />
           <span className="text-xs" style={{ color: '#ff6600cc' }}>
-            Modo Offline - Dados em cache do {data && localStorage.getItem('dashboard_cache') ? 
-              new Date(JSON.parse(localStorage.getItem('dashboard_cache')).timestamp).toLocaleString('pt-PT') : 'último carregamento'}
+            {t('Modo Offline - Dados em cache do')}{' '}{data && localStorage.getItem('dashboard_cache') ? 
+              new Date(JSON.parse(localStorage.getItem('dashboard_cache')).timestamp).toLocaleString(locale()) : t('último carregamento')}
           </span>
         </div>
       )}
@@ -189,7 +190,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
       {/* A Instabilidade Económica passou para o seu próprio separador; aqui fica só o resumo */}
       <div className="p-4 rounded-sm mb-6" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
         <div className="p-3 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.13)' }}>
-          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.33)' }}>Resumo</p>
+          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.33)' }}>{t('Resumo')}</p>
           <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>{data?.summary}</p>
         </div>
       </div>
@@ -198,7 +199,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
       {data?.critical_events?.length > 0 && (
         <div>
           <h3 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-            ⚠️ Eventos Críticos Ativos
+            {t('⚠️ Eventos Críticos Ativos')}
           </h3>
           {data.critical_events.map((event, i) => {
             const Icon = getSeverityIcon(event.type);

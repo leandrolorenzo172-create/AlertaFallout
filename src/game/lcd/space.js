@@ -3,6 +3,7 @@
 import { W, H, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
 import { lcdMusic } from './music';
+import { t as tr } from '../../i18n';
 
 const MUTE = new Proxy({}, { get: () => () => {} });
 
@@ -27,33 +28,33 @@ const ENEMY = {
 // 10 chefes, um por nível, do mais fácil ao mais difícil. move: como se desloca; attacks: ataques em ciclo;
 // cd: tempo entre ataques (s); bs: velocidade das balas; enrage: fica mais rápido com menos de metade da vida
 const BOSS_DEFS = [
-  { name: 'SENTINELA', hp: 16, move: 'sine', spd: 0.8, attacks: ['single'], cd: 1.5, bs: 38, rows: [
+  { name: tr('SENTINELA'), hp: 16, move: 'sine', spd: 0.8, attacks: ['single'], cd: 1.5, bs: 38, rows: [
     '    ######    ', '  ##########  ', ' ###  ##  ### ', '##############', '# ## #### ## #', '##############', ' ############ ', '  #  #  #  #  ', ' #  #  #  #   '] },
-  { name: 'MEDUSA', hp: 22, move: 'sine', spd: 0.9, attacks: ['aimed', 'single'], cd: 1.4, bs: 42, rows: [
+  { name: tr('MEDUSA'), hp: 22, move: 'sine', spd: 0.9, attacks: ['aimed', 'single'], cd: 1.4, bs: 42, rows: [
     '      ######      ', '    ##########    ', '   ###      ###   ', '  ##  ######  ##  ', ' ##  ##    ##  ## ', ' ## ##  ##  ## ## ', '##  ## #### ##  ##',
     ' ## ##  ##  ## ## ', ' ##  ##    ##  ## ', '  ##  ######  ##  ', '   ###      ###   ', '  # ########## #  ', ' #  # # # # #  #  ', '#  #  #  #  #   # '] },
-  { name: 'NAVE-MAE', hp: 28, move: 'sine', spd: 1, attacks: ['spread3', 'aimed'], cd: 1.3, bs: 44, rows: [
+  { name: tr('NAVE-MAE'), hp: 28, move: 'sine', spd: 1, attacks: ['spread3', 'aimed'], cd: 1.3, bs: 44, rows: [
     '        ####      ', '      ########    ', '    ############  ', '  #### ## ## #### ', ' ################ ', '##################',
     '# # # # # # # # ##', ' ################ ', '   ##  ##  ##  ## ', '    ## ## ## ##   ', '     #  #  #  #   '] },
-  { name: 'CARANGUEJO', hp: 34, move: 'track', spd: 0.9, attacks: ['aimed', 'aimed', 'spread3'], cd: 1.2, bs: 46, rows: [
+  { name: tr('CARANGUEJO'), hp: 34, move: 'track', spd: 0.9, attacks: ['aimed', 'aimed', 'spread3'], cd: 1.2, bs: 46, rows: [
     '##              ##', '# #            # #', '#  #   ####   #  #', ' #  # ###### #  # ', '  ## ######## ##  ', '   ############   ',
     '  ##############  ', '  ## ## ## ## ##  ', '   ############   ', '  #  #      #  #  ', ' #  #        #  # ', '#  #          #  #'] },
-  { name: 'ESCARAVELHO', hp: 40, move: 'charge', spd: 1, attacks: ['spread3', 'burst'], cd: 1.15, bs: 48, rows: [
+  { name: tr('ESCARAVELHO'), hp: 40, move: 'charge', spd: 1, attacks: ['spread3', 'burst'], cd: 1.15, bs: 48, rows: [
     '      ####      ', '    ########    ', '   ##########   ', '  ###  ##  ###  ', ' ############## ', '################',
     '# ############ #', '################', ' ## ######## ## ', '  #  ######  #  ', ' #    ####    # ', '#      ##      #'] },
-  { name: 'SERPENTE', hp: 46, move: 'eight', spd: 1.1, attacks: ['wave', 'aimed', 'wave'], cd: 1.05, bs: 50, rows: [
+  { name: tr('SERPENTE'), hp: 46, move: 'eight', spd: 1.1, attacks: ['wave', 'aimed', 'wave'], cd: 1.05, bs: 50, rows: [
     '  ####              ', ' ######   ####      ', '## ## ## ######  ## ', '########## ## ######', ' ######  ######  ## ', '  ####    ####   #  ', '   ##      ##       ', '  #  #    #  #      '] },
-  { name: 'FORTALEZA', hp: 54, move: 'sine', spd: 0.7, attacks: ['spread5', 'minions', 'aimed'], cd: 1, bs: 50, rows: [
+  { name: tr('FORTALEZA'), hp: 54, move: 'sine', spd: 0.7, attacks: ['spread5', 'minions', 'aimed'], cd: 1, bs: 50, rows: [
     '#  #  #      #  #  #', '####################', '#  ####  ##  ####  #', '####################', ' ################## ', ' ##  ##  ##  ##  ## ',
     ' ################## ', ' #### ######## #### ', ' ###   ######   ### ', ' #### ######## #### ', ' ################## ', '  ################  ',
     '   ##  ##  ##  ##   ', '  ################  ', ' #  #  #    #  #  # '] },
-  { name: 'VESPA', hp: 60, move: 'erratic', spd: 1.4, attacks: ['burst', 'spread3', 'burst'], cd: 0.9, bs: 56, rows: [
+  { name: tr('VESPA'), hp: 60, move: 'erratic', spd: 1.4, attacks: ['burst', 'spread3', 'burst'], cd: 0.9, bs: 56, rows: [
     '   ##      ##   ', '  #  #    #  #  ', ' #    #  #    # ', '#   ########   #', '   ##########   ', '  ### ## ## ### ',
     '################', '  ############  ', '   # # ## # #   ', '  #  #    #  #  ', ' #            # '] },
-  { name: 'OLHO LASER', hp: 68, move: 'track', spd: 1.1, attacks: ['beam', 'aimed', 'spread5'], cd: 0.85, bs: 56, enrage: true, rows: [
+  { name: tr('OLHO LASER'), hp: 68, move: 'track', spd: 1.1, attacks: ['beam', 'aimed', 'spread5'], cd: 0.85, bs: 56, enrage: true, rows: [
     '   ####    ####   ', '  ######  ######  ', ' ##    ####    ## ', ' # #### ## #### # ', ' # #  # ## #  # # ', ' # #### ## #### # ', ' ##    ####    ## ',
     '  ######  ######  ', '   ############   ', '  ##############  ', ' ## ## #### ## ## ', ' #  #   ##   #  # ', '#  #    ##    #  #'] },
-  { name: 'NUCLEO', hp: 80, move: 'eight', spd: 1.2, attacks: ['spread5', 'beam', 'burst', 'minions', 'wave'], cd: 0.75, bs: 60, enrage: true, rows: [
+  { name: tr('NUCLEO'), hp: 80, move: 'eight', spd: 1.2, attacks: ['spread5', 'beam', 'burst', 'minions', 'wave'], cd: 0.75, bs: 60, enrage: true, rows: [
     '      ########      ', '    ############    ', '  ####  ####  ####  ', ' ##  ## #### ##  ## ', ' #  #  ##  ##  #  # ', '##  # ##    ## #  ##',
     '#  ## #  ##  # ##  #', '#  ## #  ##  # ##  #', '##  # ##    ## #  ##', ' #  #  ##  ##  #  # ', ' ##  ## #### ##  ## ', '  ####  ####  ####  ',
     '    ############    ', '   # #  #  #  # #   ', '  #  #  #  #  #  #  '] },
@@ -272,12 +273,12 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {}, music
   function draw() {
     scr.clear(); const t = performance.now() / 1000;
     if (mode === 'title') {
-      scr.text('PATRULHA', W / 2, 3, { align: 'center' }); scr.text('ESTELAR', W / 2, 10, { align: 'center' });
+      scr.text(tr('PATRULHA'), W / 2, 3, { align: 'center' }); scr.text(tr('ESTELAR'), W / 2, 10, { align: 'center' });
       const bob = Math.round(Math.sin(t * 3) * 2);
       scr.sprite(SHIP, 14, 20 + bob); for (let i = 0; i < 3; i++) scr.hline(26 + i * 6 + Math.floor((t * 30) % 6), 23 + bob, 3);
       scr.sprite(ENEMY.drone.f[Math.floor(t * 3) % 2], 62, 18); scr.sprite(ENEMY.dart.f[0], 68, 26);
-      if (Math.floor(t * 2) % 2) scr.text('A: JOGAR', W / 2, 33, { align: 'center' });
-      scr.text(`RECORDE ${scr.num(best, 5)}`, W / 2, 41, { align: 'center' });
+      if (Math.floor(t * 2) % 2) scr.text(tr('A: JOGAR'), W / 2, 33, { align: 'center' });
+      scr.text(`${tr('RECORDE')} ${scr.num(best, 5)}`, W / 2, 41, { align: 'center' });
       scr.present(); return;
     }
     for (const s of st.stars) scr.hline(s.x, s.y, 2);
@@ -298,7 +299,7 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {}, music
       if (!(b.flash > 0 && Math.floor(t * 30) % 2)) scr.sprite(BOSSES[b.k].f[Math.floor(b.t * 3) % 2], b.x, b.y);
       if (b.beamWarn > 0 && Math.floor(t * 12) % 2) for (let x = 0; x < b.x; x += 3) scr.px(x, b.beamY);
       if (b.beamOn > 0) { scr.rect(0, b.beamY - 1, b.x, 3); }
-      if (b.t < 2.2) { scr.text(`CHEFE ${b.k + 1}/10`, W / 2, 14, { align: 'center', inv: true }); scr.text(BOSSES[b.k].name, W / 2, 22, { align: 'center', inv: true }); }
+      if (b.t < 2.2) { scr.text(`${tr('CHEFE')} ${b.k + 1}/10`, W / 2, 14, { align: 'center', inv: true }); scr.text(BOSSES[b.k].name, W / 2, 22, { align: 'center', inv: true }); }
       const bw = Math.ceil((b.hp / b.max) * 20); scr.frame(W - 23, TOP, 22, 3); scr.hline(W - 22, TOP + 1, bw);
     }
     for (const bl of st.bullets) scr.hline(bl.x, bl.y, 3);
@@ -307,22 +308,22 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {}, music
     if (mode !== 'over' && mode !== 'win' && !(st.inv > 0 && Math.floor(t * 12) % 2)) scr.sprite(SHIP, st.x, st.y);
     for (const p of st.parts) scr.px(p.x, p.y);
     hud();
-    if (mode === 'level') { scr.text(`NIVEL ${st.level + 1}/10`, W / 2, 20, { align: 'center', inv: true }); }
-    if (paused) { scr.rect(14, 17, 56, 15, 0); scr.frame(14, 17, 56, 15); scr.text('PAUSA', W / 2, 19, { align: 'center' }); scr.text('A: CONTINUAR', W / 2, 25, { align: 'center' }); }
+    if (mode === 'level') { scr.text(`${tr('NIVEL')} ${st.level + 1}/10`, W / 2, 20, { align: 'center', inv: true }); }
+    if (paused) { scr.rect(14, 17, 56, 15, 0); scr.frame(14, 17, 56, 15); scr.text('PAUSA', W / 2, 19, { align: 'center' }); scr.text(tr('A: CONTINUAR'), W / 2, 25, { align: 'center' }); }
     if (mode === 'over') {
       scr.rect(8, 10, 68, 32, 0); scr.frame(8, 10, 68, 32);
-      scr.text('FIM DO JOGO', W / 2, 13, { align: 'center' });
-      scr.text(`PONTOS ${scr.num(st.score, 5)}`, W / 2, 21, { align: 'center' });
-      scr.text(newBest ? 'NOVO RECORDE!' : `RECORDE ${scr.num(best, 5)}`, W / 2, 28, { align: 'center' });
-      if (modeT > 0.8 && Math.floor(t * 2) % 2) scr.text('A: OUTRA VEZ', W / 2, 35, { align: 'center' });
+      scr.text(tr('FIM DO JOGO'), W / 2, 13, { align: 'center' });
+      scr.text(`${tr('PONTOS')} ${scr.num(st.score, 5)}`, W / 2, 21, { align: 'center' });
+      scr.text(newBest ? tr('NOVO RECORDE!') : `${tr('RECORDE')} ${scr.num(best, 5)}`, W / 2, 28, { align: 'center' });
+      if (modeT > 0.8 && Math.floor(t * 2) % 2) scr.text(tr('A: OUTRA VEZ'), W / 2, 35, { align: 'center' });
     }
     if (mode === 'win') {
       scr.rect(4, 8, 76, 38, 0); scr.frame(4, 8, 76, 38);
-      scr.text('VITORIA!', W / 2, 11, { align: 'center', inv: Math.floor(t * 3) % 2 === 0 });
-      scr.text('10 CHEFES VENCIDOS', W / 2, 18, { align: 'center' });
-      scr.text(`PONTOS ${scr.num(st.score, 5)}`, W / 2, 25, { align: 'center' });
-      scr.text(newBest ? 'NOVO RECORDE!' : `RECORDE ${scr.num(best, 5)}`, W / 2, 32, { align: 'center' });
-      if (modeT > 1.2 && Math.floor(t * 2) % 2) scr.text('A: RECOMECAR', W / 2, 39, { align: 'center' });
+      scr.text(tr('VITORIA!'), W / 2, 11, { align: 'center', inv: Math.floor(t * 3) % 2 === 0 });
+      scr.text(tr('10 CHEFES VENCIDOS'), W / 2, 18, { align: 'center' });
+      scr.text(`${tr('PONTOS')} ${scr.num(st.score, 5)}`, W / 2, 25, { align: 'center' });
+      scr.text(newBest ? tr('NOVO RECORDE!') : `${tr('RECORDE')} ${scr.num(best, 5)}`, W / 2, 32, { align: 'center' });
+      if (modeT > 1.2 && Math.floor(t * 2) % 2) scr.text(tr('A: RECOMECAR'), W / 2, 39, { align: 'center' });
     }
     scr.present();
   }
@@ -336,10 +337,10 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {}, music
 
 export function mountSpace(root, { onExit = () => {} } = {}) {
   const shell = mountShell(root, {
-    title: 'Patrulha Estelar', stick: 'free',
-    a: { k: 'fire', label: 'DISPARO' }, b: { k: 'alt', label: 'LASER' },
-    mids: [{ k: 'back', label: 'SAIR' }, { k: 'ok', label: 'PAUSA' }, { k: 'mute', label: 'SOM' }],
-    help: 'PC: setas/WASD movem · espaço dispara (manter = automático) · X laser · P pausa · Esc sai · M som',
+    title: tr('Patrulha Estelar'), stick: 'free',
+    a: { k: 'fire', label: tr('DISPARO') }, b: { k: 'alt', label: tr('LASER') },
+    mids: [{ k: 'back', label: tr('SAIR') }, { k: 'ok', label: tr('PAUSA') }, { k: 'mute', label: tr('SOM') }],
+    help: tr('PC: setas/WASD movem · espaço dispara (manter = automático) · X laser · P pausa · Esc sai · M som'),
   });
   let stopped = false;
   const cleanup = () => { stopped = true; music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };

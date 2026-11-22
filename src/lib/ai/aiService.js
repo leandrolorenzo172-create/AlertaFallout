@@ -8,6 +8,7 @@ import { activeProvider } from './config';
 import { streamChat, PROVIDERS } from './providers';
 import { getNetwork, checkNow } from './net';
 import { contextFor, answerLocally } from './localEngine';
+import { locale } from '../../i18n';
 
 export const IS_ARTIFACT = typeof window !== 'undefined' && !!window.claude?.use;
 const FOLLOW = '<<SEGUIMENTO>>';
@@ -36,7 +37,7 @@ async function buildSystem(question) {
   return `${getInstructions()}
 
 # CONTEXTO DA APLICAÇÃO
-Data e hora do dispositivo: ${new Date().toLocaleString('pt-PT')}.
+Data e hora do dispositivo: ${new Date().toLocaleString(locale())}.
 Abaixo estão os excertos mais relevantes dos dados desta aplicação para a pergunta (documentos da aba Conhecimento, manual incluído e dados guardados dos separadores). Quando usares um excerto, cita a referência entre parênteses retos, por exemplo [Manual — Abrigos]. Distingue o que vem destes excertos do teu conhecimento geral.
 
 ${blocks || '(Não há excertos relevantes guardados na app para esta pergunta.)'}

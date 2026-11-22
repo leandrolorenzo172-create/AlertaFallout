@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Skull, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 import NewsCard from '../pipboy/NewsCard';
+import { t, locale } from '@/i18n';
 
 export default function WarNewsTab() {
   const [articles, setArticles] = useState([]);
@@ -70,7 +71,7 @@ export default function WarNewsTab() {
         setArticles(cachedData.articles);
         setIsOffline(true);
       } else {
-        setError(err.message || 'Erro ao carregar notícias');
+        setError(err.message || t('Erro ao carregar notícias'));
       }
       setLoading(false);
       setRefreshing(false);
@@ -114,8 +115,8 @@ export default function WarNewsTab() {
         }}>
           <AlertTriangle size={14} style={{ color: '#ff6600' }} />
           <span className="text-xs" style={{ color: '#ff6600cc' }}>
-            Modo Offline - Dados em cache do {localStorage.getItem('war_news_cache') ? 
-              new Date(JSON.parse(localStorage.getItem('war_news_cache')).timestamp).toLocaleString('pt-PT') : 'último carregamento'}
+            {t('Modo Offline - Dados em cache do')}{' '}{localStorage.getItem('war_news_cache') ? 
+              new Date(JSON.parse(localStorage.getItem('war_news_cache')).timestamp).toLocaleString(locale()) : t('último carregamento')}
           </span>
         </div>
       )}
@@ -124,7 +125,7 @@ export default function WarNewsTab() {
         <div className="flex items-center gap-2">
           <Skull size={16} style={{ color: '#ff0000' }} />
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Notícias de Guerra & Conflitos
+            {t('Notícias de Guerra & Conflitos')}
           </h2>
         </div>
         <button
@@ -143,14 +144,14 @@ export default function WarNewsTab() {
             <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
           </motion.div>
           <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-            A ANALISAR TRANSMISSÕES...
+            {t('A ANALISAR TRANSMISSÕES...')}
           </p>
         </div>
       ) : error && articles.length === 0 ? (
         <div className="flex flex-col items-center py-12 px-4">
           <Skull size={32} style={{ color: '#ff0000' }} />
           <p className="mt-3 text-xs uppercase tracking-wider text-center" style={{ color: '#ff0000' }}>
-            ERRO AO CARREGAR NOTÍCIAS
+            {t('ERRO AO CARREGAR NOTÍCIAS')}
           </p>
           <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             {error}
@@ -160,7 +161,7 @@ export default function WarNewsTab() {
             className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
             style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
           >
-            Tentar Novamente
+            {t('Tentar Novamente')}
           </button>
         </div>
       ) : (
@@ -170,7 +171,7 @@ export default function WarNewsTab() {
           ))}
           {articles.length === 0 && (
             <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.33)' }}>
-              Sem dados disponíveis
+              {t('Sem dados disponíveis')}
             </p>
           )}
         </div>

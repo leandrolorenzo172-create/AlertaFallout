@@ -1,3 +1,4 @@
+import { locale, t as tr } from '../i18n';
 // Leitor de músicas do dispositivo (offline). JavaScript puro: os ficheiros são lidos
 // localmente pelo elemento <audio> e guardados no próprio browser (IndexedDB). Nada é enviado para fora.
 
@@ -13,11 +14,11 @@ function grooves() {
 }
 
 const TEMPLATE = `
-<div class="vp-head"><h2>Música local</h2><span data-vp="count">0 faixas</span></div>
-<div class="vp-clock">HORA ATUAL: <b data-vp="clock">--:--:--</b></div>
+<div class="vp-head"><h2>${tr('Música local')}</h2><span data-vp="count">${tr('0 faixas')}</span></div>
+<div class="vp-clock">${tr('HORA ATUAL: ')}<b data-vp="clock">--:--:--</b></div>
 <div class="vp-grid">
   <div class="vp-box vp-deck">
-    <svg viewBox="0 0 320 262" role="img" aria-label="Gira-discos">
+    <svg viewBox="0 0 320 262" role="img" aria-label="${tr('Gira-discos')}">
       <rect class="st fillbg" x="8" y="14" width="304" height="240" rx="14"/>
       <circle class="st" cx="130" cy="135" r="106"/>
       <g class="vp-disc">
@@ -48,25 +49,25 @@ const TEMPLATE = `
       <path class="vp-note n2" d="M228 30v-14l9-2v13a4 3 0 1 1-2-2.500v-7l-5 1v11a4 3 0 1 1-2-2.500z"/>
       <path class="vp-note n3" d="M22 150v-12l8-2v11a3.500 3 0 1 1-2-2v-6l-4 1v9a3.500 3 0 1 1-2-2z"/>
     </svg>
-    <div class="vp-now" data-vp="now">Modo offline<b data-vp="nowname">Adiciona músicas para começar</b>
+    <div class="vp-now" data-vp="now">${tr('Modo offline')}<b data-vp="nowname">${tr('Adiciona músicas para começar')}</b>
       <div class="vp-levels" aria-hidden="true">${'<i></i>'.repeat(24)}</div>
     </div>
   </div>
   <div class="vp-box">
-    <label class="vp-addbtn">[ + Adicionar músicas do dispositivo ]
+    <label class="vp-addbtn">${tr('[ + Adicionar músicas do dispositivo ]')}
       <input id="vp-files" data-vp="files" type="file" multiple accept="audio/*,.mp3,.wav,.ogg,.m4a" />
     </label>
-    <p class="vp-note-txt">MP3, WAV, OGG ou M4A. As músicas ficam só neste dispositivo e tocam sem internet.</p>
+    <p class="vp-note-txt">${tr('MP3, WAV, OGG ou M4A. As músicas ficam só neste dispositivo e tocam sem internet.')}</p>
     <ul class="vp-list" data-vp="list" hidden></ul>
-    <div class="vp-empty" data-vp="empty">&gt; Lista vazia_</div>
-    <div class="vp-prog" data-vp="prog" role="slider" tabindex="0" aria-label="Progresso da faixa" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">${'<i></i>'.repeat(BLOCKS)}</div>
+    <div class="vp-empty" data-vp="empty">${tr('&gt; Lista vazia_')}</div>
+    <div class="vp-prog" data-vp="prog" role="slider" tabindex="0" aria-label="${tr('Progresso da faixa')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">${'<i></i>'.repeat(BLOCKS)}</div>
     <div class="vp-time"><span data-vp="cur">0:00</span><span data-vp="dur">0:00</span></div>
     <div class="vp-ctrl">
-      <button type="button" data-vp="play">[ PLAY ]</button>
-      <button type="button" data-vp="pause">[ PAUSE ]</button>
-      <button type="button" data-vp="prev">[ ANTERIOR ]</button>
-      <button type="button" data-vp="next">[ PRÓXIMA ]</button>
-      <button type="button" class="wide" data-vp="stop">[ STOP ]</button>
+      <button type="button" data-vp="play">${tr('[ PLAY ]')}</button>
+      <button type="button" data-vp="pause">${tr('[ PAUSE ]')}</button>
+      <button type="button" data-vp="prev">${tr('[ ANTERIOR ]')}</button>
+      <button type="button" data-vp="next">${tr('[ PRÓXIMA ]')}</button>
+      <button type="button" class="wide" data-vp="stop">${tr('[ STOP ]')}</button>
     </div>
     <div class="vp-msg" data-vp="msg" role="status"></div>
   </div>
@@ -112,7 +113,7 @@ export function mountVinylPlayer(root) {
   const playing = () => !audio.paused && !audio.ended && current >= 0;
 
   function renderList() {
-    el.count.textContent = `${tracks.length} ${tracks.length === 1 ? 'faixa' : 'faixas'}`;
+    el.count.textContent = `${tracks.length} ${tracks.length === 1 ? tr('faixa') : tr('faixas')}`;
     el.list.hidden = !tracks.length; el.empty.hidden = !!tracks.length;
     el.list.innerHTML = '';
     tracks.forEach((t, i) => {
@@ -137,8 +138,8 @@ export function mountVinylPlayer(root) {
     el.play.classList.toggle('act', on);
     el.pause.classList.toggle('act', !on && current >= 0 && audio.currentTime > 0);
     const t = tracks[current];
-    el.now.firstChild.textContent = on ? 'A tocar:' : (t ? 'Em pausa — prime PLAY' : 'Modo offline');
-    el.nowname.textContent = t ? t.name : 'Adiciona músicas para começar';
+    el.now.firstChild.textContent = on ? tr('A tocar:') : (t ? tr('Em pausa — prime PLAY') : tr('Modo offline'));
+    el.nowname.textContent = t ? t.name : tr('Adiciona músicas para começar');
     renderProgress();
     // marca ▶ na faixa a tocar sem redesenhar a lista toda
     [...el.list.children].forEach((li, i) => {
@@ -171,7 +172,7 @@ export function mountVinylPlayer(root) {
   function play() {
     if (!tracks.length) return;
     if (current < 0) { select(0, true); return; }
-    audio.play().catch(() => { say('Não foi possível tocar esta faixa.'); renderState(); });
+    audio.play().catch(() => { say(tr('Não foi possível tocar esta faixa.')); renderState(); });
   }
   function pause() { audio.pause(); }
   function stop() { audio.pause(); try { audio.currentTime = 0; } catch (e) { /* sem faixa */ } renderState(); }
@@ -197,7 +198,7 @@ export function mountVinylPlayer(root) {
     renderList();
     if (current < 0 && tracks.length) select(0, false);
     renderState();
-    say(good.length ? `${good.length} ${good.length === 1 ? 'faixa adicionada' : 'faixas adicionadas'}${bad ? ` · ${bad} ficheiro(s) ignorado(s) por não serem áudio` : ''}.` : (bad ? 'Esses ficheiros não são de áudio.' : ''));
+    say(good.length ? `${good.length} ${good.length === 1 ? tr('faixa adicionada') : tr('faixas adicionadas')}${bad ? ` · ${bad} ${tr('ficheiro(s) ignorado(s) por não serem áudio')}` : ''}.` : (bad ? tr('Esses ficheiros não são de áudio.') : ''));
     el.files.value = '';
   }
 
@@ -227,7 +228,7 @@ export function mountVinylPlayer(root) {
   for (const ev of ['play', 'playing', 'pause', 'loadedmetadata', 'emptied']) on(audio, ev, renderState);
   on(audio, 'timeupdate', renderProgress);
   on(audio, 'ended', () => { if (tracks.length > 1) next(true); else stop(); });
-  on(audio, 'error', () => { if (current >= 0 && audio.getAttribute('src')) { say('Este ficheiro não pôde ser lido pelo browser.'); renderState(); } });
+  on(audio, 'error', () => { if (current >= 0 && audio.getAttribute('src')) { say(tr('Este ficheiro não pôde ser lido pelo browser.')); renderState(); } });
 
   const seekAt = (e) => {
     const d = audio.duration; if (!Number.isFinite(d) || d <= 0) return;
@@ -246,7 +247,7 @@ export function mountVinylPlayer(root) {
   });
 
   // Relógio: hora local do dispositivo, a cada segundo
-  const tick = () => { el.clock.textContent = new Date().toLocaleTimeString('pt-PT', { hour12: false }); };
+  const tick = () => { el.clock.textContent = new Date().toLocaleTimeString(locale(), { hour12: false }); };
   tick();
   const clockTimer = setInterval(tick, 1000);
 

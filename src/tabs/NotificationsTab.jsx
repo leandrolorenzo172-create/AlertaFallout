@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { enableNotifications, isRegistered, pushSupported } from '@/notify/push';
 import { testWeatherAlert } from '@/notify/strikeAlerts';
 import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
+import { t } from '@/i18n';
 
 const notifications = [
-  { key: 'guerra_enabled', label: 'Guerra & Conflitos', desc: 'Notícias sobre guerras ativas e conflitos armados', icon: '⚔️', color: '#ff0000' },
-  { key: 'catastrofes_enabled', label: 'Catástrofes Naturais', desc: 'Terramotos, tsunamis, erupções e outros desastres', icon: '🌋', color: '#ff6600' },
-  { key: 'meteorologia_enabled', label: 'Meteorologia Portugal', desc: 'Alertas meteorológicos e condições extremas', icon: '🌧️', color: '#00aaff' },
-  { key: 'tensao_global_enabled', label: 'Tensão Global', desc: 'Indicadores de escalada de tensão internacional', icon: '🌍', color: '#ffaa00' },
-  { key: 'pizza_index_enabled', label: 'Índice Pizza', desc: 'Alterações significativas no índice de atividade', icon: '🍕', color: '#ff9900' },
-  { key: 'greves_enabled', label: 'Greves Portugal', desc: 'Novas greves e paralisações anunciadas em Portugal', icon: '✊', color: '#cc33ff' },
+  { key: 'guerra_enabled', label: t('Guerra & Conflitos'), desc: t('Notícias sobre guerras ativas e conflitos armados'), icon: '⚔️', color: '#ff0000' },
+  { key: 'catastrofes_enabled', label: t('Catástrofes Naturais'), desc: t('Terramotos, tsunamis, erupções e outros desastres'), icon: '🌋', color: '#ff6600' },
+  { key: 'meteorologia_enabled', label: t('Meteorologia Portugal'), desc: t('Alertas meteorológicos e condições extremas'), icon: '🌧️', color: '#00aaff' },
+  { key: 'tensao_global_enabled', label: t('Tensão Global'), desc: t('Indicadores de escalada de tensão internacional'), icon: '🌍', color: '#ffaa00' },
+  { key: 'pizza_index_enabled', label: t('Índice Pizza'), desc: t('Alterações significativas no índice de atividade'), icon: '🍕', color: '#ff9900' },
+  { key: 'greves_enabled', label: t('Greves Portugal'), desc: t('Novas greves e paralisações anunciadas em Portugal'), icon: '✊', color: '#cc33ff' },
 ];
 
 const DEFAULTS = {
@@ -61,7 +62,7 @@ export default function NotificationsTab() {
   useEffect(() => { isRegistered().then(setRegistered); }, []);
   const activatePush = async () => {
     setPushMsg(''); setBusy(true);
-    try { await enableNotifications(); setRegistered(true); setPerm('granted'); setPushMsg('✔ Pronto! Este telemóvel passa a receber os avisos, mesmo com a app fechada.'); }
+    try { await enableNotifications(); setRegistered(true); setPerm('granted'); setPushMsg(t('✔ Pronto! Este telemóvel passa a receber os avisos, mesmo com a app fechada.')); }
     catch (e) { setPushMsg(e.message); } finally { setBusy(false); }
   };
   const [perm, setPerm] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
@@ -100,7 +101,7 @@ export default function NotificationsTab() {
       await base44.entities.User.delete(user.id);
       await base44.auth.logout();
     } catch (error) {
-      alert('Erro ao eliminar conta. Tente novamente.');
+      alert(t('Erro ao eliminar conta. Tente novamente.'));
       setDeleting(false);
     }
   };
@@ -111,18 +112,18 @@ export default function NotificationsTab() {
         <div className="flex items-center gap-2">
           <Bell size={16} style={{ color: 'rgb(var(--c))' }} />
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Notificações
+            {t('Notificações')}
           </h2>
         </div>
         <span className="text-[10px] px-2 py-1 rounded-sm"
           style={{ background: 'rgb(var(--c) / 0.13)', color: 'rgb(var(--c))', border: '1px solid rgb(var(--c) / 0.2)' }}>
-          {enabledCount}/{notifications.length} ativas
+          {enabledCount}/{notifications.length}{' '}{t('ativas')}
         </span>
       </div>
 
       <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
         <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.47)' }}>
-          🔔 Configure quais notificações deseja receber. Os dados são verificados de hora a hora e os avisos chegam como notificações no telemóvel, entre as 8h e as 23h.
+          {t('🔔 Configure quais notificações deseja receber. Os dados são verificados de hora a hora e os avisos chegam como notificações no telemóvel, entre as 8h e as 23h.')}
         </p>
       </div>
 
@@ -159,20 +160,20 @@ export default function NotificationsTab() {
 
       {/* Como funcionam os avisos: explicação, estado deste telemóvel, ativação e exemplo */}
       <div className="p-3 rounded-sm mb-4 text-[10px] leading-relaxed" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)', color: 'rgb(var(--c) / 0.6)' }}>
-        <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.85)' }}>Como funcionam os avisos</p>
+        <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.85)' }}>{t('Como funcionam os avisos')}</p>
         <ul className="space-y-1.5 mb-3">
-          <li>📲 Chegam como <b>notificação no telemóvel</b>, mesmo com a app fechada, entre as 8h e as 23h.</li>
-          <li>✊ <b>Greves:</b> {ANTECEDENCIA_DIAS} dias antes e no próprio dia. Ex.: "ALERTA — Greve da Função Pública dia 26/11/26".</li>
-          <li>🌧️ 🌋 ⚔️ 🌍 🍕 <b>Restantes:</b> só no próprio dia e só quando há algo importante. Ex.: "ALERTA AMARELO — Precipitação em Braga hoje".</li>
-          <li>✅ Só recebes as categorias <b>ligadas acima</b>. Depois de mudar, carrega em <b>Guardar definições</b>.</li>
+          <li>{t('📲 Chegam como')}{' '}<b>{t('notificação no telemóvel')}</b>{t(', mesmo com a app fechada, entre as 8h e as 23h.')}</li>
+          <li>✊ <b>{t('Greves:')}</b> {ANTECEDENCIA_DIAS}{' '}{t('dias antes e no próprio dia. Ex.: "ALERTA — Greve da Função Pública dia 26/11/26".')}</li>
+          <li>🌧️ 🌋 ⚔️ 🌍 🍕 <b>{t('Restantes:')}</b>{' '}{t('só no próprio dia e só quando há algo importante. Ex.: "ALERTA AMARELO — Precipitação em Braga hoje".')}</li>
+          <li>{t('✅ Só recebes as categorias')}{' '}<b>{t('ligadas acima')}</b>{t('. Depois de mudar, carrega em')}{' '}<b>{t('Guardar definições')}</b>.</li>
         </ul>
 
         {/* estado deste telemóvel */}
         <p className="mb-3 p-2 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.5)', border: `1px solid ${perm === 'granted' ? 'rgb(var(--c) / 0.3)' : '#ffaa0055'}`, color: perm === 'granted' ? 'rgb(var(--c) / 0.85)' : '#ffaa00' }}>
-          {perm === 'granted' && (registered ? '✔ Notificações ativas neste telemóvel.' : '⚠ Notificações autorizadas, mas falta ativar: carrega em "Ativar notificações no telemóvel".')}
-          {perm === 'default' && '⚠ As notificações ainda não foram autorizadas neste telemóvel: carrega em "Ativar notificações no telemóvel".'}
-          {perm === 'denied' && '✖ As notificações estão bloqueadas nas definições do telemóvel. Desbloqueia-as para esta app; até lá os avisos só aparecem dentro da app.'}
-          {perm === 'unsupported' && '✖ Este browser não mostra notificações. Usa o Chrome com a app instalada no ecrã inicial; até lá os avisos só aparecem dentro da app.'}
+          {perm === 'granted' && (registered ? t('✔ Notificações ativas neste telemóvel.') : t('⚠ Notificações autorizadas, mas falta ativar: carrega em "Ativar notificações no telemóvel".'))}
+          {perm === 'default' && t('⚠ As notificações ainda não foram autorizadas neste telemóvel: carrega em "Ativar notificações no telemóvel".')}
+          {perm === 'denied' && t('✖ As notificações estão bloqueadas nas definições do telemóvel. Desbloqueia-as para esta app; até lá os avisos só aparecem dentro da app.')}
+          {perm === 'unsupported' && t('✖ Este browser não mostra notificações. Usa o Chrome com a app instalada no ecrã inicial; até lá os avisos só aparecem dentro da app.')}
         </p>
 
         <div className="space-y-3">
@@ -180,19 +181,19 @@ export default function NotificationsTab() {
             <div>
               <button type="button" onClick={activatePush} disabled={busy} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
                 style={{ border: '1px solid #ffaa00', color: '#ffaa00', opacity: busy ? 0.6 : 1 }}>
-                {busy ? 'A ativar…' : registered ? 'Notificações ativas ✔ (tocar para renovar)' : 'Ativar notificações no telemóvel'}
+                {busy ? t('A ativar…') : registered ? t('Notificações ativas ✔ (tocar para renovar)') : t('Ativar notificações no telemóvel')}
               </button>
-              <p className="mt-1">Um toque e fica feito: o telemóvel regista-se sozinho, sem códigos. Os interruptores acima passam a valer também com a app fechada.</p>
+              <p className="mt-1">{t('Um toque e fica feito: o telemóvel regista-se sozinho, sem códigos. Os interruptores acima passam a valer também com a app fechada.')}</p>
             </div>
           )}
           <div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>✊ Exemplo de greve</button>
+                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>{t('✊ Exemplo de greve')}</button>
               <button type="button" onClick={testWeatherAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>🌦️ Exemplo do tempo</button>
+                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>{t('🌦️ Exemplo do tempo')}</button>
             </div>
-            <p className="mt-1">Mostram agora um aviso de exemplo, com a personagem na cor da app. No do tempo, cada toque mostra outro estado (chuva, sol, geada, vento, nevoeiro, nublado).</p>
+            <p className="mt-1">{t('Mostram agora um aviso de exemplo, com a personagem na cor da app. No do tempo, cada toque mostra outro estado (chuva, sol, geada, vento, nevoeiro, nublado).')}</p>
           </div>
         </div>
         {pushMsg && <p className="mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
@@ -209,11 +210,11 @@ export default function NotificationsTab() {
         }}
       >
         {saving ? (
-          <><Loader2 size={14} className="animate-spin" /> A GUARDAR...</>
+          <><Loader2 size={14} className="animate-spin" />{' '}{t('A GUARDAR...')}</>
         ) : saved ? (
-          <><Check size={14} /> GUARDADO!</>
+          <><Check size={14} />{' '}{t('GUARDADO!')}</>
         ) : (
-          <><Save size={14} /> GUARDAR DEFINIÇÕES</>
+          <><Save size={14} />{' '}{t('GUARDAR DEFINIÇÕES')}</>
         )}
       </button>
 
@@ -221,7 +222,7 @@ export default function NotificationsTab() {
       {user && (
         <div className="mt-6 pt-6" style={{ borderTop: '1px solid #ff000022' }}>
           <h3 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: '#ff0000cc' }}>
-            ⚠️ Zona de Perigo
+            {t('⚠️ Zona de Perigo')}
           </h3>
           
           {!showDeleteConfirm ? (
@@ -234,14 +235,14 @@ export default function NotificationsTab() {
                 color: '#ff0000cc',
               }}
             >
-              <UserX size={14} /> Eliminar Conta
+              <UserX size={14} />{' '}{t('Eliminar Conta')}
             </button>
           ) : (
             <div className="p-4 rounded-sm" style={{ background: '#ff000022', border: '1px solid #ff000044' }}>
               <div className="flex items-start gap-2 mb-3">
                 <AlertTriangle size={16} style={{ color: '#ff0000' }} className="flex-shrink-0 mt-0.5" />
                 <p className="text-xs leading-relaxed" style={{ color: '#ff0000cc' }}>
-                  Esta ação é PERMANENTE e não pode ser revertida. Todos os seus dados serão eliminados.
+                  {t('Esta ação é PERMANENTE e não pode ser revertida. Todos os seus dados serão eliminados.')}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -255,7 +256,7 @@ export default function NotificationsTab() {
                     color: 'rgb(var(--c) / 0.53)',
                   }}
                 >
-                  Cancelar
+                  {t('Cancelar')}
                 </button>
                 <button
                   onClick={handleDeleteAccount}
@@ -268,9 +269,9 @@ export default function NotificationsTab() {
                   }}
                 >
                   {deleting ? (
-                    <><Loader2 size={14} className="animate-spin" /> A Eliminar...</>
+                    <><Loader2 size={14} className="animate-spin" />{' '}{t('A Eliminar...')}</>
                   ) : (
-                    <>Confirmar Eliminação</>
+                    <>{t('Confirmar Eliminação')}</>
                   )}
                 </button>
               </div>

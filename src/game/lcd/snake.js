@@ -3,6 +3,7 @@
 import { W, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
 import { lcdMusic } from './music';
+import { t as tr } from '../../i18n';
 
 const MUTE = new Proxy({}, { get: () => () => {} });
 
@@ -133,14 +134,14 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {}, music
   function draw() {
     scr.clear(); const t = performance.now() / 1000;
     if (mode === 'title') {
-      scr.text('COBRA', W / 2, 3, { align: 'center' });
+      scr.text(tr('COBRA'), W / 2, 3, { align: 'center' });
       // cobra animada a percorrer um retângulo
       const path = []; for (let x = 10; x < 74; x += 3) path.push([x, 12]); for (let y = 12; y < 20; y += 3) path.push([73, y]); for (let x = 73; x > 10; x -= 3) path.push([x, 20]); for (let y = 20; y > 12; y -= 3) path.push([10, y]);
       const head = Math.floor(t * 12) % path.length;
       for (let i = 0; i < 12; i++) { const [x, y] = path[(head - i + path.length) % path.length]; scr.rect(x, y, i ? 2 : 3, i ? 2 : 3); }
-      scr.text(`NIVEL < ${level} >`, W / 2, 26, { align: 'center' });
-      if (Math.floor(t * 2) % 2) scr.text('A: JOGAR', W / 2, 33, { align: 'center' });
-      scr.text(`RECORDE ${scr.num(best, 4)}`, W / 2, 41, { align: 'center' });
+      scr.text(`${tr('NIVEL')} < ${level} >`, W / 2, 26, { align: 'center' });
+      if (Math.floor(t * 2) % 2) scr.text(tr('A: JOGAR'), W / 2, 33, { align: 'center' });
+      scr.text(`${tr('RECORDE')} ${scr.num(best, 4)}`, W / 2, 41, { align: 'center' });
       scr.present(); return;
     }
     // barra de estado: pontos à esquerda, contagem do bicho de bónus e recorde à direita
@@ -151,13 +152,13 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {}, music
     if (st.food) { const px = OX + st.food[0] * CELL; const py = OY + st.food[1] * CELL; scr.sprite([' # ', '# #', ' # '], px, py); }
     if (st.bug && Math.floor(t * 4) % 4) { scr.sprite(BUGS[st.bug.kind], OX + st.bug.x * CELL, OY + st.bug.y * CELL - 1); }
     if (!(mode === 'dying' && Math.floor(t * 6) % 2)) drawSnake();
-    if (paused) { scr.rect(14, 17, 56, 15, 0); scr.frame(14, 17, 56, 15); scr.text('PAUSA', W / 2, 19, { align: 'center' }); scr.text('A: CONTINUAR', W / 2, 25, { align: 'center' }); }
+    if (paused) { scr.rect(14, 17, 56, 15, 0); scr.frame(14, 17, 56, 15); scr.text('PAUSA', W / 2, 19, { align: 'center' }); scr.text(tr('A: CONTINUAR'), W / 2, 25, { align: 'center' }); }
     if (mode === 'over') {
       scr.rect(8, 10, 68, 32, 0); scr.frame(8, 10, 68, 32);
-      scr.text('FIM DO JOGO', W / 2, 13, { align: 'center' });
-      scr.text(`PONTOS ${scr.num(st.score, 4)}`, W / 2, 21, { align: 'center' });
-      scr.text(newBest ? 'NOVO RECORDE!' : `RECORDE ${scr.num(best, 4)}`, W / 2, 28, { align: 'center' });
-      if (modeT > 0.6 && Math.floor(t * 2) % 2) scr.text('A: OUTRA VEZ', W / 2, 35, { align: 'center' });
+      scr.text(tr('FIM DO JOGO'), W / 2, 13, { align: 'center' });
+      scr.text(`${tr('PONTOS')} ${scr.num(st.score, 4)}`, W / 2, 21, { align: 'center' });
+      scr.text(newBest ? tr('NOVO RECORDE!') : `${tr('RECORDE')} ${scr.num(best, 4)}`, W / 2, 28, { align: 'center' });
+      if (modeT > 0.6 && Math.floor(t * 2) % 2) scr.text(tr('A: OUTRA VEZ'), W / 2, 35, { align: 'center' });
     }
     scr.present();
   }
@@ -168,10 +169,10 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {}, music
 
 export function mountSnake(root, { onExit = () => {} } = {}) {
   const shell = mountShell(root, {
-    title: 'Cobra', stick: 'dominant',
-    a: { k: 'ok', label: 'PAUSA' }, b: { k: 'mute', label: 'SOM' },
-    mids: [{ k: 'back', label: 'SAIR' }],
-    help: 'PC: setas/WASD mudam a direção · espaço/Enter começa · ◀ ▶ escolhem o nível no menu · P pausa · Esc sai · M som',
+    title: tr('Cobra'), stick: 'dominant',
+    a: { k: 'ok', label: tr('PAUSA') }, b: { k: 'mute', label: tr('SOM') },
+    mids: [{ k: 'back', label: tr('SAIR') }],
+    help: tr('PC: setas/WASD mudam a direção · espaço/Enter começa · ◀ ▶ escolhem o nível no menu · P pausa · Esc sai · M som'),
   });
   let stopped = false;
   const cleanup = () => { stopped = true; music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
+import { t } from '@/i18n';
 
 export default function PullToRefresh({ children, onRefresh }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -85,7 +86,7 @@ export default function PullToRefresh({ children, onRefresh }) {
             />
           </motion.div>
           <span className="text-xs uppercase tracking-wider" style={{ color: 'rgb(var(--c))' }}>
-            {isRefreshing ? 'A atualizar...' : 'Puxar para atualizar'}
+            {isRefreshing ? t('A atualizar...') : t('Puxar para atualizar')}
           </span>
         </div>
       </motion.div>

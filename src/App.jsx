@@ -22,6 +22,7 @@ import KnowledgeFilesTab from './tabs/KnowledgeFilesTab';
 import SurvivalManualTab from './tabs/SurvivalManualTab';
 import BragaMapTab from './tabs/BragaMapTab';
 import SettingsTab from './tabs/SettingsTab';
+import { t, useLang } from '@/i18n';
 
 // Separadores cujos dados vêm da IA sem acesso à internet (não são dados reais)
 const SIMULATED = ['dashboard', 'guerra', 'catastrofes', 'meteo', 'pizza'];
@@ -32,6 +33,7 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const visibleTabs = useVisibleTabs();
   const { compact } = useSettings();
+  const lang = useLang(); // ao mudar de idioma, os separadores voltam a abrir já no idioma novo
   const [threatLevel, setThreatLevel] = useState(0);
   // useCallback: o efeito do PipBoyStartup depende de onComplete,
   // por isso a função tem de ser estável para a animação não reiniciar.
@@ -66,11 +68,11 @@ export default function App() {
         {!IS_ARTIFACT && <StrikeBanner />}
         {IS_ARTIFACT && SIMULATED.includes(activeTab) && (
           <div className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-center" style={{ background: '#331a00', color: '#ffaa00', borderBottom: '1px solid #ffaa0044' }}>
-            Simulação — dados gerados por IA sem internet. Não são reais.
+            {t('Simulação — dados gerados por IA sem internet. Não são reais.')}
           </div>
         )}
       </div>
-      <main className="max-w-2xl mx-auto pb-40">
+      <main key={lang} className="max-w-2xl mx-auto pb-40">
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {TABS.map((tab) => (

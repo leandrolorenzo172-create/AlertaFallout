@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import NewsCard from '../pipboy/NewsCard';
+import { t, locale } from '@/i18n';
 
 export default function CatastropheTab() {
   const [articles, setArticles] = useState([]);
@@ -71,7 +72,7 @@ export default function CatastropheTab() {
         setArticles(cachedData.articles);
         setIsOffline(true);
       } else {
-        setError(err.message || 'Erro ao carregar dados');
+        setError(err.message || t('Erro ao carregar dados'));
       }
       setLoading(false);
       setRefreshing(false);
@@ -115,8 +116,8 @@ export default function CatastropheTab() {
         }}>
           <AlertTriangle size={14} style={{ color: '#ff6600' }} />
           <span className="text-xs" style={{ color: '#ff6600cc' }}>
-            Modo Offline - Dados em cache do {localStorage.getItem('catastrophe_cache') ? 
-              new Date(JSON.parse(localStorage.getItem('catastrophe_cache')).timestamp).toLocaleString('pt-PT') : 'último carregamento'}
+            {t('Modo Offline - Dados em cache do')}{' '}{localStorage.getItem('catastrophe_cache') ? 
+              new Date(JSON.parse(localStorage.getItem('catastrophe_cache')).timestamp).toLocaleString(locale()) : t('último carregamento')}
           </span>
         </div>
       )}
@@ -125,7 +126,7 @@ export default function CatastropheTab() {
         <div className="flex items-center gap-2">
           <AlertTriangle size={16} style={{ color: '#ff6600' }} />
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Catástrofes & Desastres
+            {t('Catástrofes & Desastres')}
           </h2>
         </div>
         <button
@@ -144,14 +145,14 @@ export default function CatastropheTab() {
             <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
           </motion.div>
           <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-            A MONITORIZAR EVENTOS...
+            {t('A MONITORIZAR EVENTOS...')}
           </p>
         </div>
       ) : error && articles.length === 0 ? (
         <div className="flex flex-col items-center py-12 px-4">
           <AlertTriangle size={32} style={{ color: '#ff6600' }} />
           <p className="mt-3 text-xs uppercase tracking-wider text-center" style={{ color: '#ff6600' }}>
-            ERRO AO CARREGAR DADOS
+            {t('ERRO AO CARREGAR DADOS')}
           </p>
           <p className="mt-2 text-xs text-center leading-relaxed" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             {error}
@@ -161,7 +162,7 @@ export default function CatastropheTab() {
             className="mt-4 px-4 py-2 rounded-sm text-xs uppercase tracking-wider"
             style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
           >
-            Tentar Novamente
+            {t('Tentar Novamente')}
           </button>
         </div>
       ) : (
@@ -171,7 +172,7 @@ export default function CatastropheTab() {
           ))}
           {articles.length === 0 && (
             <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.33)' }}>
-              Sem dados disponíveis
+              {t('Sem dados disponíveis')}
             </p>
           )}
         </div>

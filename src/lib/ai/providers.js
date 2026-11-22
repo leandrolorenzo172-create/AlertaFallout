@@ -1,3 +1,4 @@
+import { t as tr } from '../../i18n';
 // Fornecedores de IA online. Cada um usa o SDK oficial, carregado só quando é preciso.
 //  - anthropic: Claude (@anthropic-ai/sdk)
 //  - openai:    ChatGPT (openai)
@@ -10,7 +11,7 @@ export const PROVIDERS = {
   anthropic: { label: 'Claude (Anthropic)', short: 'Claude', keyHint: 'sk-ant-...', keyUrl: 'console.anthropic.com', defaultModel: 'claude-opus-5-5' },
   openai: { label: 'ChatGPT (OpenAI)', short: 'ChatGPT', keyHint: 'sk-...', keyUrl: 'platform.openai.com', defaultModel: 'gpt-5.5' },
   gemini: { label: 'Gemini (Google)', short: 'Gemini', keyHint: 'AIza...', keyUrl: 'aistudio.google.com', defaultModel: 'gemini-3.8-flash' },
-  custom: { label: 'Outro (compatível com OpenAI)', short: 'IA personalizada', keyHint: 'chave (opcional em servidores locais)', keyUrl: '', defaultModel: '' },
+  custom: { label: tr('Outro (compatível com OpenAI)'), short: tr('IA personalizada'), keyHint: tr('chave (opcional em servidores locais)'), keyUrl: '', defaultModel: '' },
 };
 export const ANTHROPIC_MODELS = [
   { id: 'claude-opus-5-5', label: 'Claude Opus 5.5 (mais capaz)' },

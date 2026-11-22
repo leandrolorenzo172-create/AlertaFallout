@@ -2,6 +2,7 @@
 // As cores da app são variáveis CSS (--c cor principal, --cd fundo de painéis, --cb fundo do ecrã),
 // por isso mudar de tema muda tudo de uma vez, sem recarregar.
 import { useSyncExternalStore } from 'react';
+import { refreshLang } from './i18n';
 
 export const THEMES = [
   { id: 'green', label: 'Verde (clássico)', c: '0 255 65', cd: '0 26 0', cb: '0 10 0' },
@@ -12,7 +13,7 @@ export const THEMES = [
 ];
 
 const KEY = 'pb_settings';
-const DEFAULTS = { theme: 'green', order: [], hidden: [], compact: false };
+const DEFAULTS = { theme: 'green', order: [], hidden: [], compact: false, lang: null }; // lang: 'pt' | 'en' | null (segue o telemóvel)
 
 function read() {
   try { return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY)) || {}) }; } catch { return { ...DEFAULTS }; }
@@ -31,6 +32,11 @@ export function getSettings() { return state; }
 export function setSettings(patch) {
   state = { ...state, ...patch };
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* sem armazenamento */ }
+  if ('lang' in patch) {
+    refreshLang();
+    document.documentElement.lang = patch.lang === 'en' ? 'en' : 'pt';
+    import('./notify/strikeAlerts').then((m) => m.checkStrikeAlerts()).catch(() => {}); // notificações no idioma novo
+  }
   if (patch.theme) {
     applyTheme(state.theme);
     // as miniaturas das notificações passam logo a usar a cor nova
@@ -38,7 +44,7 @@ export function setSettings(patch) {
   }
   listeners.forEach((l) => l());
 }
-export function resetSettings() { setSettings({ ...DEFAULTS }); }
+export function resetSettings() { setSettings({ ...DEFAULTS, lang: state.lang }); } // repor não muda o idioma
 const subscribe = (l) => { listeners.add(l); return () => listeners.delete(l); };
 export function useSettings() { return useSyncExternalStore(subscribe, getSettings); }
 

@@ -441,6 +441,7 @@ function createNowPlaying(onChange) {
 
 
 
+
 // range = distância a que a emissora começa a ouvir-se; lock = sintonia centrada (luz STEREO / LOCKED)
 const RANGE = 0.3; // MHz
 const LOCK = 0.1; // MHz
@@ -462,47 +463,47 @@ const online = () => typeof navigator === 'undefined' || navigator.onLine !== fa
 
 const TEMPLATE = `
 <div class="rf-chassis rf-off">
-  <button type="button" class="rf-start" data-rf="start"><b data-rf="startlabel">&#9654; TOCA PARA LIGAR O RÁDIO</b><span data-rf="startinfo">O browser só deixa tocar som depois de um toque.</span></button>
+  <button type="button" class="rf-start" data-rf="start"><b data-rf="startlabel">${tr('&#9654; TOCA PARA LIGAR O RÁDIO')}</b><span data-rf="startinfo">${tr('O browser só deixa tocar som depois de um toque.')}</span></button>
   <div class="rf-grid">
     <section class="rf-left rf-panelbox">
       <div class="rf-title">PRESET</div>
       <div class="rf-sel">
-        <button type="button" data-rf="prev" aria-label="Emissora anterior">&lsaquo;</button>
-        <div class="rf-name" data-rf="name">DESLIGADO</div>
-        <button type="button" data-rf="next" aria-label="Emissora seguinte">&rsaquo;</button>
+        <button type="button" data-rf="prev" aria-label="${tr('Emissora anterior')}">&lsaquo;</button>
+        <div class="rf-name" data-rf="name">${tr('DESLIGADO')}</div>
+        <button type="button" data-rf="next" aria-label="${tr('Emissora seguinte')}">&rsaquo;</button>
       </div>
       <div class="rf-np" data-rf="np" hidden><span aria-hidden="true">&#9835;</span><b data-rf="nptext"></b></div>
       <div class="rf-art">
         <div class="rf-artsvg" data-rf="art"></div>
         <div class="rf-artinfo">
-          <div class="rf-status" data-rf="status">RÁDIO DESLIGADO</div>
-          <div class="rf-genre" data-rf="genre">Toca no botão de volume para ligar</div>
-          <a class="rf-site" data-rf="site" target="_blank" rel="noopener noreferrer" hidden>OUVIR NO SITE OFICIAL &#8599;</a>
+          <div class="rf-status" data-rf="status">${tr('RÁDIO DESLIGADO')}</div>
+          <div class="rf-genre" data-rf="genre">${tr('Toca no botão de volume para ligar')}</div>
+          <a class="rf-site" data-rf="site" target="_blank" rel="noopener noreferrer" hidden>${tr('OUVIR NO SITE OFICIAL &#8599;')}</a>
         </div>
       </div>
     </section>
     <section class="rf-right">
-      <div class="rf-clock rf-panelbox" aria-label="Hora atual"><span>HORA ATUAL</span><b data-rf="clock">--:--:--</b><span data-rf="date"></span></div>
+      <div class="rf-clock rf-panelbox" aria-label="${tr('Hora atual')}"><span>${tr('HORA ATUAL')}</span><b data-rf="clock">--:--:--</b><span data-rf="date"></span></div>
       <div class="rf-tuner rf-panelbox">
-        <div class="rf-screen" data-rf="screen" role="slider" tabindex="0" aria-label="Visor de frequência (sintoniza no botão SINTONIA)"><canvas data-rf="dial"></canvas></div>
+        <div class="rf-screen" data-rf="screen" role="slider" tabindex="0" aria-label="${tr('Visor de frequência (sintoniza no botão SINTONIA)')}"><canvas data-rf="dial"></canvas></div>
         <div class="rf-volline"><span>VOLUME</span><i><b data-rf="volbar"></b></i><span data-rf="volpct">0%</span></div>
         <div class="rf-mid">
           <div class="rf-knobwrap">
-            <button type="button" class="rf-knob vol" data-rf="vol" aria-label="Volume e ligar/desligar"><span class="rf-cap" data-rf="volcap"></span></button>
-            <span>VOLUME · ON/OFF</span>
+            <button type="button" class="rf-knob vol" data-rf="vol" aria-label="${tr('Volume e ligar/desligar')}"><span class="rf-cap" data-rf="volcap"></span></button>
+            <span>${tr('VOLUME · ON/OFF')}</span>
           </div>
           <div class="rf-pills">
-            <div class="rf-pill"><span>Sinal</span><span data-rf="pillsig">0%</span></div>
-            <div class="rf-pill"><span>Estática</span><span data-rf="pillstat">0%</span></div>
+            <div class="rf-pill"><span>${tr('Sinal')}</span><span data-rf="pillsig">0%</span></div>
+            <div class="rf-pill"><span>${tr('Estática')}</span><span data-rf="pillstat">0%</span></div>
           </div>
           <div class="rf-knobwrap">
-            <button type="button" class="rf-knob tune" data-rf="tune" aria-label="Sintonia"><span class="rf-cap" data-rf="tunecap"></span></button>
-            <span>SINTONIA</span>
+            <button type="button" class="rf-knob tune" data-rf="tune" aria-label="${tr('Sintonia')}"><span class="rf-cap" data-rf="tunecap"></span></button>
+            <span>${tr('SINTONIA')}</span>
           </div>
         </div>
         <div class="rf-readout">
-          <label class="rf-nixie"><input id="rf-freq-input" data-rf="freq" type="text" inputmode="decimal" autocomplete="off" aria-label="Frequência exata" /><span data-rf="unit">MHz</span></label>
-          <div class="rf-band" role="group" aria-label="Banda">
+          <label class="rf-nixie"><input id="rf-freq-input" data-rf="freq" type="text" inputmode="decimal" autocomplete="off" aria-label="${tr('Frequência exata')}" /><span data-rf="unit">MHz</span></label>
+          <div class="rf-band" role="group" aria-label="${tr('Banda')}">
             <button type="button" data-rf="fm" aria-pressed="true">FM</button>
             <button type="button" data-rf="am" aria-pressed="false">AM</button>
           </div>
@@ -515,25 +516,25 @@ const TEMPLATE = `
     </section>
   </div>
   <div class="rf-presets" data-rf="presets"></div>
-  <div class="rf-note" data-rf="note">MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam</div>
+  <div class="rf-note" data-rf="note">${tr('MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam')}</div>
   <div class="rf-actions">
-    <button type="button" data-rf="listbtn" aria-expanded="false">[ LISTA ]</button>
-    <button type="button" data-rf="sharebtn">[ PARTILHAR ]</button>
-    <button type="button" class="rf-add" data-rf="addbtn">[ + ADICIONAR FREQUÊNCIA ]</button>
+    <button type="button" data-rf="listbtn" aria-expanded="false">${tr('[ LISTA ]')}</button>
+    <button type="button" data-rf="sharebtn">${tr('[ PARTILHAR ]')}</button>
+    <button type="button" class="rf-add" data-rf="addbtn">${tr('[ + ADICIONAR FREQUÊNCIA ]')}</button>
   </div>
   <div class="rf-sharemsg" data-rf="sharemsg" role="status"></div>
   <div class="rf-list" data-rf="listpanel" hidden>
-    <h3>&gt; EMISSORAS <span data-rf="listcount"></span></h3>
-    <input id="rf-list-search" data-rf="listq" type="search" autocomplete="off" placeholder="Procurar por nome ou género..." aria-label="Procurar emissora por nome ou género" />
+    <h3>${tr('&gt; EMISSORAS ')}<span data-rf="listcount"></span></h3>
+    <input id="rf-list-search" data-rf="listq" type="search" autocomplete="off" placeholder="${tr('Procurar por nome ou género...')}" aria-label="${tr('Procurar emissora por nome ou género')}" />
     <ul class="rf-listul" data-rf="listul"></ul>
   </div>
   <div class="rf-panel" data-rf="panel" hidden>
-    <h3>&gt; NOVA ESTAÇÃO</h3>
+    <h3>${tr('&gt; NOVA ESTAÇÃO')}</h3>
     <form data-rf="form" novalidate>
-      <label>FREQUÊNCIA MHz<input id="rf-new-freq" data-rf="nfreq" type="text" inputmode="decimal" placeholder="99.0" autocomplete="off" /></label>
-      <label>NOME<input id="rf-new-name" data-rf="nname" type="text" maxlength="40" placeholder="A minha rádio" autocomplete="off" /></label>
-      <label class="wide">URL DO STREAM (https)<input id="rf-new-url" data-rf="nurl" type="url" placeholder="https://..." autocomplete="off" /></label>
-      <div class="rf-row"><button type="submit">GUARDAR</button><span class="rf-msg" data-rf="msg" role="status"></span></div>
+      <label>${tr('FREQUÊNCIA MHz')}<input id="rf-new-freq" data-rf="nfreq" type="text" inputmode="decimal" placeholder="99.0" autocomplete="off" /></label>
+      <label>${tr('NOME')}<input id="rf-new-name" data-rf="nname" type="text" maxlength="40" placeholder="${tr('A minha rádio')}" autocomplete="off" /></label>
+      <label class="wide">${tr('URL DO STREAM (https)')}<input id="rf-new-url" data-rf="nurl" type="url" placeholder="https://..." autocomplete="off" /></label>
+      <div class="rf-row"><button type="submit">${tr('GUARDAR')}</button><span class="rf-msg" data-rf="msg" role="status"></span></div>
     </form>
     <ul class="rf-custom" data-rf="custom"></ul>
   </div>
@@ -693,12 +694,12 @@ function mountRadio(root, opts = {}) {
     if (state.status === s) return;
     state.status = s;
     const map = {
-      off: ['RÁDIO DESLIGADO', ''],
-      static: ['SÓ ESTÁTICA', ''],
+      off: [tr('RÁDIO DESLIGADO'), ''],
+      static: [tr('SÓ ESTÁTICA'), ''],
       conn: ['CONECTANDO...', 'conn'],
-      live: ['EM DIRETO', 'live'],
-      bad: ['SINAL FRACO / STREAM OFFLINE', 'bad'],
-      nonet: ['SEM SINAL — SEM LIGAÇÃO À INTERNET', 'bad'],
+      live: [tr('EM DIRETO'), 'live'],
+      bad: [tr('SINAL FRACO / STREAM OFFLINE'), 'bad'],
+      nonet: [tr('SEM SINAL — SEM LIGAÇÃO À INTERNET'), 'bad'],
     };
     el.status.textContent = map[s][0];
     el.status.className = `rf-status ${map[s][1]}`;
@@ -761,8 +762,8 @@ function mountRadio(root, opts = {}) {
     if (el.art.dataset.key !== key) { el.art.dataset.key = key; el.art.innerHTML = `<svg viewBox="0 0 200 200" fill="currentColor" aria-hidden="true">${ART[key]}</svg>`; }
   }
   function showIdle() {
-    el.name.textContent = state.on ? (online() ? 'SÓ ESTÁTICA' : 'SEM SINAL') : 'DESLIGADO';
-    el.genre.textContent = state.on ? (online() ? 'Sem emissora nesta frequência' : 'Sem ligação à internet') : 'Toca no botão de volume para ligar';
+    el.name.textContent = state.on ? (online() ? tr('SÓ ESTÁTICA') : tr('SEM SINAL')) : 'DESLIGADO';
+    el.genre.textContent = state.on ? (online() ? tr('Sem emissora nesta frequência') : tr('Sem ligação à internet')) : tr('Toca no botão de volume para ligar');
     showArt(null);
     el.site.hidden = true;
   }
@@ -771,7 +772,7 @@ function mountRadio(root, opts = {}) {
     state.station = st;
     if (st) {
       el.name.textContent = st.name;
-      el.genre.textContent = `${fmtFreq(st)} · ${st.genre || (state.custom.includes(st) ? 'Estação personalizada' : 'Rádio portuguesa')}`;
+      el.genre.textContent = `${fmtFreq(st)} · ${st.genre || (state.custom.includes(st) ? tr('Estação personalizada') : tr('Rádio portuguesa'))}`;
       save('rf_last', { band: st.band, freq: st.freq });
       if (st.band === 'FM') save('rf_last_fm', st.freq);
       showArt(st);
@@ -922,7 +923,7 @@ function mountRadio(root, opts = {}) {
     needsDraw = true;
   }
 
-  const NOTE = 'MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam';
+  const NOTE = tr('MEMÓRIAS: toca para sintonizar · mantém premido para gravar a frequência atual · setas ← → afinam');
   let noteTimer = null;
   function savePreset(i) {
     const f = Number(state.freq[state.band].toFixed(band().digits));
@@ -933,7 +934,7 @@ function mountRadio(root, opts = {}) {
     nb.classList.add('saved'); setTimeout(() => nb.classList.remove('saved'), 900);
     try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) { /* sem vibração */ }
     const st = stationAt(state.band, f);
-    el.note.textContent = `MEMÓRIA ${i + 1} GUARDADA: ${st ? `${st.name} · ` : ''}${f} ${band().unit}`;
+    el.note.textContent = `${tr('MEMÓRIA {n} GUARDADA:', { n: i + 1 })} ${st ? `${st.name} · ` : ''}${f} ${band().unit}`;
     el.note.classList.add('ok');
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => { el.note.textContent = NOTE; el.note.classList.remove('ok'); }, 3500);
@@ -944,7 +945,7 @@ function mountRadio(root, opts = {}) {
       const b = document.createElement('button');
       b.type = 'button';
       b.innerHTML = `<b>${i + 1}</b><small>${presetLabel(p)}</small>`;
-      b.setAttribute('aria-label', `Memória ${i + 1}: ${p.band === 'AM' ? `${Math.round(p.freq)} kHz AM` : `${Number(p.freq).toFixed(1)} MHz`}. Mantém premido para gravar a frequência atual.`);
+      b.setAttribute('aria-label', `${tr('Memória {n}:', { n: i + 1 })} ${p.band === 'AM' ? `${Math.round(p.freq)} kHz AM` : `${Number(p.freq).toFixed(1)} MHz`}. ${tr('Mantém premido para gravar a frequência atual.')}`);
       // Toque longo grava. Alguns telemóveis cancelam o toque (pointercancel) ou abrem o menu de contexto
       // ao fim de meio segundo; por isso só se desiste se o dedo se mexer ou largar antes do tempo.
       let timer = null; let held = false; let start = null;
@@ -1090,7 +1091,7 @@ function mountRadio(root, opts = {}) {
     el.listcount.textContent = q ? `(${shown.length} de ${all.length})` : `(${all.length})`;
     el.listul.innerHTML = '';
     if (!shown.length) {
-      const li = document.createElement('li'); li.className = 'rf-listempty'; li.textContent = 'Nenhuma emissora com esse nome ou género.';
+      const li = document.createElement('li'); li.className = 'rf-listempty'; li.textContent = tr('Nenhuma emissora com esse nome ou género.');
       el.listul.appendChild(li); return;
     }
     const frag = document.createDocumentFragment();
@@ -1136,9 +1137,9 @@ function mountRadio(root, opts = {}) {
     const st = state.station || stationAt(state.band, state.freq[state.band]);
     const title = st ? `${st.name} · ${fmtFreq(st)}` : `${settledFreq()} ${band().unit}`;
     if (navigator.share) {
-      try { await navigator.share({ title: `Rádio — ${title}`, text: `Ouve ${title} no SteelDeck`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.share({ title: `${tr('Rádio')} — ${title}`, text: tr('Ouve {x} no SteelDeck', { x: title }), url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
-    try { await navigator.clipboard.writeText(url); shareMsg('LINK COPIADO'); } catch (e) { shareMsg(`Copia o link: ${url}`); }
+    try { await navigator.clipboard.writeText(url); shareMsg(tr('LINK COPIADO')); } catch (e) { shareMsg(`${tr('Copia o link:')} ${url}`); }
   });
   on(el.prev, 'click', () => step(-1));
   on(el.next, 'click', () => step(1));
@@ -1146,9 +1147,9 @@ function mountRadio(root, opts = {}) {
   on(el.start, 'click', () => { el.start.hidden = true; if (!state.on) setVolAngle(state.lastVolAngle); });
   function updateStartLabel() {
     const st = stationAt(state.band, state.freq[state.band]);
-    el.startlabel.textContent = st ? `\u25B6 TOCA PARA OUVIR ${st.name.toUpperCase()}` : '\u25B6 TOCA PARA LIGAR O RÁDIO';
-    el.startinfo.textContent = !online() ? 'SEM SINAL — SEM LIGAÇÃO À INTERNET'
-      : st ? `${fmtFreq(st)} · o browser só deixa tocar som depois de um toque.` : 'O browser só deixa tocar som depois de um toque.';
+    el.startlabel.textContent = st ? `\u25B6 ${tr('TOCA PARA OUVIR')} ${st.name.toUpperCase()}` : `\u25B6 ${tr('TOCA PARA LIGAR O RÁDIO')}`;
+    el.startinfo.textContent = !online() ? tr('SEM SINAL — SEM LIGAÇÃO À INTERNET')
+      : st ? `${fmtFreq(st)} · ${tr('o browser só deixa tocar som depois de um toque.')}` : tr('O browser só deixa tocar som depois de um toque.');
   }
   on(el.fm, 'click', () => setBand('FM'));
   on(el.am, 'click', () => setBand('AM'));
@@ -1159,14 +1160,14 @@ function mountRadio(root, opts = {}) {
     const f = Math.round(parseFloat(el.nfreq.value.replace(',', '.')) * 10) / 10;
     const name = el.nname.value.trim(); const url = el.nurl.value.trim();
     let msg = '';
-    if (!Number.isFinite(f) || f < 88 || f > 108) msg = 'Frequência entre 88.0 e 108.0 MHz.';
-    else if (!name) msg = 'Falta o nome.';
-    else if (!/^https:\/\/\S+$/i.test(url)) msg = 'O URL tem de começar por https://';
-    else if (stations().some((s) => s.band === 'FM' && Math.abs(s.freq - f) < 0.35)) msg = 'Já existe uma estação junto a essa frequência.';
+    if (!Number.isFinite(f) || f < 88 || f > 108) msg = tr('Frequência entre 88.0 e 108.0 MHz.');
+    else if (!name) msg = tr('Falta o nome.');
+    else if (!/^https:\/\/\S+$/i.test(url)) msg = tr('O URL tem de começar por https://');
+    else if (stations().some((s) => s.band === 'FM' && Math.abs(s.freq - f) < 0.35)) msg = tr('Já existe uma estação junto a essa frequência.');
     if (msg) { el.msg.textContent = msg; return; }
     state.custom.push({ band: 'FM', freq: f, name: name.slice(0, 40), url, genre: '' });
     save('rf_custom', state.custom);
-    el.form.reset(); el.msg.textContent = `Guardada em ${f.toFixed(1)} MHz.`;
+    el.form.reset(); el.msg.textContent = `${tr('Guardada em')} ${f.toFixed(1)} MHz.`;
     renderCustom(); needsDraw = true;
   });
 
@@ -1174,8 +1175,8 @@ function mountRadio(root, opts = {}) {
   // Relógio: hora local do dispositivo, atualizada a cada segundo
   const tick = () => {
     const d = new Date();
-    el.clock.textContent = d.toLocaleTimeString('pt-PT', { hour12: false });
-    el.date.textContent = d.toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
+    el.clock.textContent = d.toLocaleTimeString(locale(), { hour12: false });
+    el.date.textContent = d.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
   };
   tick();
   const clockTimer = setInterval(tick, 1000);

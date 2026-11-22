@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.js';
 // Guerra das Eras — lógica do jogo (sem desenho nem DOM, para poder ser testada sozinha).
 // Duas bases frente a frente: o jogador (lado 0, à esquerda) e a IA (lado 1, à direita).
 // Treinam-se tropas com ouro, ganha-se ouro e XP a abater inimigos, e com XP evolui-se de era.
@@ -14,11 +15,11 @@ const UNIT_BASE = [
   { hp: 230, dmg: 36, rng: 0, spd: 14, rate: 1.5, cost: 100, time: 3.6 },
 ];
 export const ERAS = [
-  { name: 'Sobreviventes Primitivos', short: 'Primitivos', xp: 0, units: ['Explorador com moca', 'Fundibulário', 'Cavaleiro de javali'], turret: 'Lança-pedras', special: 'Chuva de destroços', fx: 'meteor' },
-  { name: 'Sucateiros Medievais', short: 'Sucateiros', xp: 1000, units: ['Sucateiro de espada', 'Besteiro', 'Cavaleiro de sucata'], turret: 'Balista de sucata', special: 'Barragem de morteiros', fx: 'shells' },
-  { name: 'Milícia Industrial', short: 'Milícia', xp: 3600, units: ['Miliciano', 'Atirador', 'Canhão a vapor'], turret: 'Metralhadora a vapor', special: 'Gás tóxico', fx: 'gas' },
-  { name: 'Tropas Táticas', short: 'Táticas', xp: 11000, units: ['Soldado tático', 'Atirador de elite', 'Blindado'], turret: 'Ninho de metralhadora', special: 'Bombardeamento aéreo', fx: 'bombs' },
-  { name: 'Armadura Futurista', short: 'Futurista', xp: 32000, units: ['Explorador blindado', 'Soldado laser', 'Exo-armadura'], turret: 'Torre laser', special: 'Mini Nuke', fx: 'nuke' },
+  { name: t('Sobreviventes Primitivos'), short: t('Primitivos'), xp: 0, units: [t('Explorador com moca'), t('Fundibulário'), t('Cavaleiro de javali')], turret: t('Lança-pedras'), special: t('Chuva de destroços'), fx: 'meteor' },
+  { name: t('Sucateiros Medievais'), short: t('Sucateiros'), xp: 1000, units: [t('Sucateiro de espada'), t('Besteiro'), t('Cavaleiro de sucata')], turret: t('Balista de sucata'), special: t('Barragem de morteiros'), fx: 'shells' },
+  { name: t('Milícia Industrial'), short: t('Milícia'), xp: 3600, units: [t('Miliciano'), t('Atirador'), t('Canhão a vapor')], turret: t('Metralhadora a vapor'), special: t('Gás tóxico'), fx: 'gas' },
+  { name: t('Tropas Táticas'), short: t('Táticas'), xp: 11000, units: [t('Soldado tático'), t('Atirador de elite'), t('Blindado')], turret: t('Ninho de metralhadora'), special: t('Bombardeamento aéreo'), fx: 'bombs' },
+  { name: t('Armadura Futurista'), short: t('Futurista'), xp: 32000, units: [t('Explorador blindado'), t('Soldado laser'), t('Exo-armadura')], turret: t('Torre laser'), special: t('Mini Nuke'), fx: 'nuke' },
 ];
 export const CURRENCY = 'caricas';
 export function unitStats(era, type) {
@@ -45,9 +46,9 @@ const KILL_XP = 2.2;
 const TRICKLE = 0.8; // ouro por segundo, para nunca ficar sem nada
 
 export const DIFFICULTY = {
-  easy: { label: 'Fácil', income: 0.7, think: [2.5, 4.5], slack: 0.35, special: 0.25, turretFrom: 2, evolveDelay: 12 },
-  medium: { label: 'Médio', income: 1.0, think: [1.0, 1.8], slack: 0.15, special: 0.7, turretFrom: 1, evolveDelay: 3 },
-  hard: { label: 'Difícil', income: 1.3, think: [0.25, 0.4], slack: 0, special: 1, turretFrom: 0, evolveDelay: 0 },
+  easy: { label: t('Fácil'), income: 0.7, think: [2.5, 4.5], slack: 0.35, special: 0.25, turretFrom: 2, evolveDelay: 12 },
+  medium: { label: t('Médio'), income: 1.0, think: [1.0, 1.8], slack: 0.15, special: 0.7, turretFrom: 1, evolveDelay: 3 },
+  hard: { label: t('Difícil'), income: 1.3, think: [0.25, 0.4], slack: 0, special: 1, turretFrom: 0, evolveDelay: 0 },
 };
 
 function newSide() {

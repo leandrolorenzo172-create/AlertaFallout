@@ -5,6 +5,7 @@ import { MapPin, Trash2, X, Palette, Save, Crosshair } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { alpha } from '../theme';
+import { t } from '@/i18n';
 
 const BRAGA_CENTER = [41.5518, -8.4229];
 
@@ -90,7 +91,7 @@ export default function BragaMapTab() {
 
   const handleClearAll = () => {
     if (pins.length === 0) return;
-    if (window.confirm('Apagar todos os pinos?')) {
+    if (window.confirm(t('Apagar todos os pinos?'))) {
       savePins([]);
     }
   };
@@ -101,17 +102,17 @@ export default function BragaMapTab() {
         <div className="flex items-center gap-2">
           <MapPin size={16} style={{ color: 'rgb(var(--c))' }} />
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Mapa Personalizado de Braga
+            {t('Mapa Personalizado de Braga')}
           </h2>
         </div>
         <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-          {pins.length} pino{pins.length !== 1 ? 's' : ''}
+          {pins.length}{' '}{t('pino')}{pins.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       <div className="p-3 rounded-sm mb-3" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
         <p className="text-[10px] leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          📍 Clique no mapa para adicionar um pino. Defina nome, descrição e cor. Os pinos ficam guardados no dispositivo (offline).
+          {t('📍 Clique no mapa para adicionar um pino. Defina nome, descrição e cor. Os pinos ficam guardados no dispositivo (offline).')}
         </p>
       </div>
 
@@ -129,7 +130,7 @@ export default function BragaMapTab() {
                 <div className="flex items-center gap-2">
                   <Crosshair size={14} style={{ color: 'rgb(var(--c))' }} />
                   <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-                    Novo Pino
+                    {t('Novo Pino')}
                   </span>
                 </div>
                 <button onClick={() => setShowForm(false)} className="p-1 hover:bg-white/5 rounded-sm">
@@ -139,7 +140,7 @@ export default function BragaMapTab() {
 
               <div className="mb-2">
                 <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-                  Coords: {newPin.lat.toFixed(4)}, {newPin.lng.toFixed(4)}
+                  {t('Coords:')}{' '}{newPin.lat.toFixed(4)}, {newPin.lng.toFixed(4)}
                 </span>
               </div>
 
@@ -147,7 +148,7 @@ export default function BragaMapTab() {
                 type="text"
                 value={pinName}
                 onChange={(e) => setPinName(e.target.value)}
-                placeholder="Nome do local..."
+                placeholder={t('Nome do local...')}
                 className="w-full p-2 mb-2 rounded-sm text-xs outline-none"
                 style={{ background: '#0a0a0a', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
                 autoFocus
@@ -156,7 +157,7 @@ export default function BragaMapTab() {
               <textarea
                 value={pinDesc}
                 onChange={(e) => setPinDesc(e.target.value)}
-                placeholder="Descrição (opcional)..."
+                placeholder={t('Descrição (opcional)...')}
                 rows={2}
                 className="w-full p-2 mb-3 rounded-sm text-xs outline-none resize-none"
                 style={{ background: '#0a0a0a', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c))' }}
@@ -166,7 +167,7 @@ export default function BragaMapTab() {
                 <div className="flex items-center gap-1 mb-2">
                   <Palette size={12} style={{ color: 'rgb(var(--c) / 0.53)' }} />
                   <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-                    Cor do Pino
+                    {t('Cor do Pino')}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -197,7 +198,7 @@ export default function BragaMapTab() {
                 }}
               >
                 <Save size={12} />
-                Guardar Pino
+                {t('Guardar Pino')}
               </button>
             </div>
           </motion.div>
@@ -243,14 +244,14 @@ export default function BragaMapTab() {
         <div className="mt-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-              Pinos Guardados
+              {t('Pinos Guardados')}
             </h3>
             <button
               onClick={handleClearAll}
               className="text-[10px] uppercase tracking-wider hover:underline"
               style={{ color: '#ff666688' }}
             >
-              Limpar Tudo
+              {t('Limpar Tudo')}
             </button>
           </div>
           {pins.map((pin) => (
@@ -281,7 +282,7 @@ export default function BragaMapTab() {
         <div className="mt-3 p-4 text-center rounded-sm" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px dashed rgb(var(--c) / 0.13)' }}>
           <MapPin size={20} style={{ color: 'rgb(var(--c) / 0.27)' }} className="mx-auto mb-2" />
           <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.33)' }}>
-            Sem pinos. Clique no mapa para começar.
+            {t('Sem pinos. Clique no mapa para começar.')}
           </p>
         </div>
       )}

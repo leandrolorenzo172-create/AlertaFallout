@@ -1,3 +1,4 @@
+import { t as tr } from '../../i18n';
 // Motor dos jogos LCD retro: ecrã de 84x48 píxeis a preto sobre verde, letra de 3x5, bips e
 // um comando no ecrã (analógico + botões A/B, toque e rato) mais o teclado do computador. JavaScript puro, offline.
 
@@ -124,7 +125,7 @@ export function mountShell(root, { title, help, a, b, mids = [], stick = 'free' 
     <div class="lcd-screen"><div class="lcd-glass"><canvas width="${W}" height="${H}" aria-label="${title}"></canvas></div></div>
     <div class="lcd-pad">
       <div class="lcd-side lcd-left">
-        <div class="lcd-stick" role="application" aria-label="Analógico: arrasta para mover"><div class="lcd-ring"><div class="lcd-thumb"></div></div></div>
+        <div class="lcd-stick" role="application" aria-label="${tr('Analógico: arrasta para mover')}"><div class="lcd-ring"><div class="lcd-thumb"></div></div></div>
       </div>
       <div class="lcd-mid">${mids.map((m) => `<button type="button" class="lcd-pill" data-k="${m.k}"><span></span>${m.label}</button>`).join('')}</div>
       <div class="lcd-side lcd-right">

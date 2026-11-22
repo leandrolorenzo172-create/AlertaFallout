@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Star, Search, X, List } from 'lucide-react';
 import { listDocs, getDoc, getFile, getMeta, setMeta, onKbChange, takeOpenRequest, pdfjs } from '@/lib/kb';
+import { t } from '@/i18n';
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c))' };
@@ -46,7 +47,7 @@ function Reader({ docId, startPage, onClose }) {
           }
           if (alive) setOutline(items);
         }
-      } catch (e) { if (alive) setError('Não foi possível abrir este documento.'); }
+      } catch (e) { if (alive) setError(t('Não foi possível abrir este documento.')); }
     })();
     return () => { alive = false; if (loaded) loaded.destroy(); };
   }, [docId, startPage]);
@@ -79,47 +80,47 @@ function Reader({ docId, startPage, onClose }) {
   };
   const words = norm(q).split(/[^a-z0-9]+/).filter((w) => w.length > 2);
   const hits = words.length && doc ? (doc.index || []).map((t, i) => (words.every((w) => t.includes(w)) ? i + 1 : 0)).filter(Boolean).slice(0, 40) : [];
-  const unit = doc?.unit || 'pág.';
+  const unit = doc?.unit || t('pág.');
 
   return (
     <div className="p-3 rounded-sm mb-4" style={box}>
       <div className="flex items-center gap-2 mb-2">
         <BookOpen size={14} />
-        <h3 className="flex-1 min-w-0 text-xs font-bold uppercase tracking-wider truncate">{doc?.title || 'A abrir...'}</h3>
-        <button type="button" onClick={onClose} aria-label="Fechar leitor" className="p-1.5 rounded-sm" style={btn}><X size={14} /></button>
+        <h3 className="flex-1 min-w-0 text-xs font-bold uppercase tracking-wider truncate">{doc?.title || t('A abrir...')}</h3>
+        <button type="button" onClick={onClose} aria-label={t('Fechar leitor')} className="p-1.5 rounded-sm" style={btn}><X size={14} /></button>
       </div>
       {error && <p className="text-xs" style={{ color: '#ff6600' }}>{error}</p>}
       <div className="flex flex-wrap items-center gap-1.5 mb-2 text-xs">
-        <button type="button" onClick={() => go(page - 1)} disabled={page <= 1} aria-label="Página anterior" className="p-1.5 rounded-sm disabled:opacity-30" style={btn}><ChevronLeft size={14} /></button>
-        <input id="reader-page" type="number" min="1" max={total} value={page} onChange={(e) => go(Number(e.target.value))} aria-label="Ir para a página"
+        <button type="button" onClick={() => go(page - 1)} disabled={page <= 1} aria-label={t('Página anterior')} className="p-1.5 rounded-sm disabled:opacity-30" style={btn}><ChevronLeft size={14} /></button>
+        <input id="reader-page" type="number" min="1" max={total} value={page} onChange={(e) => go(Number(e.target.value))} aria-label={t('Ir para a página')}
           className="w-14 px-1 py-1 rounded-sm text-center tabular-nums" style={{ ...btn, outline: 'none' }} />
         <span style={{ color: 'rgb(var(--c) / 0.6)' }}>/ {total} {unit}</span>
-        <button type="button" onClick={() => go(page + 1)} disabled={page >= total} aria-label="Página seguinte" className="p-1.5 rounded-sm disabled:opacity-30" style={btn}><ChevronRight size={14} /></button>
+        <button type="button" onClick={() => go(page + 1)} disabled={page >= total} aria-label={t('Página seguinte')} className="p-1.5 rounded-sm disabled:opacity-30" style={btn}><ChevronRight size={14} /></button>
         {pdf && <>
-          <button type="button" onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.2).toFixed(1)))} aria-label="Reduzir" className="p-1.5 rounded-sm" style={btn}><ZoomOut size={14} /></button>
+          <button type="button" onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.2).toFixed(1)))} aria-label={t('Reduzir')} className="p-1.5 rounded-sm" style={btn}><ZoomOut size={14} /></button>
           <span className="tabular-nums" style={{ color: 'rgb(var(--c) / 0.6)' }}>{Math.round(zoom * 100)}%</span>
-          <button type="button" onClick={() => setZoom((z) => Math.min(3, +(z + 0.2).toFixed(1)))} aria-label="Ampliar" className="p-1.5 rounded-sm" style={btn}><ZoomIn size={14} /></button>
+          <button type="button" onClick={() => setZoom((z) => Math.min(3, +(z + 0.2).toFixed(1)))} aria-label={t('Ampliar')} className="p-1.5 rounded-sm" style={btn}><ZoomIn size={14} /></button>
         </>}
-        <button type="button" onClick={toggleMark} aria-pressed={marks.includes(page)} aria-label="Marcar esta página" className="p-1.5 rounded-sm" style={{ ...btn, color: marks.includes(page) ? '#ffaa00' : 'rgb(var(--c))' }}>
+        <button type="button" onClick={toggleMark} aria-pressed={marks.includes(page)} aria-label={t('Marcar esta página')} className="p-1.5 rounded-sm" style={{ ...btn, color: marks.includes(page) ? '#ffaa00' : 'rgb(var(--c))' }}>
           <Star size={14} fill={marks.includes(page) ? '#ffaa00' : 'none'} />
         </button>
-        <button type="button" onClick={() => setShowIndex((v) => !v)} aria-pressed={showIndex} aria-label="Índice e marcadores" className="p-1.5 rounded-sm" style={btn}><List size={14} /></button>
+        <button type="button" onClick={() => setShowIndex((v) => !v)} aria-pressed={showIndex} aria-label={t('Índice e marcadores')} className="p-1.5 rounded-sm" style={btn}><List size={14} /></button>
       </div>
       <div className="flex items-center gap-2 mb-2 px-2 py-1 rounded-sm" style={btn}>
         <Search size={13} />
-        <input id="reader-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar neste documento..." className="flex-1 min-w-0 bg-transparent text-xs" style={{ outline: 'none', color: 'rgb(var(--c))' }} />
+        <input id="reader-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Procurar neste documento...')} className="flex-1 min-w-0 bg-transparent text-xs" style={{ outline: 'none', color: 'rgb(var(--c))' }} />
       </div>
       {words.length > 0 && (
         <p className="text-[11px] mb-2" style={{ color: 'rgb(var(--c) / 0.75)' }}>
-          {hits.length ? <>Encontrado em: {hits.map((h) => <button key={h} type="button" onClick={() => go(h)} className="underline mr-2">{unit} {h}</button>)}</> : 'Sem resultados neste documento.'}
+          {hits.length ? <>{t('Encontrado em:')}{' '}{hits.map((h) => <button key={h} type="button" onClick={() => go(h)} className="underline mr-2">{unit} {h}</button>)}</> : t('Sem resultados neste documento.')}
         </p>
       )}
       {showIndex && (
         <div className="mb-2 p-2 rounded-sm text-[11px]" style={{ background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.2)' }}>
-          <p className="uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.6)' }}>Marcadores</p>
-          {marks.length ? marks.map((m) => <button key={m} type="button" onClick={() => go(m)} className="underline mr-2">★ {unit} {m}</button>) : <span style={{ color: 'rgb(var(--c) / 0.5)' }}>Nenhum. Usa a estrela para marcar uma página.</span>}
-          <p className="uppercase tracking-wider mt-2 mb-1" style={{ color: 'rgb(var(--c) / 0.6)' }}>Índice</p>
-          {outline.length ? outline.map((o, i) => <button key={i} type="button" onClick={() => go(o.page)} className="block text-left underline">{o.title} — pág. {o.page}</button>) : <span style={{ color: 'rgb(var(--c) / 0.5)' }}>Este documento não traz índice de capítulos.</span>}
+          <p className="uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.6)' }}>{t('Marcadores')}</p>
+          {marks.length ? marks.map((m) => <button key={m} type="button" onClick={() => go(m)} className="underline mr-2">★ {unit} {m}</button>) : <span style={{ color: 'rgb(var(--c) / 0.5)' }}>{t('Nenhum. Usa a estrela para marcar uma página.')}</span>}
+          <p className="uppercase tracking-wider mt-2 mb-1" style={{ color: 'rgb(var(--c) / 0.6)' }}>{t('Índice')}</p>
+          {outline.length ? outline.map((o, i) => <button key={i} type="button" onClick={() => go(o.page)} className="block text-left underline">{o.title}{' '}{t('— pág.')}{' '}{o.page}</button>) : <span style={{ color: 'rgb(var(--c) / 0.5)' }}>{t('Este documento não traz índice de capítulos.')}</span>}
         </div>
       )}
       <div ref={wrapRef} className="overflow-auto rounded-sm" style={{ maxHeight: '70vh', background: pdf ? '#fff' : 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.2)' }}>
@@ -153,11 +154,11 @@ export default function DocLibrary() {
 
   return (
     <div className="mb-4">
-      <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold mb-2"><BookOpen size={14} /> Documentos importados ({docs.length})</h3>
+      <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold mb-2"><BookOpen size={14} />{' '}{t('Documentos importados (')}{docs.length})</h3>
       {open && <Reader key={`${open.docId}|${open.page || 0}`} docId={open.docId} startPage={open.page} onClose={() => { setOpen(null); load(); }} />}
       {docs.length === 0 ? (
         <p className="p-3 rounded-sm text-[11px]" style={{ ...box, color: 'rgb(var(--c) / 0.6)' }}>
-          Ainda não há documentos. Importa PDF ou texto no separador Ficheiros IA e aparecem aqui para leitura offline.
+          {t('Ainda não há documentos. Importa PDF ou texto no separador Ficheiros IA e aparecem aqui para leitura offline.')}
         </p>
       ) : (
         <ul className="flex flex-col gap-1.5">

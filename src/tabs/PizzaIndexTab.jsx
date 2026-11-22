@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Loader2, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import ThreatGauge from '../pipboy/ThreatGauge';
 import { alpha } from '../theme';
+import { t } from '@/i18n';
 
 const CACHE_KEY = 'pipboy_pizza_index_v1';
 const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
@@ -83,9 +84,9 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
 
       if (cached && cached.data) {
         setData(cached.data);
-        setError('Limite de pedidos atingido — a mostrar a última leitura guardada.');
+        setError(t('Limite de pedidos atingido — a mostrar a última leitura guardada.'));
       } else {
-        setError('Não foi possível calcular o Índice Pizza: limite de pedidos atingido.');
+        setError(t('Não foi possível calcular o Índice Pizza: limite de pedidos atingido.'));
       }
     } finally {
       setLoading(false);
@@ -108,7 +109,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
           <Loader2 size={24} style={{ color: 'rgb(var(--c))' }} />
         </motion.div>
         <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-          A CALCULAR ÍNDICE PIZZA...
+          {t('A CALCULAR ÍNDICE PIZZA...')}
         </p>
       </div>
     );
@@ -120,19 +121,19 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
         <div className="flex items-center gap-2 mb-4">
           <span className="text-lg">🍕</span>
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Índice Pizza
+            {t('Índice Pizza')}
           </h2>
         </div>
         <div className="p-4 rounded-sm text-center" style={{ background: '#ff000011', border: '1px solid #ff000033' }}>
           <p className="text-xs leading-relaxed mb-3" style={{ color: '#ff5555cc' }}>
-            ⚠️ {error || 'Sem dados disponíveis.'}
+            ⚠️ {error || t('Sem dados disponíveis.')}
           </p>
           <button
             onClick={() => fetchData(true)}
             className="px-3 py-2 rounded-sm text-[10px] uppercase tracking-wider inline-flex items-center gap-2"
             style={{ background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.27)', color: 'rgb(var(--c))' }}
           >
-            <RefreshCw size={12} /> Tentar novamente
+            <RefreshCw size={12} />{' '}{t('Tentar novamente')}
           </button>
         </div>
       </div>
@@ -149,7 +150,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
         <div className="flex items-center gap-2">
           <span className="text-lg">🍕</span>
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            Índice Pizza
+            {t('Índice Pizza')}
           </h2>
         </div>
         <button onClick={() => fetchData(true)} className="p-2 rounded-sm hover:bg-white/5" style={{ color: 'rgb(var(--c) / 0.53)' }}>
@@ -176,16 +177,16 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
         <div className="flex items-center justify-center gap-2 mb-3">
           <TrendIcon size={16} style={{ color: levelColor }} />
           <span className="text-xs uppercase tracking-wider" style={{ color: `${alpha(levelColor, 'cc')}` }}>
-            {data?.trend === 'subindo' ? 'A SUBIR' : data?.trend === 'descendo' ? 'A DESCER' : 'ESTÁVEL'}
+            {data?.trend === 'subindo' ? t('A SUBIR') : data?.trend === 'descendo' ? t('A DESCER') : t('ESTÁVEL')}
           </span>
         </div>
-        <ThreatGauge label="Nível de Atividade" value={level} />
+        <ThreatGauge label={t('Nível de Atividade')} value={level} />
       </motion.div>
 
       {/* Explanation */}
       <div className="p-3 rounded-sm mb-4" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
         <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-          O que é o Índice Pizza?
+          {t('O que é o Índice Pizza?')}
         </h3>
         <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.47)' }}>
           {data?.explanation}
@@ -196,7 +197,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       {data?.current_indicators?.length > 0 && (
         <div className="mb-4">
           <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-            Indicadores Atuais
+            {t('Indicadores Atuais')}
           </h3>
           {data.current_indicators.map((ind, i) => (
             <motion.div
@@ -218,7 +219,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       {data?.historical_events?.length > 0 && (
         <div className="mb-4">
           <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-            Histórico de Crises
+            {t('Histórico de Crises')}
           </h3>
           {data.historical_events.map((evt, i) => (
             <div key={i} className="flex items-center justify-between p-2 mb-1 rounded-sm"
@@ -239,7 +240,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       {data?.citizen_meaning && (
         <div className="p-3 rounded-sm" style={{ background: '#ffaa0011', border: '1px solid #ffaa0033' }}>
           <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: '#ffaa00cc' }}>
-            ⚠️ O Que Significa Para Si
+            {t('⚠️ O Que Significa Para Si')}
           </h3>
           <p className="text-xs leading-relaxed" style={{ color: '#ffaa0099' }}>
             {data.citizen_meaning}

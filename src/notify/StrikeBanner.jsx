@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Megaphone, X } from 'lucide-react';
 import { startStrikeAlerts } from './strikeAlerts';
+import { t } from '@/i18n';
 
 export default function StrikeBanner() {
   const [list, setList] = useState([]);
@@ -27,7 +28,7 @@ export default function StrikeBanner() {
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ffaa00' }}>{a.title}</p>
             <p className="text-[11px] leading-snug mt-0.5" style={{ color: 'rgb(var(--c) / 0.8)' }}>{a.body}</p>
           </button>
-          <button type="button" aria-label="Fechar aviso" onClick={() => close(a.title)} className="p-1 shrink-0" style={{ color: 'rgb(var(--c) / 0.6)' }}><X size={14} /></button>
+          <button type="button" aria-label={t('Fechar aviso')} onClick={() => close(a.title)} className="p-1 shrink-0" style={{ color: 'rgb(var(--c) / 0.6)' }}><X size={14} /></button>
         </div>
       ))}
     </div>

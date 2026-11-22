@@ -8,6 +8,7 @@ import mapaUrl from './assets/mapa.webp';
 import torresUrl from './assets/torres.webp';
 import espUrl from './assets/especiais.webp';
 import ESP from './assets/especiais.json';
+import { t as tr } from '../../i18n';
 
 // mapa desenhado pelo dono da app (redesenhado com IA): ocupa a largura toda, na parte de baixo do ecrã
 let mapa = null;
@@ -349,7 +350,7 @@ export function render(ctx, g, C, t) {
   c.globalAlpha = 1;
   c.setTransform(1, 0, 0, 1, 0, 0);
   drawHudFrames(c, C, g);
-  if (g.t > SIEGE_AT && !g.over) { c.font = 'bold 16px monospace'; c.textAlign = 'center'; c.fillStyle = C.ink; R(c, WD / 2 - 150, 8, 300, 24); c.fillStyle = C.red; c.fillText('CERCO: AS BASES PERDEM VIDA', WD / 2, 26); }
+  if (g.t > SIEGE_AT && !g.over) { c.font = 'bold 16px monospace'; c.textAlign = 'center'; c.fillStyle = C.ink; R(c, WD / 2 - 150, 8, 300, 24); c.fillStyle = C.red; c.fillText(tr('CERCO: AS BASES PERDEM VIDA'), WD / 2, 26); }
 }
 
 // Sprite de uma tropa para as cartas

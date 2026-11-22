@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Shield } from 'lucide-react';
 import { manualSections } from '@/data/survivalManual';
 import DocLibrary from '../pipboy/DocLibrary';
+import { t } from '@/i18n';
 
 function ManualSection({ section }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,13 +45,13 @@ function ManualSection({ section }) {
                 <div className="mb-3 rounded-sm overflow-hidden" style={{ border: '1px solid rgb(var(--c) / 0.2)', background: '#0a0a0a' }}>
                   <img
                     src={section.image}
-                    alt={`Diagrama ilustrativo: ${section.title}`}
+                    alt={t('Diagrama ilustrativo: {x}', { x: section.title })}
                     loading="lazy"
                     className="w-full h-auto"
                     style={{ display: 'block', filter: 'brightness(0.95)' }}
                   />
                   <p className="text-[9px] uppercase tracking-wider p-1.5 text-center" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-                    📐 Diagrama Técnico — {section.title}
+                    {t('📐 Diagrama Técnico —')}{' '}{section.title}
                   </p>
                 </div>
               )}
@@ -71,19 +72,19 @@ export default function SurvivalManualTab() {
       <div className="flex items-center gap-2 mb-4">
         <Shield size={16} style={{ color: 'rgb(var(--c))' }} />
         <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-          Manual de Sobrevivência Tático
+          {t('Manual de Sobrevivência Tático')}
         </h2>
       </div>
 
       <div className="p-3 rounded-sm mb-4" style={{ background: '#ffaa0011', border: '1px solid #ffaa0033' }}>
         <p className="text-[10px] uppercase tracking-wider" style={{ color: '#ffaa0099' }}>
-          ⚠️ Manual tático avançado — FM 21-76 / SAS Handbook. Em emergência real, contacte 112.
+          {t('⚠️ Manual tático avançado — FM 21-76 / SAS Handbook. Em emergência real, contacte 112.')}
         </p>
       </div>
 
       <div className="p-2 rounded-sm mb-4" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
         <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          📚 {manualSections.length} secções táticas | 📐 Diagramas ilustrativos em secções-chave
+          📚 {manualSections.length}{' '}{t('secções táticas | 📐 Diagramas ilustrativos em secções-chave')}
         </p>
       </div>
 

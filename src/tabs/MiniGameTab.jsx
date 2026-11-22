@@ -9,22 +9,23 @@ import { mountSpace, createSpace } from '../game/lcd/space';
 import { mountSnake, createSnake } from '../game/lcd/snake';
 import { createScreen, demoInput, runLoop, loadBest } from '../game/lcd/engine';
 import '../game/lcd/lcd.css';
+import { t } from '@/i18n';
 
 const GAMES = [
-  { id: 'erawar', name: 'Guerra das Eras', sub: 'Defesa de base', icon: Swords },
-  { id: 'space', name: 'Patrulha Estelar', sub: 'Nave · LCD', icon: Rocket },
-  { id: 'snake', name: 'Cobra', sub: 'Cobrinha · LCD', icon: Worm },
+  { id: 'erawar', name: t('Guerra das Eras'), sub: t('Defesa de base'), icon: Swords },
+  { id: 'space', name: t('Patrulha Estelar'), sub: t('Nave · LCD'), icon: Rocket },
+  { id: 'snake', name: t('Cobra'), sub: t('Cobrinha · LCD'), icon: Worm },
 ];
 const LCD_INFO = {
   space: {
-    title: 'PATRULHA ESTELAR', tag: 'Retro LCD · shooter de rolagem lateral', best: 'pb_lcd_space_best', digits: 5,
+    title: t('PATRULHA ESTELAR'), tag: t('Retro LCD · shooter de rolagem lateral'), best: 'pb_lcd_space_best', digits: 5,
     text: 'Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.',
-    points: [[Heart, '3 vidas em corações e bónus de vida pelo caminho.'], [Crosshair, 'Disparo automático ao manter A e laser especial no B.'], [Zap, 'Chefes resistentes que disparam em leque.'], [Joystick, 'Analógico no ecrã ou setas/WASD no PC.']],
+    points: [[Heart, t('3 vidas em corações e bónus de vida pelo caminho.')], [Crosshair, t('Disparo automático ao manter A e laser especial no B.')], [Zap, t('Chefes resistentes que disparam em leque.')], [Joystick, t('Analógico no ecrã ou setas/WASD no PC.')]],
   },
   snake: {
-    title: 'COBRA', tag: 'Retro LCD · o clássico da cobrinha', best: 'pb_lcd_snake_best', digits: 4,
+    title: 'COBRA', tag: t('Retro LCD · o clássico da cobrinha'), best: 'pb_lcd_snake_best', digits: 4,
     text: 'Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.',
-    points: [[Gauge, '9 níveis de velocidade, escolhe no menu.'], [Bug, 'Bicho de bónus com contagem decrescente.'], [Joystick, 'Analógico, deslizar o dedo ou setas no PC.'], [Trophy, 'Recorde guardado no aparelho.']],
+    points: [[Gauge, t('9 níveis de velocidade, escolhe no menu.')], [Bug, t('Bicho de bónus com contagem decrescente.')], [Joystick, t('Analógico, deslizar o dedo ou setas no PC.')], [Trophy, t('Recorde guardado no aparelho.')]],
   },
 };
 
@@ -57,9 +58,9 @@ function LcdGame({ kind, onExit }) {
 }
 
 const DIFFS = [
-  { id: 'easy', desc: 'A IA junta caricas mais devagar e demora a evoluir.' },
-  { id: 'medium', desc: 'Ritmo equilibrado de ataque e de evolução.' },
-  { id: 'hard', desc: 'Gere bem as caricas, constrói defesas e usa os especiais na altura certa.' },
+  { id: 'easy', desc: t('A IA junta caricas mais devagar e demora a evoluir.') },
+  { id: 'medium', desc: t('Ritmo equilibrado de ataque e de evolução.') },
+  { id: 'hard', desc: t('Gere bem as caricas, constrói defesas e usa os especiais na altura certa.') },
 ];
 
 // Pré-visualização animada no cartão: uma batalha IA contra IA a correr em segundo plano
@@ -130,12 +131,12 @@ export default function MiniGameTab() {
     <div className="p-4 max-w-3xl mx-auto" onPointerDown={startMenuMusic}>
       <div className="flex items-center gap-2 mb-4">
         <Gamepad2 size={16} />
-        <h2 className="text-sm uppercase tracking-wider font-bold flex-1">Mini Jogo</h2>
-        {sndBtn('music', '♫ MÚSICA')}
-        {sndBtn('sfx', '♬ EFEITOS')}
+        <h2 className="text-sm uppercase tracking-wider font-bold flex-1">{t('Mini Jogo')}</h2>
+        {sndBtn('music', t('♫ MÚSICA'))}
+        {sndBtn('sfx', t('♬ EFEITOS'))}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-3" role="tablist" aria-label="Escolher jogo">
+      <div className="grid grid-cols-3 gap-2 mb-3" role="tablist" aria-label={t('Escolher jogo')}>
         {GAMES.map((gm) => {
           const on = game === gm.id; const Icon = gm.icon;
           return (
@@ -162,15 +163,15 @@ export default function MiniGameTab() {
               {LCD_INFO[game].points.map(([Icon, t]) => <li key={t} className="flex gap-2"><Icon size={14} className="shrink-0" /> {t}</li>)}
             </ul>
             <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.8)', border: '2px solid rgb(var(--c) / 0.25)' }}>
-              <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}><Trophy size={14} /> Recorde</span>
+              <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}><Trophy size={14} />{' '}{t('Recorde')}</span>
               <span className="text-lg font-bold tabular-nums" style={{ color: '#ffb000' }}>{String(loadBest(LCD_INFO[game].best)).padStart(LCD_INFO[game].digits, '0')}</span>
             </div>
             <button type="button" onClick={() => { audio.ui.confirm(); setLcdPlaying(true); }} className="w-full py-3 rounded-sm text-sm font-bold tracking-widest"
               style={{ background: 'rgb(var(--c))', color: 'rgb(var(--cb))', boxShadow: '0 0 16px rgb(var(--c) / 0.4)' }}>
-              ▶ JOGAR
+              {t('▶ JOGAR')}
             </button>
             <p className="text-[10px] mt-2 text-center" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-              Telemóvel: analógico à esquerda, botões A e B à direita. PC: setas/WASD e espaço. Funciona sem internet.
+              {t('Telemóvel: analógico à esquerda, botões A e B à direita. PC: setas/WASD e espaço. Funciona sem internet.')}
             </p>
           </div>
         </section>
@@ -183,21 +184,20 @@ export default function MiniGameTab() {
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(0deg, rgb(0 0 0 / 0.06) 0 1px, transparent 1px 3px)' }} />
         </div>
         <div className="p-4">
-          <h3 className="text-xl font-bold tracking-widest" style={{ textShadow: '0 0 10px rgb(var(--c) / 0.6)' }}>GUERRA DAS ERAS</h3>
-          <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: '#ffb000' }}>Retro 8-bit · defesa de base pós-apocalíptica</p>
+          <h3 className="text-xl font-bold tracking-widest" style={{ textShadow: '0 0 10px rgb(var(--c) / 0.6)' }}>{t('GUERRA DAS ERAS')}</h3>
+          <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: '#ffb000' }}>{t('Retro 8-bit · defesa de base pós-apocalíptica')}</p>
           <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgb(var(--c) / 0.8)' }}>
-            Destrói o abrigo inimigo antes que ele destrua o teu. Treina exploradores, ganha caricas e XP a cada baixa e faz o teu grupo
-            avançar dos Sobreviventes Primitivos até à Armadura Futurista.
+            {t('Destrói o abrigo inimigo antes que ele destrua o teu. Treina exploradores, ganha caricas e XP a cada baixa e faz o teu grupo avançar dos Sobreviventes Primitivos até à Armadura Futurista.')}
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] mb-4" style={{ color: 'rgb(var(--c) / 0.8)' }}>
-            <li className="flex gap-2"><Swords size={14} className="shrink-0" /> 3 tropas por era: linha da frente, atiradores e pesadas.</li>
-            <li className="flex gap-2"><TrendingUp size={14} className="shrink-0" /> 5 eras: Primitivos, Sucateiros, Milícia, Táticas e Futurista.</li>
-            <li className="flex gap-2"><Shield size={14} className="shrink-0" /> Torres na base, até 3 espaços.</li>
-            <li className="flex gap-2"><Zap size={14} className="shrink-0" /> Especiais com recarga: destroços, morteiros, gás tóxico, bombardeamento e Mini Nuke.</li>
+            <li className="flex gap-2"><Swords size={14} className="shrink-0" />{' '}{t('3 tropas por era: linha da frente, atiradores e pesadas.')}</li>
+            <li className="flex gap-2"><TrendingUp size={14} className="shrink-0" />{' '}{t('5 eras: Primitivos, Sucateiros, Milícia, Táticas e Futurista.')}</li>
+            <li className="flex gap-2"><Shield size={14} className="shrink-0" />{' '}{t('Torres na base, até 3 espaços.')}</li>
+            <li className="flex gap-2"><Zap size={14} className="shrink-0" />{' '}{t('Especiais com recarga: destroços, morteiros, gás tóxico, bombardeamento e Mini Nuke.')}</li>
           </ul>
 
-          <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.6)' }}>Dificuldade da IA</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4" role="radiogroup" aria-label="Dificuldade">
+          <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.6)' }}>{t('Dificuldade da IA')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4" role="radiogroup" aria-label={t('Dificuldade')}>
             {DIFFS.map((d) => {
               const on = diff === d.id; const s = stats[d.id];
               return (
@@ -206,16 +206,16 @@ export default function MiniGameTab() {
                   style={{ background: on ? 'rgb(var(--c) / 0.15)' : 'rgb(var(--cb) / 0.8)', border: `2px solid rgb(var(--c) / ${on ? 0.9 : 0.25})`, color: 'rgb(var(--c))' }}>
                   <span className="block text-sm font-bold">{DIFFICULTY[d.id].label}{on ? ' ◆' : ''}</span>
                   <span className="block text-[10px] mt-1" style={{ color: 'rgb(var(--c) / 0.7)' }}>{d.desc}</span>
-                  <span className="block text-[10px] mt-1" style={{ color: '#ffb000' }}>{s ? `${s.w} vitórias · ${s.l} derrotas` : 'Ainda não jogado'}</span>
+                  <span className="block text-[10px] mt-1" style={{ color: '#ffb000' }}>{s ? t('{w} vitórias · {l} derrotas', { w: s.w, l: s.l }) : t('Ainda não jogado')}</span>
                 </button>
               );
             })}
           </div>
           <button type="button" onClick={() => { audio.ui.confirm(); setPlaying(diff); }} className="w-full py-3 rounded-sm text-sm font-bold tracking-widest"
             style={{ background: 'rgb(var(--c))', color: 'rgb(var(--cb))', boxShadow: '0 0 16px rgb(var(--c) / 0.4)' }}>
-            ▶ JOGAR
+            {t('▶ JOGAR')}
           </button>
-          <p className="text-[10px] mt-2 text-center" style={{ color: 'rgb(var(--c) / 0.55)' }}>Funciona sem internet. Melhor com o telemóvel na horizontal.</p>
+          <p className="text-[10px] mt-2 text-center" style={{ color: 'rgb(var(--c) / 0.55)' }}>{t('Funciona sem internet. Melhor com o telemóvel na horizontal.')}</p>
         </div>
       </section>
       )}

@@ -7,6 +7,7 @@ import { manualSections } from '@/data/survivalManual';
 import { listDocs, onKbChange } from '@/lib/kb';
 import { DEFAULT_STATIONS } from '@/radio/defaultStations';
 import stationsPT from '@/data/stationsPT.json';
+import { locale } from '../../i18n';
 
 // ---------- Texto ----------
 const STOP = new Set(('a o os as um uma uns umas de do da dos das em no na nos nas por para pelo pela pelos pelas com sem sob sobre '
@@ -54,7 +55,7 @@ function appDataDocs() {
   const dash = readCache('dashboard_cache');
   if (dash && dash.data) {
     const d = dash.data;
-    const when = dash.timestamp ? new Date(dash.timestamp).toLocaleString('pt-PT') : 'última atualização';
+    const when = dash.timestamp ? new Date(dash.timestamp).toLocaleString(locale()) : 'última atualização';
     docs.push({
       source: 'app', title: 'Painel de ameaças (dados guardados)', ref: `Painel · ${when}`, route: '/dashboard',
       text: `Nível de ameaça global ${d.global_threat_level}/10. Risco de guerra ${d.war_risk}/10. Tensão geopolítica ${d.geopolitical_tension}/10. `
@@ -65,7 +66,7 @@ function appDataDocs() {
   for (const [key, title, route] of [['war_news_cache', 'Notícias de guerra (guardadas)', '/guerra'], ['catastrophe_cache', 'Catástrofes (guardadas)', '/catastrofes']]) {
     const c = readCache(key);
     if (c && Array.isArray(c.articles) && c.articles.length) {
-      const when = c.timestamp ? new Date(c.timestamp).toLocaleString('pt-PT') : 'última atualização';
+      const when = c.timestamp ? new Date(c.timestamp).toLocaleString(locale()) : 'última atualização';
       docs.push({ source: 'app', title, ref: `${title.replace(/ \(.*/, '')} · ${when}`, route, text: c.articles.slice(0, 12).map((a) => `- **${a.title}** (${a.region || 'global'}, gravidade ${a.severity}/10): ${a.summary || ''}`).join('\n') });
     }
   }

@@ -1,3 +1,4 @@
+import { locale, t as tr, isEn } from '../i18n';
 // Dados reais de fontes públicas, usados quando a app corre fora do claude.ai.
 // - Meteorologia e avisos: IPMA (api.ipma.pt). Previsão a 15 dias: Open-Meteo, com o IPMA (5 dias) como reserva.
 // - Catástrofes: GDACS (alertas laranja/vermelho) e USGS (sismos).
@@ -32,7 +33,9 @@ const AREAS = {
   VCT: 'Viana do Castelo', VRL: 'Vila Real', VIS: 'Viseu', MCN: 'Madeira (costa norte)', MCS: 'Madeira (costa sul)',
   MRM: 'Madeira (montanha)', MPS: 'Porto Santo', AOR: 'Açores (oriental)', ACE: 'Açores (central)', AOC: 'Açores (ocidental)',
 };
-const LEVEL_PT = { yellow: 'amarelo', orange: 'laranja', red: 'vermelho' };
+const LEVEL_PT = { yellow: tr('amarelo'), orange: tr('laranja'), red: tr('vermelho') };
+// tipos de aviso do IPMA (nomes que vêm em português)
+const ALERT_TYPE = (x) => tr(x || '');
 const SEA_SPOTS = [
   { id: 1160926, name: 'Viana do Castelo (costa do Minho)' },
   { id: 1130826, name: 'Porto (costa norte)' },
@@ -43,23 +46,23 @@ const SEA_SPOTS = [
   { id: 1080526, name: 'Faro' },
 ];
 const WMO_PT = (c) => {
-  if (c === 0) return 'Céu limpo';
-  if (c <= 2) return 'Céu pouco nublado';
-  if (c === 3) return 'Céu muito nublado';
-  if (c <= 48) return 'Nevoeiro';
-  if (c <= 57) return 'Chuvisco';
-  if (c <= 67) return 'Chuva';
-  if (c <= 77) return 'Neve';
-  if (c <= 82) return 'Aguaceiros de chuva';
-  if (c <= 86) return 'Aguaceiros de neve';
-  return 'Trovoada com chuva';
+  if (c === 0) return tr('Céu limpo');
+  if (c <= 2) return tr('Céu pouco nublado');
+  if (c === 3) return tr('Céu muito nublado');
+  if (c <= 48) return tr('Nevoeiro');
+  if (c <= 57) return tr('Chuvisco');
+  if (c <= 67) return tr('Chuva');
+  if (c <= 77) return tr('Neve');
+  if (c <= 82) return tr('Aguaceiros de chuva');
+  if (c <= 86) return tr('Aguaceiros de neve');
+  return tr('Trovoada com chuva');
 };
 const DEG_DIR = (d) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(((d % 360) / 45)) % 8];
 const dayName = (iso) => {
-  const s = new Date(`${iso}T12:00:00`).toLocaleDateString('pt-PT', { weekday: 'long' });
+  const s = new Date(`${iso}T12:00:00`).toLocaleDateString(locale(), { weekday: 'long' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
-const shortDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+const shortDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
 
 export async function fetchWeather() {
   const safe = (p) => p.catch(() => null);
@@ -71,11 +74,11 @@ export async function fetchWeather() {
     safe(getJson(`${IPMA}forecast/oceanography/daily/hp-daily-sea-forecast-day0.json`)),
     ...CITIES.map((c) => safe(getJson(`${IPMA}forecast/meteorology/cities/daily/${c.id}.json`))),
   ]);
-  if (daily.every((d) => !d)) throw new Error('IPMA indisponível');
+  if (daily.every((d) => !d)) throw new Error(tr('IPMA indisponível'));
 
   const typeName = (id) => {
     const t = types?.data?.find((x) => x.idWeatherType === id);
-    return t?.descWeatherTypePT || t?.descIdWeatherTypePT || '—';
+    return (isEn() && t?.descWeatherTypeEN) || t?.descWeatherTypePT || t?.descIdWeatherTypePT || '—';
   };
   const today = new Date().toISOString().slice(0, 10);
   const obsKeys = obs ? Object.keys(obs).sort() : [];
@@ -109,7 +112,7 @@ export async function fetchWeather() {
   const active = (warnings || []).filter((w) => w.awarenessLevelID !== 'green' && new Date(w.endTime).getTime() > now);
   const rank = { red: 0, orange: 1, yellow: 2 };
   active.sort((a, b) => (rank[a.awarenessLevelID] - rank[b.awarenessLevelID]) || a.startTime.localeCompare(b.startTime));
-  const fmt = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const fmt = (t) => new Date(t).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   // o mesmo aviso costuma repetir-se por vários distritos: junta-os numa só linha
   const groups = new Map();
   for (const w of active) {
@@ -119,9 +122,9 @@ export async function fetchWeather() {
   }
   const alerts = [...groups.values()].slice(0, 10).map(({ w, areas }) => ({
     city: areas.join(', '),
-    alert_type: w.awarenessTypeName,
+    alert_type: ALERT_TYPE(w.awarenessTypeName),
     severity: LEVEL_PT[w.awarenessLevelID] || w.awarenessLevelID,
-    description: `${w.text || ''} (${fmt(w.startTime)} a ${fmt(w.endTime)})`.trim(),
+    description: `${w.text || ''} (${tr('{a} a {b}', { a: fmt(w.startTime), b: fmt(w.endTime) })})`.trim(),
   }));
 
   const bragaIpma = (daily[2]?.data || []).map((d) => ({
@@ -163,14 +166,14 @@ export async function fetchWeather() {
     if (!f) return null;
     const h = Number(f.totalSeaMax);
     const w = seaWarn(SEA_AREA[s.id]);
-    const sev = h >= 6 ? 'Muito forte' : h >= 4 ? 'Forte' : h >= 2.5 ? 'Moderada' : 'Fraca';
+    const sev = h >= 6 ? tr('Muito forte') : h >= 4 ? tr('Forte') : h >= 2.5 ? tr('Moderada') : tr('Fraca');
     return {
       region: s.name,
       wave_height_m: round1(h),
       wind_direction: f.predWaveDir,
-      wind_intensity: `Período das ondas até ${f.wavePeriodMax} s`,
-      severity: w ? `Aviso ${LEVEL_PT[w.awarenessLevelID]}` : sev,
-      description: w ? w.text : `Ondulação de ${f.predWaveDir} com ${f.waveHighMin} a ${f.waveHighMax} m. Água a ${f.sstMax} °C.`,
+      wind_intensity: tr('Período das ondas até {n} s', { n: f.wavePeriodMax }),
+      severity: w ? tr('Aviso {n}', { n: LEVEL_PT[w.awarenessLevelID] }) : sev,
+      description: w ? w.text : tr('Ondulação de {d} com {a} a {b} m. Água a {c} °C.', { d: f.predWaveDir, a: f.waveHighMin, b: f.waveHighMax, c: f.sstMax }),
       is_active: !!w || h >= 4,
     };
   }).filter(Boolean);
@@ -185,17 +188,17 @@ export async function fetchWeather() {
 }
 
 // ---------------- Catástrofes (GDACS + USGS) ----------------
-const GDACS_TYPE = { EQ: 'Sismo', TC: 'Ciclone tropical', FL: 'Cheias', VO: 'Erupção vulcânica', DR: 'Seca', WF: 'Incêndio florestal', TS: 'Tsunami' };
+const GDACS_TYPE = { EQ: tr('Sismo'), TC: tr('Ciclone tropical'), FL: tr('Cheias'), VO: tr('Erupção vulcânica'), DR: tr('Seca'), WF: tr('Incêndio florestal'), TS: tr('Tsunami') };
 
 export async function fetchCatastrophes() {
   const [g, q] = await Promise.all([
     getJson('https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?alertlevel=orange;red', 20000).catch(() => null),
     getJson('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson', 20000).catch(() => null),
   ]);
-  if (!g && !q) throw new Error('Fontes de catástrofes indisponíveis');
+  if (!g && !q) throw new Error(tr('Fontes de catástrofes indisponíveis'));
   const articles = [];
   const monthAgo = Date.now() - 10 * 86400000; // só eventos em curso ou dos últimos 10 dias
-  const fmt = (t) => new Date(t).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+  const fmt = (t) => new Date(t).toLocaleDateString(locale(), { day: '2-digit', month: 'short' });
 
   const events = (g?.features || []).map((f) => f.properties)
     .filter((p) => p.iscurrent === 'true' || new Date(p.todate).getTime() > monthAgo)
@@ -205,7 +208,7 @@ export async function fetchCatastrophes() {
     const kind = GDACS_TYPE[p.eventtype] || p.eventtype;
     articles.push({
       title: `${kind}: ${p.country || p.name}`,
-      summary: `Alerta ${red ? 'vermelho' : 'laranja'} do GDACS. ${p.name}. ${p.severitydata?.severitytext || ''} De ${fmt(p.fromdate)} a ${fmt(p.todate)}.`.replace(/\s+/g, ' ').trim(),
+      summary: `${red ? tr('Alerta vermelho do GDACS.') : tr('Alerta laranja do GDACS.')} ${p.name}. ${p.severitydata?.severitytext || ''} ${tr('De {a} a {b}.', { a: fmt(p.fromdate), b: fmt(p.todate) })}`.replace(/\s+/g, ' ').trim(),
       severity: red ? 9 : 7,
       region: p.country || 'Global',
       source: 'GDACS',
@@ -216,8 +219,8 @@ export async function fetchCatastrophes() {
   const quakes = (q?.features || []).map((f) => f.properties).filter((p) => p.mag >= 5.5).sort((a, b) => b.mag - a.mag).slice(0, 6);
   for (const p of quakes) {
     articles.push({
-      title: `Sismo de magnitude ${p.mag.toFixed(1)}`,
-      summary: `${p.place}. Registado em ${new Date(p.time).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}.${p.tsunami ? ' Possível tsunami.' : ''}`,
+      title: tr('Sismo de magnitude {m}', { m: p.mag.toFixed(1) }),
+      summary: `${p.place}. ${tr('Registado em')} ${new Date(p.time).toLocaleString(locale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}.${p.tsunami ? tr(' Possível tsunami.') : ''}`,
       severity: clamp(Math.round((p.mag - 5.5) * 2.4 + 5), 1, 10),
       region: (p.place || '').split(', ').pop() || 'Global',
       source: 'USGS',
@@ -240,7 +243,7 @@ async function fetchNewsFile() {
 
 export async function fetchWarNews() {
   const n = await fetchNewsFile().catch(() => null);
-  if (!n) throw new Error('Notícias ainda não disponíveis. São recolhidas de hora a hora.');
+  if (!n) throw new Error(tr('Notícias ainda não disponíveis. São recolhidas de hora a hora.'));
   return { articles: (n.war || []).slice(0, 12) };
 }
 
@@ -249,7 +252,7 @@ const scoreFromCount = (count, per10) => clamp(round1(1 + (count / per10) * 9), 
 
 export async function fetchDashboard() {
   const [n, cat] = await Promise.all([fetchNewsFile().catch(() => null), fetchCatastrophes().catch(() => null)]);
-  if (!n && !cat) throw new Error('Sem fontes de dados disponíveis');
+  if (!n && !cat) throw new Error(tr('Sem fontes de dados disponíveis'));
   const war = n?.war || [];
   const c = n?.counts || { total: 0, war: 0, prep: 0, econ: 0, cyber: 0 };
   const avgSev = war.length ? war.slice(0, 10).reduce((s, a) => s + a.severity, 0) / Math.min(10, war.length) : 1;
@@ -268,10 +271,10 @@ export async function fetchDashboard() {
     ...war.map((a) => ({ title: a.title, severity: a.severity, type: 'guerra', region: a.region })),
     ...cats.map((a) => ({ title: a.title, severity: a.severity, type: 'catástrofe', region: a.region })),
   ].sort((a, b) => b.severity - a.severity).slice(0, 5);
-  const when = n?.generated ? new Date(n.generated).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+  const when = n?.generated ? new Date(n.generated).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
   return {
     war_risk, geopolitical_tension, natural_disaster_risk, economic_instability, cyber_risk, strike_index, global_threat_level, critical_events,
-    summary: `Índices calculados automaticamente, não são uma avaliação oficial. ${n ? `Baseados em ${c.total} notícias de jornais portugueses (${c.war} sobre conflitos, ${c.econ} sobre economia, ${c.cyber} sobre ciberataques), recolhidas em ${when}` : 'Notícias indisponíveis'}${cat ? `, e em ${cats.length} alertas do GDACS e do USGS.` : '.'}`,
+    summary: `${tr('Índices calculados automaticamente, não são uma avaliação oficial.')} ${n ? tr('Baseados em {t} notícias de jornais portugueses ({w} sobre conflitos, {e} sobre economia, {c} sobre ciberataques), recolhidas em {when}', { t: c.total, w: c.war, e: c.econ, c: c.cyber, when }) : tr('Notícias indisponíveis')}${cat ? tr(', e em {n} alertas do GDACS e do USGS.', { n: cats.length }) : '.'}`,
   };
 }
 
@@ -279,19 +282,19 @@ export async function fetchDashboard() {
 // economy = { level 1-10, total, negative, history: [{ d: 'AAAA-MM-DD', v }], articles: [{ title, summary, url, source, date, negative }] }
 export async function fetchEconomy() {
   const n = await fetchNewsFile().catch(() => null);
-  if (!n?.economy) throw new Error('Dados de economia ainda não disponíveis. São recolhidos de hora a hora.');
+  if (!n?.economy) throw new Error(tr('Dados de economia ainda não disponíveis. São recolhidos de hora a hora.'));
   return { ...n.economy, generated: n.generated };
 }
 // strikes = { year, since, reference, count, last30, level 1-10, bySector: { setor: n }, items: [{ title, summary, url, source, date, sector }] }
 export async function fetchStrikes() {
   const n = await fetchNewsFile().catch(() => null);
-  if (!n?.strikes) throw new Error('Dados de greves ainda não disponíveis. São recolhidos de hora a hora.');
+  if (!n?.strikes) throw new Error(tr('Dados de greves ainda não disponíveis. São recolhidos de hora a hora.'));
   return { ...n.strikes, generated: n.generated };
 }
 
 export async function fetchPizza() {
   const n = await fetchNewsFile().catch(() => null);
-  if (!n) throw new Error('Notícias ainda não disponíveis. São recolhidas de hora a hora.');
+  if (!n) throw new Error(tr('Notícias ainda não disponíveis. São recolhidas de hora a hora.'));
   const c = n.counts;
   const share = c.total ? (c.war + c.prep) / c.total : 0;
   const level = clamp(round1(1 + share * 24), 1, 10);
@@ -301,24 +304,24 @@ export async function fetchPizza() {
   return {
     current_level: level,
     trend,
-    explanation: 'O "Índice Pizza" é um indicador informal: a ideia é que muitas entregas de pizza à noite junto ao Pentágono sugerem que há gente a trabalhar até tarde numa crise. Não existem dados públicos fiáveis dessas entregas. Aqui o nível é uma estimativa calculada a partir da proporção de notícias sobre conflitos e atividade militar nos jornais portugueses.',
+    explanation: tr('O "Índice Pizza" é um indicador informal: a ideia é que muitas entregas de pizza à noite junto ao Pentágono sugerem que há gente a trabalhar até tarde numa crise. Não existem dados públicos fiáveis dessas entregas. Aqui o nível é uma estimativa calculada a partir da proporção de notícias sobre conflitos e atividade militar nos jornais portugueses.'),
     current_indicators: [
-      `${c.war} de ${c.total} notícias recentes falam de guerra ou ataques`,
-      `${c.prep} notícias falam de preparação militar, armamento ou sanções`,
+      tr('{a} de {b} notícias recentes falam de guerra ou ataques', { a: c.war, b: c.total }),
+      tr('{a} notícias falam de preparação militar, armamento ou sanções', { a: c.prep }),
       ...(n.war || []).slice(0, 3).map((a) => `${a.source}: ${a.title}`),
     ],
     historical_events: [
-      { event: 'Crise dos mísseis de Cuba', year: '1962', pizza_level: 9 },
-      { event: 'Guerra do Golfo (Tempestade no Deserto)', year: '1991', pizza_level: 9 },
-      { event: 'Ataques de 11 de setembro', year: '2001', pizza_level: 10 },
-      { event: 'Invasão do Iraque', year: '2003', pizza_level: 9 },
-      { event: 'Invasão da Ucrânia', year: '2022', pizza_level: 8 },
+      { event: tr('Crise dos mísseis de Cuba'), year: '1962', pizza_level: 9 },
+      { event: tr('Guerra do Golfo (Tempestade no Deserto)'), year: '1991', pizza_level: 9 },
+      { event: tr('Ataques de 11 de setembro'), year: '2001', pizza_level: 10 },
+      { event: tr('Invasão do Iraque'), year: '2003', pizza_level: 9 },
+      { event: tr('Invasão da Ucrânia'), year: '2022', pizza_level: 8 },
     ],
     citizen_meaning: level >= 7
-      ? 'O volume de notícias sobre conflitos está muito alto. Vale a pena acompanhar fontes oficiais e ter o kit de emergência em dia.'
+      ? tr('O volume de notícias sobre conflitos está muito alto. Vale a pena acompanhar fontes oficiais e ter o kit de emergência em dia.')
       : level >= 4
-        ? 'Há várias notícias sobre conflitos, dentro do habitual dos últimos tempos. Mantém-te informado por fontes oficiais.'
-        : 'Poucas notícias sobre conflitos neste momento.',
-    recent_activity: `Os níveis históricos da tabela são ilustrativos, não são medições. Notícias recolhidas em ${new Date(n.generated).toLocaleString('pt-PT')}.`,
+        ? tr('Há várias notícias sobre conflitos, dentro do habitual dos últimos tempos. Mantém-te informado por fontes oficiais.')
+        : tr('Poucas notícias sobre conflitos neste momento.'),
+    recent_activity: tr('Os níveis históricos da tabela são ilustrativos, não são medições. Notícias recolhidas em {d}.', { d: new Date(n.generated).toLocaleString(locale()) }),
   };
 }
