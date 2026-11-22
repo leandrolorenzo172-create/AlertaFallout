@@ -2,7 +2,7 @@
 
 Terminal de sobrevivência em estilo retro: painel de ameaças com o tempo em Braga, rádio com as emissoras portuguesas, música local, notícias, catástrofes, meteorologia, mapa de Braga, manual com leitor de documentos, base de conhecimento e assistente.
 
-**Abrir a app:** https://leandrolorenzo172-create.github.io/AlertaFallout/#/dashboard
+**Abrir a app:** https://steeldeck.github.io/SteelDeck/#/dashboard
 
 ## Instalar no telemóvel
 

@@ -5,7 +5,7 @@ import '../radio/radioTuner.css';
 import { IS_ARTIFACT } from '@/api/base44Client';
 
 // Endereço público da app, onde o som das emissoras funciona
-const LIVE_SITE = 'https://leandrolorenzo172-create.github.io/AlertaFallout/';
+const LIVE_SITE = 'https://steeldeck.github.io/SteelDeck/';
 const LIVE_RADIO_URL = `${LIVE_SITE}#/radio`;
 
 // #/radio?f=97.4 (FM) ou #/radio?f=1000&b=AM

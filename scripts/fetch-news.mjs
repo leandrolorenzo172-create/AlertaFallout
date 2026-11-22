@@ -1,6 +1,6 @@
 // Recolhe notícias de feeds RSS de jornais portugueses e grava public/data/news.json.
 // Corre no GitHub Actions antes de compilar a app (o browser não pode ler estes feeds diretamente).
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 
 const FEEDS = [
   { source: 'RTP', url: 'https://www.rtp.pt/noticias/rss/mundo' },
@@ -19,7 +19,7 @@ const FEEDS = [
 ];
 // Endereço da app publicada: o script lê o news.json anterior para acumular a contagem anual de greves
 // e o histórico do índice económico entre execuções (o GitHub Actions não guarda ficheiros de uma vez para a outra).
-const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://leandrolorenzo172-create.github.io/AlertaFallout/data/news.json';
+const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://steeldeck.github.io/SteelDeck/data/news.json';
 
 const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const WAR = /\b(guerra|ataques?|misse?is|missil|bombarde\w*|tropas|exercito|invas\w+|ofensiva|drones?|conflito armado|combates?|rebeldes|cessar-fogo|frente de batalha|artilharia|refens|hamas|hezbollah|houthis?|gaza|kiev|kremlin|ucrania|ucranian\w+|faixa de gaza)\b/;
@@ -178,6 +178,12 @@ try { const r = await fetch(PUBLISHED, { signal: AbortSignal.timeout(15000) }); 
 const prevStrikes = previous?.strikes?.year === year ? previous.strikes : null;
 const strikeKey = (t) => norm(t).replace(/[^a-z0-9 ]/g, '').split(' ').filter((w) => w.length > 3).slice(0, 7).join(' ');
 const items = new Map((prevStrikes?.items || []).map((x) => [strikeKey(x.title), x]));
+// greves recolhidas antes da mudança de endereço do site (o ficheiro publicado antigo deixou de existir)
+let seedSince = null;
+try {
+  const seed = JSON.parse(readFileSync('scripts/strikes-seed.json', 'utf8'));
+  if (seed.year === year) { seedSince = seed.since; for (const x of seed.items) if (!items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x); }
+} catch { /* sem ficheiro */ }
 for (const x of strikesNow) if (new Date(x.date).getFullYear() === year && !items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x);
 const strikeItems = [...items.values()].sort((x, y) => y.date - x.date);
 // greves desconvocadas/suspensas/adiadas não geram aviso (e anulam as do mesmo setor nesses dias)
@@ -187,7 +193,7 @@ const monthAgo = Date.now() - 30 * 86400000;
 const bySector = {};
 for (const x of strikeItems) bySector[x.sector] = (bySector[x.sector] || 0) + 1;
 const strikes = {
-  year, since: prevStrikes?.since || new Date().toISOString(), reference: REFERENCIA_ANUAL,
+  year, since: [prevStrikes?.since, seedSince, new Date().toISOString()].filter(Boolean).sort()[0], reference: REFERENCIA_ANUAL,
   count: strikeItems.length, last30: strikeItems.filter((x) => x.date > monthAgo).length,
   level: Math.min(10, Math.round((1 + (strikeItems.length / REFERENCIA_ANUAL) * 9) * 10) / 10),
   bySector, items: strikeItems.slice(0, 400),

@@ -19,7 +19,7 @@ import webpush from 'web-push';
 export const VAPID_PUBLIC = 'BJUMloYPF_iiynd3u8ispKS3NqXUXDwR2Nc7-MIy0BcBF5d9TaNQaYNkvXQFpj-PtuBMzZcbNLaQTg0UAcj9xi0';
 const ANTECEDENCIA_DIAS = 2;
 const DISTRITO = { id: 'BRG', nome: 'Braga', cidade: 1030300 }; // código do distrito nos avisos e da cidade na previsão do IPMA
-const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://leandrolorenzo172-create.github.io/AlertaFallout/data/news.json';
+const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://steeldeck.github.io/SteelDeck/data/news.json';
 const SECTOR_TXT = {
   'Função pública': 'Greve da Função Pública', Saúde: 'Greve na Saúde', Educação: 'Greve nas escolas', Transportes: 'Greve nos Transportes',
   'Greve geral': 'Greve geral', Justiça: 'Greve na Justiça', Segurança: 'Greve nas forças de segurança', Autarquias: 'Greve nas autarquias',
@@ -181,7 +181,7 @@ if (!priv || !subs.length) {
   console.log(`push: ${due.length} avisos por enviar, mas falta ${!priv ? 'VAPID_PRIVATE_KEY' : 'algum telemóvel registado'} — nada enviado`);
   for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.title}`);
 } else if (due.length) {
-  webpush.setVapidDetails('https://leandrolorenzo172-create.github.io/AlertaFallout/', VAPID_PUBLIC, priv);
+  webpush.setVapidDetails('https://steeldeck.github.io/SteelDeck/', VAPID_PUBLIC, priv);
   for (const d of due.slice(0, 10)) { // nunca mais de 10 de uma vez
     const payload = JSON.stringify({ cat: d.cat, title: d.title, body: d.body, tag: d.key.slice(0, 120), url: d.url, icon: `./icons/tempo/${d.icon || 'base'}.png` });
     const results = await Promise.allSettled(subs.map((s) => webpush.sendNotification(s, payload, { TTL: 12 * 3600, urgency: 'high' })));

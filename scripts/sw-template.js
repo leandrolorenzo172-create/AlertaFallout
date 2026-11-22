@@ -7,7 +7,7 @@ const VERSION = '__VERSION__';
 const CACHE = `pipboy-app-${VERSION}`;
 const FONTS = 'pipboy-fontes';
 const PRECACHE = __PRECACHE__;
-const BASE = new URL('./', self.location).href; // funciona em /AlertaFallout/ ou na raiz
+const BASE = new URL('./', self.location).href; // funciona em /SteelDeck/ ou na raiz
 
 // Primeiro o essencial para a app abrir (rápido, para a instalação não falhar se a rede cair logo a seguir);
 // depois o resto (leitor de PDF, hls.js, dados), sem bloquear a instalação.
