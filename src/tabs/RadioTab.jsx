@@ -35,7 +35,11 @@ function Tuner({ initialFreq, band }) {
 
 // Sintonizador analógico com as emissoras portuguesas pré-configuradas.
 export default function RadioTab() {
-  const location = useLocation();
+  const loc = useLocation();
+  // o separador fica montado noutros separadores (para o som continuar): guarda o último endereço do /radio
+  const last = useRef(loc);
+  if (loc.pathname === '/radio') last.current = loc;
+  const location = last.current;
   const params = new URLSearchParams(location.search);
   const f = params.get('f');
   const initialFreq = f != null && f !== '' && Number.isFinite(Number(f)) ? Number(f) : undefined;

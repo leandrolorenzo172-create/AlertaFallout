@@ -110,7 +110,19 @@ body { display: flex; align-items: center; justify-content: center; padding: 12p
 .rf-pills { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .rf-pill { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: rgb(var(--cb));
   border: 2px solid #2a2e29; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; min-width: 0; }
-.rf-pill span:last-child { font-variant-numeric: tabular-nums; }
+.rf-pill span:last-child { font-variant-numeric: tabular-nums; flex: none; }
+.rf-pill span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* No PC a coluna do sintonizador é estreita (a app tem largura máxima): compacta botões e indicadores
+   conforme o espaço real, como no telemóvel, para Sinal/Estática não saírem da caixa */
+.rf-mid { container-type: inline-size; }
+@container (max-width: 400px) {
+  .rf-knob { width: 78px; height: 78px; }
+  .rf-pill { padding: 8px 9px; font-size: 11px; letter-spacing: .04em; gap: 6px; }
+}
+@container (max-width: 300px) {
+  .rf-knob { width: 64px; height: 64px; }
+  .rf-pill { padding: 6px 7px; font-size: 10px; letter-spacing: 0; }
+}
 
 .rf-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
 .rf-nixie { display: flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgb(var(--cb)); border: 2px solid #2a2e29; }
@@ -915,6 +927,8 @@ function mountRadio(root, opts = {}) {
 
   function setPower(on) {
     state.on = on;
+    // rádio e música não tocam ao mesmo tempo: ao ligar o rádio, a música pára (e vice-versa)
+    if (on) window.dispatchEvent(new CustomEvent('pb-audio-start', { detail: 'radio' }));
     chassis.classList.toggle('rf-off', !on);
     el.ledpwr.classList.toggle('on', on);
     if (on) { el.start.hidden = true; ensureAudio(); primeAudio(); state.status = ''; setStatus(online() ? 'static' : 'nonet'); }
@@ -1225,6 +1239,11 @@ function mountRadio(root, opts = {}) {
   updateStartLabel();
   resize();
   raf = requestAnimationFrame(frame);
+
+  // a música começou a tocar: desligar o rádio (volume a zero, como se fosse rodado à mão)
+  const onOtherAudio = (e) => { if (e.detail !== 'radio' && state.on) setVolAngle(-135); };
+  window.addEventListener('pb-audio-start', onOtherAudio);
+  offs.push(() => window.removeEventListener('pb-audio-start', onOtherAudio));
 
   return function destroy() {
     destroyed = true;

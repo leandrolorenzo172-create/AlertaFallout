@@ -481,6 +481,8 @@ export function mountRadio(root, opts = {}) {
 
   function setPower(on) {
     state.on = on;
+    // rádio e música não tocam ao mesmo tempo: ao ligar o rádio, a música pára (e vice-versa)
+    if (on) window.dispatchEvent(new CustomEvent('pb-audio-start', { detail: 'radio' }));
     chassis.classList.toggle('rf-off', !on);
     el.ledpwr.classList.toggle('on', on);
     if (on) { el.start.hidden = true; ensureAudio(); primeAudio(); state.status = ''; setStatus(online() ? 'static' : 'nonet'); }
@@ -791,6 +793,11 @@ export function mountRadio(root, opts = {}) {
   updateStartLabel();
   resize();
   raf = requestAnimationFrame(frame);
+
+  // a música começou a tocar: desligar o rádio (volume a zero, como se fosse rodado à mão)
+  const onOtherAudio = (e) => { if (e.detail !== 'radio' && state.on) setVolAngle(-135); };
+  window.addEventListener('pb-audio-start', onOtherAudio);
+  offs.push(() => window.removeEventListener('pb-audio-start', onOtherAudio));
 
   return function destroy() {
     destroyed = true;

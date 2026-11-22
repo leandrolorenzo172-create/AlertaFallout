@@ -169,7 +169,12 @@ export function mountVinylPlayer(root) {
     say('');
     if (autoplay) play(); else renderState();
   }
+  // o rádio começou a tocar: pôr a música em pausa
+  const onOtherAudio = (e) => { if (e.detail !== 'music' && !audio.paused) pause(); };
+  window.addEventListener('pb-audio-start', onOtherAudio);
+
   function play() {
+    window.dispatchEvent(new CustomEvent('pb-audio-start', { detail: 'music' })); // o rádio desliga-se
     if (!tracks.length) return;
     if (current < 0) { select(0, true); return; }
     audio.play().catch(() => { say(tr('Não foi possível tocar esta faixa.')); renderState(); });
@@ -268,6 +273,7 @@ export function mountVinylPlayer(root) {
   return function destroy() {
     destroyed = true;
     clearInterval(clockTimer);
+    window.removeEventListener('pb-audio-start', onOtherAudio);
     offs.forEach((f) => f());
     audio.pause(); audio.removeAttribute('src'); audio.load();
     tracks.forEach((t) => URL.revokeObjectURL(t.url));

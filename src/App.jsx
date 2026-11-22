@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import HotBar, { TABS, useVisibleTabs } from './HotBar';
 import { useSettings } from './theme';
@@ -37,12 +37,16 @@ export default function App() {
   const [threatLevel, setThreatLevel] = useState(0);
   // useCallback: o efeito do PipBoyStartup depende de onComplete,
   // por isso a função tem de ser estável para a animação não reiniciar.
+  // Rádio e Música ficam montados depois da primeira visita, para o som continuar ao mudar de separador
+  const kept = useRef(new Set());
   const handleBootComplete = useCallback(() => setBooting(false), []);
   const handleThreat = useCallback((v) => setThreatLevel(Number(v) || 0), []);
 
   if (booting) return <PipBoyStartup onComplete={handleBootComplete} />;
 
   const activeTab = TABS.find((t) => t.path === location.pathname)?.id || 'dashboard';
+  const KEEP = ['radio', 'musica'];
+  if (KEEP.includes(activeTab)) kept.current.add(activeTab);
   const elements = {
     dashboard: <DashboardTab onThreatLevelChange={handleThreat} />,
     guerra: <WarNewsTab />,
@@ -76,11 +80,14 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {TABS.map((tab) => (
-            <Route key={tab.id} path={tab.path} element={elements[tab.id]} />
+            <Route key={tab.id} path={tab.path} element={KEEP.includes(tab.id) ? null : elements[tab.id]} />
           ))}
           <Route path="/alertas" element={<Navigate to="/definicoes" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        {[...kept.current].map((id) => (
+          <div key={id} hidden={activeTab !== id}>{elements[id]}</div>
+        ))}
       </main>
       <HotBar />
       <TabBar tabs={visibleTabs} compact={compact} activeTab={activeTab} onTabChange={(id) => navigate(TABS.find((t) => t.id === id).path)} />
