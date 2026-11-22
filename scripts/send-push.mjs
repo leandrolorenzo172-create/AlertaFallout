@@ -11,7 +11,7 @@
 //  - pizza_index   : uma vez por dia, se o Índice Pizza estiver em >= 7/10
 //
 // Precisa de: secret VAPID_PRIVATE_KEY e secret PUSH_SUBSCRIPTIONS (lista JSON dos códigos dos telemóveis, obtidos na app em
-// Definições > Notificações > "Ativar notificações no telemóvel"). Teste manual: Actions > Run workflow > "Enviar uma notificação de teste".
+// Definições > Notificações > "Ativar notificações no telemóvel"). Teste manual: Actions > Run workflow > "Enviar uma notificação de teste" (um exemplo de cada categoria).
 // Os avisos já enviados ficam em news.json (pushSent), lido do site publicado na execução seguinte.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import webpush from 'web-push';
@@ -118,15 +118,27 @@ if (hour >= 8 && hour < 23) {
   if (pizza >= 7) add('pizza_index', `pizza_index|${today}`, `ALERTA — Índice Pizza hoje: ${pizza.toFixed(1)}/10`, 'Muitas notícias sobre conflitos e atividade militar.', './#/pizza');
 }
 
-// teste manual: envia sempre, a qualquer hora
-if (process.env.PUSH_TEST) due.push({ cat: 'teste', key: `teste-${Date.now()}`, title: 'ALERTA — Greve da Função Pública dia 00/00/00 (TESTE)', body: 'Teste enviado pelo GitHub: os avisos chegam a este telemóvel mesmo com a app fechada.', url: './#/greves' });
+// teste manual: envia um exemplo de cada categoria, a qualquer hora. Cada um leva a sua categoria,
+// por isso o telemóvel só mostra os das categorias ligadas em Definições > Notificações (serve para testar os interruptores).
+if (process.env.PUSH_TEST) {
+  const t = Date.now();
+  const EX = [
+    ['greves', 'ALERTA — Greve da Função Pública dia 00/00/00 (TESTE)', 'Exemplo de aviso de greve: chega 2 dias antes e no próprio dia.', './#/greves'],
+    ['meteorologia', `ALERTA AMARELO — Precipitação em ${DISTRITO.nome} hoje (TESTE)`, 'Exemplo de aviso do IPMA para o teu distrito.', './#/meteo'],
+    ['catastrofes', 'ALERTA — Sismo de magnitude 6.8 hoje (TESTE)', 'Exemplo de aviso de catástrofe (GDACS / USGS).', './#/catastrofes'],
+    ['guerra', 'ALERTA — Guerra & Conflitos (TESTE)', 'Exemplo de notícia de conflito muito grave.', './#/guerra'],
+    ['tensao_global', 'ALERTA — Tensão global hoje: 7.4/10 (TESTE)', 'Exemplo de aviso de tensão global alta ou a subir.', './#/dashboard'],
+    ['pizza_index', 'ALERTA — Índice Pizza hoje: 7.2/10 (TESTE)', 'Exemplo do Índice Pizza (desligado por omissão).', './#/pizza'],
+  ];
+  for (const [cat, title, body, url] of EX) due.push({ cat, key: `teste-${cat}-${t}`, title, body, url });
+}
 
 if (!priv || !subs.length) {
   console.log(`push: ${due.length} avisos por enviar, mas falta ${!priv ? 'VAPID_PRIVATE_KEY' : 'algum telemóvel registado'} — nada enviado`);
   for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.title}`);
 } else if (due.length) {
   webpush.setVapidDetails('https://leandrolorenzo172-create.github.io/AlertaFallout/', VAPID_PUBLIC, priv);
-  for (const d of due.slice(0, 8)) { // nunca mais de 8 de uma vez
+  for (const d of due.slice(0, 10)) { // nunca mais de 10 de uma vez
     const payload = JSON.stringify({ cat: d.cat, title: d.title, body: d.body, tag: d.key.slice(0, 120), url: d.url });
     const results = await Promise.allSettled(subs.map((s) => webpush.sendNotification(s, payload, { TTL: 12 * 3600, urgency: 'high' })));
     const ok = results.filter((r) => r.status === 'fulfilled').length;
