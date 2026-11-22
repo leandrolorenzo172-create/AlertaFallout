@@ -212,3 +212,29 @@
   .ew-fs .ew-stat b { font-size: 9px; } .ew-fs .ew-stat span { font-size: 14px; }
   .ew-fs .ew-evolve b, .ew-fs .ew-special b { font-size: 12px; }
 }
+
+/* PC (ecrã grande na horizontal) em ecrã inteiro: o campo de batalha ocupa a largura toda e é o maior elemento;
+   barra de caricas/XP/evoluir/especial em cima, separadores e cartas em baixo com tamanho normal (não esticadas). */
+@media (orientation: landscape) and (min-width: 1000px) and (min-height: 640px) {
+  .ew.ew-fs { grid-template-columns: 1fr auto; grid-template-rows: auto auto auto auto; grid-template-areas: 'hud queue' 'screen screen' 'tabs tabs' 'panel panel';
+    align-content: center; gap: 8px; padding: 10px 14px; }
+  .ew-fs .ew-hud { grid-area: hud; grid-column: auto; grid-row: auto; align-self: center; display: grid; grid-template-columns: auto 1fr 1fr 1.6fr 1.8fr; gap: 8px; }
+  .ew-fs .ew-hud > *, .ew-fs .ew-hud .ew-pause, .ew-fs .ew-hud .ew-stat.ew-caps { grid-column: auto !important; }
+  .ew-fs .ew-hud .ew-pause { padding: 6px 12px; font-size: 16px; }
+  .ew-fs .ew-stat { padding: 5px 10px; }
+  .ew-fs .ew-stat b { font-size: 11px; letter-spacing: .12em; }
+  .ew-fs .ew-stat span { font-size: 20px; }
+  .ew-fs .ew-evolve, .ew-fs .ew-special { padding: 6px 10px; }
+  .ew-fs .ew-evolve b, .ew-fs .ew-special b { font-size: 14px; letter-spacing: .06em; white-space: nowrap; }
+  .ew-fs .ew-evolve span, .ew-fs .ew-special span { font-size: 11px; }
+  .ew-fs .ew-queuebar { grid-area: queue; grid-column: auto; grid-row: auto; align-self: center; font-size: 11px; gap: 6px; }
+  .ew-fs .ew-queue i { width: 22px; height: 12px; }
+  .ew-fs .ew-audio button { font-size: 11px; padding: 4px 8px; }
+  /* campo de batalha: largura toda, mas deixando sempre espaço para as cartas por baixo */
+  .ew-fs .ew-screen { justify-self: center; width: min(100%, calc((100vh - 330px) * 3.2)); }
+  .ew-fs .ew-panel { align-self: start; grid-auto-rows: auto; align-items: stretch; padding: 8px; gap: 8px; overflow: visible; }
+  .ew-fs .ew-card { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: auto; padding: 18px 8px 8px; }
+  .ew-fs .ew-card canvas { grid-row: auto; max-width: 110px; }
+  .ew-fs .ew-card .ew-uname, .ew-fs .ew-card .ew-cost { align-self: center; text-align: center; }
+  .ew-fs .ew-card .ew-uname { font-size: 15px; }
+}

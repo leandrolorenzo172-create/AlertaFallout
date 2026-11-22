@@ -198,7 +198,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   let fsOn = false;
   const setFs = (on) => {
     fsOn = on; root.classList.toggle('ew-fs', on);
-    el.fs.setAttribute('aria-pressed', String(on)); el.fs.innerHTML = on ? '&#10529; SAIR DO ECRÃ INTEIRO' : '&#10530; ECRÃ INTEIRO';
+    el.fs.setAttribute('aria-pressed', String(on)); el.fs.innerHTML = on ? tr('&#10529; SAIR DO ECRÃ INTEIRO') : tr('&#10530; ECRÃ INTEIRO');
     document.documentElement.style.overflow = on ? 'hidden' : '';
   };
   on(el.fs, 'click', async () => {
