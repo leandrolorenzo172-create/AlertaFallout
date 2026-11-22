@@ -13,11 +13,12 @@ export function startAutoFlip() {
   let flipped = false; let since = 0; let want = false;
   const setFlip = (on) => {
     if (on === flipped) return;
-    // guardar a posição do scroll: com a app rodada quem faz scroll é o body
-    const y = flipped ? document.body.scrollTop : window.scrollY;
+    // guardar a posição do scroll: com a app rodada quem faz scroll é o contentor da app (.crt), não a janela
+    const box = () => document.querySelector('#root > .crt');
+    const y = flipped ? (box()?.scrollTop || 0) : window.scrollY;
     flipped = on;
     root.classList.toggle('pb-flip', on);
-    if (on) document.body.scrollTop = y; else window.scrollTo(0, y);
+    if (on) { const b = box(); if (b) b.scrollTop = y; } else window.scrollTo(0, y);
   };
   window.addEventListener('devicemotion', (e) => {
     const g = e.accelerationIncludingGravity; if (!g || g.y == null) return;
