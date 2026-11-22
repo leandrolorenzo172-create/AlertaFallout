@@ -5,6 +5,7 @@ import App from './App';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import './index.css';
 import { applyTheme } from './theme';
+import { t } from './i18n';
 import { startAutoFlip } from './autoFlip';
 
 applyTheme(); // aplica o tema guardado antes de desenhar a app
@@ -29,7 +30,7 @@ if (!IS_ARTIFACT && import.meta.env.PROD && 'serviceWorker' in navigator) {
     const b = document.createElement('button');
     b.id = 'pb-update';
     b.type = 'button';
-    b.textContent = 'NOVA VERSÃO INSTALADA — TOCA PARA ATUALIZAR';
+    b.textContent = t('NOVA VERSÃO INSTALADA — TOCA PARA ATUALIZAR');
     b.style.cssText = 'position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9999;'
       + 'padding:10px 14px;font:inherit;font-size:12px;letter-spacing:.1em;cursor:pointer;border-radius:4px;'
       + 'color:rgb(var(--cb));background:rgb(var(--c));border:0;box-shadow:0 0 16px rgb(var(--c) / .6);max-width:calc(100% - 32px)';

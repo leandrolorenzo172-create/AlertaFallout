@@ -19,12 +19,12 @@ const GAMES = [
 const LCD_INFO = {
   space: {
     title: t('PATRULHA ESTELAR'), tag: t('Retro LCD · shooter de rolagem lateral'), best: 'pb_lcd_space_best', digits: 5,
-    text: 'Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.',
+    text: t('Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.'),
     points: [[Heart, t('3 vidas em corações e bónus de vida pelo caminho.')], [Crosshair, t('Disparo automático ao manter A e laser especial no B.')], [Zap, t('Chefes resistentes que disparam em leque.')], [Joystick, t('Analógico no ecrã ou setas/WASD no PC.')]],
   },
   snake: {
-    title: 'COBRA', tag: t('Retro LCD · o clássico da cobrinha'), best: 'pb_lcd_snake_best', digits: 4,
-    text: 'Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.',
+    title: t('COBRA'), tag: t('Retro LCD · o clássico da cobrinha'), best: 'pb_lcd_snake_best', digits: 4,
+    text: t('Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.'),
     points: [[Gauge, t('9 níveis de velocidade, escolhe no menu.')], [Bug, t('Bicho de bónus com contagem decrescente.')], [Joystick, t('Analógico, deslizar o dedo ou setas no PC.')], [Trophy, t('Recorde guardado no aparelho.')]],
   },
 };

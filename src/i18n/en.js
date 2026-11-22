@@ -1,6 +1,11 @@
 // Traduções para inglês (EUA). Chave = texto em português tal como está no código (ver src/i18n/index.js).
 // Gerado a partir dos textos da app; para acrescentar, junta "texto em português": "English text".
 export default {
+  "Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.": "Fly your ship through space, shoot down the waves of enemies coming from the right, dodge the mountains and face the boss at the end of each level.",
+  "Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.": "Eat the dots to grow and score points. Don't hit the walls or your own body. Every now and then a bonus bug shows up for a short time.",
+  "Este ficheiro não tem texto extraído.": "This file has no extracted text.",
+  "NOVA VERSÃO INSTALADA — TOCA PARA ATUALIZAR": "NEW VERSION INSTALLED — TAP TO UPDATE",
+  "lido até": "read up to",
   "[ + Adicionar músicas do dispositivo ]": "[ + Add music from this device ]",
   "Outro (compatível com OpenAI)": "Other (OpenAI-compatible)",
   "IA personalizada": "Custom AI",

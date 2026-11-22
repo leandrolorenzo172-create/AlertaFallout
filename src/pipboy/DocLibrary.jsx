@@ -126,7 +126,7 @@ function Reader({ docId, startPage, onClose }) {
       <div ref={wrapRef} className="overflow-auto rounded-sm" style={{ maxHeight: '70vh', background: pdf ? '#fff' : 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.2)' }}>
         {pdf ? <canvas ref={canvasRef} className="block" /> : (
           <pre className="p-3 text-xs whitespace-pre-wrap" style={{ color: 'rgb(var(--c) / 0.9)', fontFamily: 'inherit', overflowWrap: 'anywhere' }}>
-            {doc ? (doc.pages?.[page - 1] || 'Este ficheiro não tem texto extraído.') : ''}
+            {doc ? (doc.pages?.[page - 1] || t('Este ficheiro não tem texto extraído.')) : ''}
           </pre>
         )}
       </div>
@@ -169,7 +169,7 @@ export default function DocLibrary() {
                 <span className="flex-1 min-w-0">
                   <span className="block text-xs truncate">{d.title}</span>
                   <span className="block text-[10px]" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-                    {d.category} · {d.pages?.length || 0} {d.unit}{recent[d.id] ? ` · lido até ${d.unit} ${recent[d.id]}` : ''}
+                    {d.category} · {d.pages?.length || 0} {d.unit}{recent[d.id] ? ` · ${t('lido até')} ${d.unit} ${recent[d.id]}` : ''}
                   </span>
                 </span>
               </button>
