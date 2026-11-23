@@ -154,3 +154,5 @@ html.pb-flip #root > .crt { height: 100%; overflow-y: auto; overscroll-behavior:
 .rd-card:hover, .rd-card:focus-visible { border-color: rgb(var(--c)) !important; }
 .rd-card:active { transform: scale(.99); }
 @media (prefers-reduced-motion: reduce) { .rd-in-next, .rd-in-prev { animation: none; } }
+.rd-flip { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.rd-stage { position: relative; }
