@@ -109,12 +109,8 @@ export default function NotificationsTab() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Bell size={16} style={{ color: 'rgb(var(--c))' }} />
-          <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            {t('Notificações')}
-          </h2>
-        </div>
+        {/* o título "Notificações" já está na secção das Definições: aqui fica só o contador */}
+        <span />
         <span className="text-[10px] px-2 py-1 rounded-sm"
           style={{ background: 'rgb(var(--c) / 0.13)', color: 'rgb(var(--c))', border: '1px solid rgb(var(--c) / 0.2)' }}>
           {enabledCount}/{notifications.length}{' '}{t('ativas')}
