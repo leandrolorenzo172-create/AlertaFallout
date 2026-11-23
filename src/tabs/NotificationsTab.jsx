@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { base44, IS_ARTIFACT } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -186,6 +186,8 @@ export default function NotificationsTab() {
               <p className="mt-1">{t('Um toque e fica feito: o telemóvel regista-se sozinho, sem códigos. Os interruptores acima passam a valer também com a app fechada.')}</p>
             </div>
           )}
+          {/* Exemplos de aviso: só no artefacto do claude.ai, para testes (a app publicada não os mostra) */}
+          {IS_ARTIFACT && (
           <div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
@@ -195,6 +197,7 @@ export default function NotificationsTab() {
             </div>
             <p className="mt-1">{t('Mostram agora um aviso de exemplo, com a personagem na cor da app. No do tempo, cada toque mostra outro estado (chuva, sol, geada, vento, nevoeiro, nublado).')}</p>
           </div>
+          )}
         </div>
         {pushMsg && <p className="mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
       </div>

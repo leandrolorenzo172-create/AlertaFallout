@@ -152,16 +152,19 @@ export default function PipBoyHero({ data }) {
             {test !== 'auto' && <p className="text-[10px] mt-1" style={{ color: '#ffaa00' }}>{t('Modo de teste: a mascote não segue o tempo real.')}</p>}
           </div>
         </div>
+        {/* Botões de teste do tempo: só no artefacto do claude.ai (a app publicada fica sempre em Auto) */}
+        {IS_ARTIFACT && (
         <div className="relative flex flex-wrap items-center gap-1.5 mt-3">
-          <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>{t('Testar:')}</span>
-          {MODES.map((m) => (
-            <button key={m.id} type="button" onClick={() => setTest(m.id)} aria-pressed={test === m.id}
-              className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-              style={{ background: test === m.id ? 'rgb(var(--c))' : 'rgb(var(--cb) / 0.6)', color: test === m.id ? 'rgb(var(--cb))' : 'rgb(var(--c) / 0.8)', border: '1px solid rgb(var(--c) / 0.4)' }}>
-              {t(m.label)}
-            </button>
-          ))}
-        </div>
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>{t('Testar:')}</span>
+            {MODES.map((m) => (
+              <button key={m.id} type="button" onClick={() => setTest(m.id)} aria-pressed={test === m.id}
+                className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
+                style={{ background: test === m.id ? 'rgb(var(--c))' : 'rgb(var(--cb) / 0.6)', color: test === m.id ? 'rgb(var(--cb))' : 'rgb(var(--c) / 0.8)', border: '1px solid rgb(var(--c) / 0.4)' }}>
+                {t(m.label)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
