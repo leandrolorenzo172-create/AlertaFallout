@@ -20,7 +20,7 @@ function serviceWorker() {
         }
       };
       walk(outDir);
-      const precache = ['./', ...files.filter((f) => f !== 'sw.js' && !f.endsWith('.map') && !f.startsWith('icons/tempo/')) /* miniaturas das notificações: só se descarregam quando chega uma */.sort()];
+      const precache = ['./', ...files.filter((f) => f !== 'sw.js' && !f.endsWith('.map') && !f.startsWith('icons/tempo/') && f !== 'guia-steeldeck.pdf') /* o guia fica guardado no IndexedDB da estante */ /* miniaturas das notificações: só se descarregam quando chega uma */.sort()];
       const version = `${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}`;
       const sw = fs.readFileSync('scripts/sw-template.js', 'utf8')
         .replace('__VERSION__', version)
