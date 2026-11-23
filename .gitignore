@@ -4,3 +4,4 @@ artifact
 *.zip
 public/radio-steeldeck.html
 public/data
+__pycache__/
