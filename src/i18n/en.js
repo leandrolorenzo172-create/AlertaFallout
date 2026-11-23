@@ -1,6 +1,18 @@
 // Traduções para inglês (EUA). Chave = texto em português tal como está no código (ver src/i18n/index.js).
 // Gerado a partir dos textos da app; para acrescentar, junta "texto em português": "English text".
 export default {
+  "Médio Oriente": "Middle East",
+  "Europa de Leste": "Eastern Europe",
+  "Ásia-Pacífico": "Asia-Pacific",
+  "Notificação de teste.": "Test notification.",
+  "ALERTA — Sismo de magnitude {m} hoje": "ALERT — Magnitude {m} earthquake today",
+  "ALERTA — Guerra & Conflitos ({r})": "ALERT — War & Conflicts ({r})",
+  "ALERTA — Tensão global hoje: {v}/10": "ALERT — Global tension today: {v}/10",
+  "TESTE": "TEST",
+  "Testar notificações": "Test notifications",
+  "Envia agora para este telemóvel uma notificação de teste de uma categoria e outra do tempo, para veres se chegam.": "Sends a test notification from one category and another for the weather to this phone right now, so you can see if they arrive.",
+  "Enviadas 2 notificações de teste. Se não aparecerem, confirma nas definições do telemóvel que as notificações desta app estão permitidas.": "2 test notifications sent. If they don't show up, check in your phone's settings that notifications are allowed for this app.",
+  "As notificações não estão autorizadas neste telemóvel: carrega primeiro em \"Ativar notificações no telemóvel\". O aviso de teste aparece só dentro da app.": "Notifications are not allowed on this phone: tap \"Turn on phone notifications\" first. The test alert only shows inside the app.",
   "Alertas de última hora ({c}):": "Breaking alerts ({c}):",
   "Previsão 15 Dias - {c} (IPMA)": "15-Day Forecast - {c} (IPMA)",
   "Tempo hoje em {c}:": "Weather today in {c}:",

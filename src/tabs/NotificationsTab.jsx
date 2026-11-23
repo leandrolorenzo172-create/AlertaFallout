@@ -5,7 +5,7 @@ import { Bell, BellOff, Save, Loader2, Check, UserX, AlertTriangle } from 'lucid
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { enableNotifications, isRegistered, pushSupported } from '@/notify/push';
-import { testWeatherAlert } from '@/notify/strikeAlerts';
+import { testWeatherAlert, testNotifications } from '@/notify/strikeAlerts';
 import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
 import { t } from '@/i18n';
 
@@ -182,18 +182,13 @@ export default function NotificationsTab() {
               <p className="mt-1">{t('Um toque e fica feito: o telemóvel regista-se sozinho, sem códigos. Os interruptores acima passam a valer também com a app fechada.')}</p>
             </div>
           )}
-          {/* Exemplos de aviso: só no artefacto do claude.ai, para testes (a app publicada não os mostra) */}
-          {IS_ARTIFACT && (
           <div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={testAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>{t('✊ Exemplo de greve')}</button>
-              <button type="button" onClick={testWeatherAlert} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider"
-                style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>{t('🌦️ Exemplo do tempo')}</button>
-            </div>
-            <p className="mt-1">{t('Mostram agora um aviso de exemplo, com a personagem na cor da app. No do tempo, cada toque mostra outro estado (chuva, sol, geada, vento, nevoeiro, nublado).')}</p>
+            <button type="button" onClick={async () => { const ok = await testNotifications(); setPushMsg(ok ? t('Enviadas 2 notificações de teste. Se não aparecerem, confirma nas definições do telemóvel que as notificações desta app estão permitidas.') : t('As notificações não estão autorizadas neste telemóvel: carrega primeiro em "Ativar notificações no telemóvel". O aviso de teste aparece só dentro da app.')); }}
+              className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>
+              🔔 {t('Testar notificações')}
+            </button>
+            <p className="mt-1">{t('Envia agora para este telemóvel uma notificação de teste de uma categoria e outra do tempo, para veres se chegam.')}</p>
           </div>
-          )}
         </div>
         {pushMsg && <p className="mt-2" style={{ color: '#ffaa00' }}>{pushMsg}</p>}
       </div>

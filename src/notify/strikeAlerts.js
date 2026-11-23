@@ -119,6 +119,25 @@ export async function testWeatherAlert() {
   return mode;
 }
 
+// Botão "Testar notificações" (Definições > Notificações): mostra no telemóvel uma notificação de teste de uma categoria
+// ao acaso e outra do tempo ao acaso, com a personagem na cor da app — serve para ver se as notificações aparecem no aparelho.
+const CAT_EX = [
+  () => strikeMessage({ sector: ['Função pública', 'Saúde', 'Educação', 'Transportes'][Math.floor(Math.random() * 4)], days: [ymdLocal(new Date(Date.now() + 2 * 86400000))], title: t('Notificação de teste.') }, 'pre'),
+  () => ({ title: t('ALERTA — Sismo de magnitude {m} hoje', { m: (6.5 + Math.random()).toFixed(1) }), body: t('Notificação de teste.') }),
+  () => ({ title: t('ALERTA — Guerra & Conflitos ({r})', { r: t(['Médio Oriente', 'Europa de Leste', 'Ásia-Pacífico'][Math.floor(Math.random() * 3)]) }), body: t('Notificação de teste.') }),
+  () => ({ title: t('ALERTA — Tensão global hoje: {v}/10', { v: (7 + Math.random() * 2).toFixed(1) }), body: t('Notificação de teste.') }),
+];
+export async function testNotifications() {
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const cat = { ...pick(CAT_EX)(), icon: thumb('base'), url: './#/greves' };
+  cat.title += ` (${t('TESTE')})`;
+  const [mode, tipo, body] = pick(TEMPO_EX);
+  const tempo = { title: `${t('Tempo hoje em {c}:', { c: getLoc().name })} ${tipo} (${t('TESTE')})`, body, icon: thumb(mode), url: './#/meteo' };
+  banner(cat); await systemNotify(cat, 'teste-categoria');
+  setTimeout(() => { banner(tempo); systemNotify(tempo, 'teste-tempo'); }, 1500);
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
 let running = false;
 export async function checkStrikeAlerts() {
   if (running || IS_ARTIFACT) return; running = true;
