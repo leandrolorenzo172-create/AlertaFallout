@@ -10,6 +10,8 @@ export const THEMES = [
   { id: 'amber', label: 'Laranja / Âmbar', c: '255 176 0', cd: '28 18 0', cb: '10 6 0' },
   { id: 'blue', label: 'Azul', c: '46 207 255', cd: '0 20 30', cb: '0 7 11' },
   { id: 'red', label: 'Vermelho', c: '255 70 56', cd: '30 5 3', cb: '11 2 1' },
+  // Easter egg: no lilás a mascote passa à versão feminina (painel, clima e miniaturas das notificações)
+  { id: 'lilac', label: 'Lilás', c: '226 152 255', cd: '26 9 32', cb: '10 3 14' },
 ];
 
 const KEY = 'pb_settings';
@@ -37,6 +39,7 @@ export function setSettings(patch) {
     document.documentElement.lang = patch.lang === 'en' ? 'en' : 'pt';
     import('./notify/strikeAlerts').then((m) => m.checkStrikeAlerts()).catch(() => {}); // notificações no idioma novo
   }
+  if ('loc' in patch) import('./notify/strikeAlerts').then((m) => m.checkStrikeAlerts()).catch(() => {}); // notificações do tempo da cidade nova
   if (patch.theme) {
     applyTheme(state.theme);
     // as miniaturas das notificações passam logo a usar a cor nova

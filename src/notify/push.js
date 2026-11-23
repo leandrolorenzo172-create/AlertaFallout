@@ -1,4 +1,5 @@
 import { t, getLang } from '@/i18n';
+import { getLoc } from '@/location';
 // Notificações push (chegam com a app fechada).
 // Ao carregar em "Ativar notificações", o telemóvel regista-se sozinho no serviço de registo da SteelDeck
 // (Cloudflare Worker, código em worker/push-registry.js). O GitHub Actions (scripts/send-push.mjs) lê de lá a lista
@@ -24,10 +25,11 @@ async function currentSub() {
 export async function isRegistered() { try { return !!(await currentSub()); } catch { return false; } }
 
 async function send(sub) {
-  const body = { subscription: sub.toJSON(), prefs: localPrefs(), theme: localTheme(), lang: getLang() };
+  const L = getLoc();
+  const body = { subscription: sub.toJSON(), prefs: localPrefs(), theme: localTheme(), lang: getLang(), loc: { id: L.id, area: L.area, name: L.name } };
   const res = await fetch(`${PUSH_REGISTRY}/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(t('O serviço de notificações não respondeu. Tenta outra vez daqui a pouco.'));
-  try { localStorage.setItem('pb_push_sync', JSON.stringify({ ep: sub.endpoint, prefs: body.prefs, theme: body.theme, lang: body.lang })); } catch { /* sem armazenamento */ }
+  try { localStorage.setItem('pb_push_sync', JSON.stringify({ ep: sub.endpoint, prefs: body.prefs, theme: body.theme, lang: body.lang, loc: body.loc.id })); } catch { /* sem armazenamento */ }
 }
 
 // Botão "Ativar notificações no telemóvel": pede autorização, cria o registo e envia-o ao serviço. Tudo automático.
@@ -59,7 +61,7 @@ export async function syncPush() {
   try {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const sub = await currentSub(); if (!sub) return;
-    const now = JSON.stringify({ ep: sub.endpoint, prefs: localPrefs(), theme: localTheme(), lang: getLang() });
+    const now = JSON.stringify({ ep: sub.endpoint, prefs: localPrefs(), theme: localTheme(), lang: getLang(), loc: getLoc().id });
     if (localStorage.getItem('pb_push_sync') === now) return;
     await send(sub);
   } catch { /* tenta outra vez mais tarde */ }

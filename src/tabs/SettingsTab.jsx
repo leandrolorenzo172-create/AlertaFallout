@@ -1,10 +1,11 @@
 import React from 'react';
-import { Settings, Languages, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell } from 'lucide-react';
+import { Settings, Languages, MapPin, LocateFixed, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell } from 'lucide-react';
 import { THEMES, useSettings, setSettings, resetSettings, orderTabs } from '../theme';
 import { TABS } from '../HotBar';
 import NotificationsTab from './NotificationsTab';
 import AiSettings from '../pipboy/AiSettings';
 import { t, LANGS, useLang } from '@/i18n';
+import { LOCATIONS, useLoc, locMode, setLocManual, detectLocation } from '@/location';
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c))' };
@@ -14,6 +15,41 @@ function Title({ icon: Icon, children }) {
     <h3 className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold mb-3" style={{ color: 'rgb(var(--c))' }}>
       <Icon size={14} /> {children}
     </h3>
+  );
+}
+
+// Localização: cidade do tempo, dos avisos e das notificações
+function LocationSection() {
+  const loc = useLoc();
+  const [msg, setMsg] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const mode = locMode();
+  const auto = async () => {
+    setBusy(true); setMsg('');
+    try { const l = await detectLocation(); setMsg(t('✔ Localização encontrada: {c}.', { c: l.name })); }
+    catch (e) { setMsg(e.message === 'denied' ? t('A localização está bloqueada para esta app. Ativa-a nas definições do telemóvel ou escolhe a cidade na lista.') : t('Não foi possível obter a localização. Escolhe a cidade na lista.')); }
+    finally { setBusy(false); }
+  };
+  return (
+    <section className="p-3 rounded-sm mb-4" style={box}>
+      <Title icon={MapPin}>{t('Localização')}</Title>
+      <p className="text-[10px] mb-3" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+        {t('O tempo, os alertas do IPMA e as notificações do tempo são da cidade escolhida. A posição exata fica só no telemóvel; só se usa a cidade.')}
+      </p>
+      <p className="text-xs mb-3" style={{ color: 'rgb(var(--c))' }}>
+        📍 {loc.name}{' '}<span style={{ color: 'rgb(var(--c) / 0.55)' }}>({mode === 'auto' ? t('automática') : mode === 'manual' ? t('escolhida à mão') : t('por omissão')})</span>
+      </p>
+      <div className="flex flex-wrap gap-2 items-center">
+        <button type="button" onClick={auto} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-sm text-xs uppercase tracking-wider" style={{ ...btn, opacity: busy ? 0.6 : 1 }}>
+          <LocateFixed size={13} /> {busy ? t('A localizar…') : t('Usar a minha localização')}
+        </button>
+        <select aria-label={t('Escolher cidade')} value={loc.id} onChange={(e) => { setLocManual(e.target.value); setMsg(''); }}
+          className="px-2 py-2 rounded-sm text-xs" style={{ ...btn, background: 'rgb(var(--cb))' }}>
+          {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+        </select>
+      </div>
+      {msg && <p className="text-[10px] mt-2" style={{ color: '#ffaa00' }}>{msg}</p>}
+    </section>
   );
 }
 
@@ -58,6 +94,8 @@ export default function SettingsTab() {
           })}
         </div>
       </section>
+
+      <LocationSection />
 
       {/* Tema de cores */}
       <section className="p-3 rounded-sm mb-4" style={box}>

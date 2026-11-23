@@ -1,4 +1,5 @@
 import { locale, t as tr, isEn } from '../i18n';
+import { getLoc } from '../location';
 // Dados reais de fontes públicas, usados quando a app corre fora do claude.ai.
 // - Meteorologia e avisos: IPMA (api.ipma.pt). Previsão a 15 dias: Open-Meteo, com o IPMA (5 dias) como reserva.
 // - Catástrofes: GDACS (alertas laranja/vermelho) e USGS (sismos).
@@ -64,14 +65,19 @@ const dayName = (iso) => {
 };
 const shortDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
 
-export async function fetchWeather() {
+// loc: cidade do utilizador (src/location.js) — tempo atual, avisos e previsão de 15 dias são dessa cidade
+export async function fetchWeather(loc = getLoc()) {
   const safe = (p) => p.catch(() => null);
-  const [types, obs, uv, warnings, sea, ...daily] = await Promise.all([
+  const locIdx = CITIES.findIndex((c) => c.id === loc.id);
+  const [types, obs, uv, warnings, sea, locDaily, omNow, ...daily] = await Promise.all([
     safe(getJson(`${IPMA}weather-type-classe.json`)),
     safe(getJson(`${IPMA}observation/meteorology/stations/observations.json`, 25000)),
     safe(getJson(`${IPMA}forecast/meteorology/uv/uv.json`)),
     safe(getJson(`${IPMA}forecast/warnings/warnings_www.json`)),
     safe(getJson(`${IPMA}forecast/oceanography/daily/hp-daily-sea-forecast-day0.json`)),
+    locIdx >= 0 ? Promise.resolve(null) : safe(getJson(`${IPMA}forecast/meteorology/cities/daily/${loc.id}.json`)),
+    // tempo atual no sítio exato da cidade (Open-Meteo): temperatura, humidade, vento, UV
+    safe(getJson(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&timezone=auto&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,uv_index`, 10000)),
     ...CITIES.map((c) => safe(getJson(`${IPMA}forecast/meteorology/cities/daily/${c.id}.json`))),
   ]);
   if (daily.every((d) => !d)) throw new Error(tr('IPMA indisponível'));
@@ -127,7 +133,8 @@ export async function fetchWeather() {
     description: `${w.text || ''} (${tr('{a} a {b}', { a: fmt(w.startTime), b: fmt(w.endTime) })})`.trim(),
   }));
 
-  const bragaIpma = (daily[2]?.data || []).map((d) => ({
+  const locData = locIdx >= 0 ? daily[locIdx] : locDaily;
+  const bragaIpma = (locData?.data || []).map((d) => ({
     date: shortDate(d.forecastDate),
     day_name: dayName(d.forecastDate),
     condition: typeName(d.idWeatherType),
@@ -141,7 +148,7 @@ export async function fetchWeather() {
   }));
   let braga15 = bragaIpma;
   try {
-    const om = await getJson('https://api.open-meteo.com/v1/forecast?latitude=41.5475&longitude=-8.4227&timezone=Europe%2FLisbon&forecast_days=15&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,relative_humidity_2m_mean', 10000);
+    const om = await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&timezone=auto&forecast_days=15&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,relative_humidity_2m_mean`, 10000);
     const d = om.daily;
     if (d?.time?.length) {
       braga15 = d.time.map((t, i) => ({
@@ -178,7 +185,31 @@ export async function fetchWeather() {
     };
   }).filter(Boolean);
 
+  // a cidade do utilizador: condição do dia do IPMA, valores atuais do Open-Meteo (ou da estação, se for uma das 6 cidades)
+  const d0 = locData?.data?.[0];
+  const cur = omNow?.current;
+  const fromList = cities.find((c) => c.name === loc.name);
+  const here = {
+    name: loc.name,
+    temp: cur?.temperature_2m != null ? Math.round(cur.temperature_2m) : (fromList?.temp ?? (d0 ? Math.round((Number(d0.tMin) + Number(d0.tMax)) / 2) : null)),
+    condition: d0 ? typeName(d0.idWeatherType) : (cur ? WMO_PT(cur.weather_code) : '—'),
+    humidity: cur?.relative_humidity_2m != null ? Math.round(cur.relative_humidity_2m) : (fromList?.humidity ?? '—'),
+    wind_kmh: cur?.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : (fromList?.wind_kmh ?? '—'),
+    wind_direction: cur?.wind_direction_10m != null ? DEG_DIR(cur.wind_direction_10m) : (fromList?.wind_direction ?? '—'),
+    uv_index: cur?.uv_index != null ? Math.round(cur.uv_index) : (fromList?.uv_index ?? 0),
+    min_temp: d0 ? Math.round(Number(d0.tMin)) : null,
+    max_temp: d0 ? Math.round(Number(d0.tMax)) : null,
+  };
+  const fmtA = (x) => new Date(x).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const here_alerts = active.filter((w) => w.idAreaAviso === loc.area).map((w) => ({
+    city: loc.name, alert_type: ALERT_TYPE(w.awarenessTypeName), severity: LEVEL_PT[w.awarenessLevelID] || w.awarenessLevelID,
+    description: `${w.text || ''} (${tr('{a} a {b}', { a: fmtA(w.startTime), b: fmtA(w.endTime) })})`.trim(),
+  }));
+
   return {
+    place: loc.name,
+    here: here.temp !== null ? here : null,
+    here_alerts,
     alerts,
     cities,
     forecast_days: bragaIpma.slice(0, 5).map((d) => ({ day: `${d.day_name.slice(0, 3)} ${d.date}`, condition: d.condition, min_temp: d.min_temp, max_temp: d.max_temp })),

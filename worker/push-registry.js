@@ -2,7 +2,7 @@
 // A app regista aqui cada telemóvel quando se carrega em "Ativar notificações" (sem códigos para copiar).
 // O GitHub Actions (scripts/send-push.mjs) lê a lista para enviar os avisos e apaga os registos que expiraram.
 //
-//  POST /subscribe   { subscription, prefs, theme, lang }   (público, só da app; guarda ou atualiza o registo)
+//  POST /subscribe   { subscription, prefs, theme, lang, loc }   (público, só da app; guarda ou atualiza o registo)
 //  POST /unsubscribe { endpoint }                     (público; apaga o registo desse telemóvel)
 //  GET  /list                                         (só o GitHub Actions: Authorization: Bearer <JWT assinado com a chave VAPID privada>)
 //  POST /remove      { endpoints: [...] }             (só o GitHub Actions, mesmo JWT)
@@ -13,7 +13,7 @@
 
 const PUSH_HOSTS = /(^|\.)(fcm\.googleapis\.com|push\.services\.mozilla\.com|notify\.windows\.com|push\.apple\.com|web\.push\.apple\.com)$/;
 const PREF_KEYS = ['guerra_enabled', 'catastrofes_enabled', 'meteorologia_enabled', 'tensao_global_enabled', 'pizza_index_enabled', 'greves_enabled'];
-const THEMES = ['green', 'white', 'amber', 'blue', 'red'];
+const THEMES = ['green', 'white', 'amber', 'blue', 'red', 'lilac'];
 
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4)), (c) => c.charCodeAt(0));
@@ -62,7 +62,10 @@ export default {
         const prefs = Object.fromEntries(PREF_KEYS.map((k) => [k, typeof body.prefs?.[k] === 'boolean' ? body.prefs[k] : k !== 'pizza_index_enabled']));
         const theme = THEMES.includes(body.theme) ? body.theme : 'green';
         const lang = body.lang === 'en' ? 'en' : 'pt'; // idioma das notificações
-        const rec = { sub: { endpoint: ep, expirationTime: null, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, prefs, theme, lang, updated: new Date().toISOString() };
+        // cidade (só a cidade do IPMA, nunca a posição exata): id da previsão, distrito dos avisos e nome
+        const l = body.loc || {};
+        const loc = Number.isInteger(l.id) && /^[A-Z]{3}$/.test(l.area || '') && typeof l.name === 'string' && l.name.length < 40 ? { id: l.id, area: l.area, name: l.name } : null;
+        const rec = { sub: { endpoint: ep, expirationTime: null, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, prefs, theme, lang, loc, updated: new Date().toISOString() };
         await env.SUBS.put(await keyOf(ep), JSON.stringify(rec));
         return json({ ok: true }, 200, h);
       }

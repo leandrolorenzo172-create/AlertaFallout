@@ -7,6 +7,7 @@
 // O registo dos avisos já mostrados fica na Cache Storage, partilhado entre a página e o service worker.
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { syncPush } from './push';
+import { getLoc } from '@/location';
 import { t, isEn } from '@/i18n';
 
 export const ANTECEDENCIA_DIAS = 2;
@@ -61,7 +62,7 @@ function enabledInSettings() { return readPrefs().greves_enabled !== false; }
 
 // ---------- entrega ----------
 // cor da app escolhida (as miniaturas das notificações existem nas 5 cores)
-const themeId = () => { try { const t = JSON.parse(localStorage.getItem('pb_settings') || '{}').theme; return /^(green|white|amber|blue|red)$/.test(t) ? t : 'green'; } catch { return 'green'; } };
+const themeId = () => { try { const t = JSON.parse(localStorage.getItem('pb_settings') || '{}').theme; return /^(green|white|amber|blue|red|lilac)$/.test(t) ? t : 'green'; } catch { return 'green'; } };
 const thumb = (mode = 'base') => `./icons/tempo/${themeId()}/${mode}.png`;
 
 async function systemNotify({ title, body, icon, url }, tag) {
@@ -113,7 +114,7 @@ const TEMPO_EX = [
 let tempoIdx = 0;
 export async function testWeatherAlert() {
   const [mode, tipo, body] = TEMPO_EX[tempoIdx++ % TEMPO_EX.length];
-  const msg = { title: `${t('Tempo hoje em Braga:')} ${tipo} (${t('EXEMPLO')})`, body, icon: thumb(mode), url: './#/meteo' };
+  const msg = { title: `${t('Tempo hoje em {c}:', { c: getLoc().name })} ${tipo} (${t('EXEMPLO')})`, body, icon: thumb(mode), url: './#/meteo' };
   banner(msg); await systemNotify(msg, `tempo-exemplo-${mode}`);
   return mode;
 }

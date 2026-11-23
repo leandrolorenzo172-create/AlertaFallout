@@ -48,7 +48,7 @@ if (priv) {
   try {
     const r = await fetch(`${PUSH_REGISTRY}/list`, { headers: { Authorization: `Bearer ${registryToken()}` }, signal: AbortSignal.timeout(20000) });
     const j = r.ok ? await r.json() : null;
-    if (j?.ok) targets = j.records.map((x) => ({ sub: x.sub, prefs: x.prefs || {}, lang: x.lang || 'pt' }));
+    if (j?.ok) targets = j.records.map((x) => ({ sub: x.sub, prefs: x.prefs || {}, lang: x.lang || 'pt', loc: x.loc || null }));
     console.log(`registo automático: ${targets.length} telemóveis${r.ok ? '' : ` (erro ${r.status})`}`);
   } catch (e) { console.log('registo automático indisponível:', e.message); }
 }
@@ -110,7 +110,8 @@ const EN = {
 const T = (lang, pt, vars = {}) => { let x = lang === 'en' ? (EN[pt] ?? pt) : pt; return x.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)); };
 const dmyL = (lang, d) => { const [y, m, dd] = d.split('-'); return lang === 'en' ? `${m}/${dd}/${y.slice(2)}` : `${dd}/${m}/${y.slice(2)}`; };
 // icon: miniatura da personagem (public/icons/tempo/<modo>.png); make(lang) devolve { title, body } nesse idioma
-const add = (cat, key, make, url, icon = 'base') => { if (!sent[key]) due.push({ cat, key, make, url, icon }); };
+// only: só para os telemóveis dessa cidade (tempo e avisos do IPMA); sem only, para todos
+const add = (cat, key, make, url, icon = 'base', only = null) => { if (!sent[key]) due.push({ cat, key, make, url, icon, only }); };
 // modo da personagem a partir da descrição do tempo (igual ao painel Alertas e clima da app)
 const modeFrom = (txt = '', tmin = 10, wind = 0) => {
   const c = txt.toLowerCase();
@@ -138,36 +139,44 @@ if (hour >= 8 && hour < 23) {
     }
   }
 
-  // ---- Meteorologia: previsão do dia, uma vez por dia (primeira verificação depois das 8h) ----
-  const [prev, types] = await Promise.all([
-    getJson(`https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/${DISTRITO.cidade}.json`),
-    getJson('https://api.ipma.pt/open-data/weather-type-classe.json'),
-  ]);
-  const hoje = (prev?.data || []).find((d) => d.forecastDate === today);
-  if (hoje) {
+  // ---- Meteorologia por cidade: cada telemóvel recebe o tempo e os avisos da cidade escolhida na app ----
+  // (registos antigos, sem cidade, ficam com DISTRITO: Braga)
+  const locOf = (tg) => tg.loc || { id: DISTRITO.cidade, area: DISTRITO.id, name: DISTRITO.nome };
+  const cidades = new Map(); for (const tg of targets) { const L = locOf(tg); cidades.set(L.id, L); }
+  if (!cidades.size) cidades.set(DISTRITO.cidade, { id: DISTRITO.cidade, area: DISTRITO.id, name: DISTRITO.nome });
+  const types = await getJson('https://api.ipma.pt/open-data/weather-type-classe.json');
+  const VENTO = { 1: 'fraco', 2: 'moderado', 3: 'forte', 4: 'muito forte' }; const VENTO_KMH = { 1: 10, 2: 25, 3: 45, 4: 65 };
+  for (const L of cidades.values()) {
+    // previsão do dia, uma vez por dia (primeira verificação depois das 8h)
+    const prev = await getJson(`https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/${L.id}.json`);
+    const hoje = (prev?.data || []).find((d) => d.forecastDate === today);
+    if (!hoje) continue;
     const ty = (types?.data || []).find((x) => x.idWeatherType === hoje.idWeatherType);
     const tipo = ty?.descWeatherTypePT || 'Tempo variável';
-    const VENTO = { 1: 'fraco', 2: 'moderado', 3: 'forte', 4: 'muito forte' }; const VENTO_KMH = { 1: 10, 2: 25, 3: 45, 4: 65 };
     const mode = modeFrom(tipo, Number(hoje.tMin), VENTO_KMH[hoje.classWindSpeed] || 0);
     const chuva = Math.round(Number(hoje.precipitaProb) || 0);
-    add('meteorologia', `meteorologia|${today}|previsao`, (l) => ({
-      title: T(l, 'Tempo hoje em {c}: {t} · {min}°/{max}°', { c: DISTRITO.nome, t: l === 'en' ? (ty?.descWeatherTypeEN || T(l, tipo)) : tipo, min: Math.round(hoje.tMin), max: Math.round(hoje.tMax) }),
+    // a chave antiga (sem cidade) continua a valer para Braga, para não repetir o aviso no dia da mudança
+    const key = L.id === DISTRITO.cidade && sent[`meteorologia|${today}|previsao`] ? `meteorologia|${today}|previsao` : `meteorologia|${today}|previsao|${L.id}`;
+    add('meteorologia', key, (l) => ({
+      title: T(l, 'Tempo hoje em {c}: {t} · {min}°/{max}°', { c: L.name, t: l === 'en' ? (ty?.descWeatherTypeEN || T(l, tipo)) : tipo, min: Math.round(hoje.tMin), max: Math.round(hoje.tMax) }),
       body: T(l, 'Chuva {p}% · Vento {v}{dir}. {c}', { p: chuva, v: T(l, VENTO[hoje.classWindSpeed] || '—'), dir: hoje.predWindDir ? ` (${hoje.predWindDir})` : '', c: T(l, CONSELHO[mode]) }),
-    }), './#/meteo', mode);
+    }), './#/meteo', mode, (tg) => locOf(tg).id === L.id);
   }
 
-  // ---- Meteorologia: avisos do IPMA para o distrito, ativos hoje (o texto do IPMA fica em português) ----
+  // avisos do IPMA (amarelo, laranja, vermelho) ativos hoje no distrito de cada cidade (o texto do IPMA fica em português)
   const LV = { yellow: 'AMARELO', orange: 'LARANJA', red: 'VERMELHO' };
   const AVISO_MODO = (x = '') => (/precipita|trovoada/i.test(x) ? 'rain' : /vento|agita/i.test(x) ? 'wind' : /nevoeiro/i.test(x) ? 'fog' : /frio|neve/i.test(x) ? 'cold' : /quente/i.test(x) ? 'sun' : 'cloud');
   const warnings = await getJson('https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json');
+  const areas = new Map(); for (const L of cidades.values()) if (!areas.has(L.area)) areas.set(L.area, L);
   for (const w of warnings || []) {
-    if (w.idAreaAviso !== DISTRITO.id || !LV[w.awarenessLevelID]) continue;
+    const L = areas.get(w.idAreaAviso);
+    if (!L || !LV[w.awarenessLevelID]) continue;
     const s = dayOf(w.startTime), e = dayOf(w.endTime);
     if (today < s || today > e || new Date(w.endTime) < new Date()) continue;
-    add('meteorologia', `meteorologia|${today}|${w.awarenessLevelID}|${w.awarenessTypeName}|${w.startTime}`, (l) => ({
-      title: T(l, 'ALERTA {l} — {t} em {c} hoje ({a} às {b})', { l: T(l, LV[w.awarenessLevelID]), t: T(l, w.awarenessTypeName), c: DISTRITO.nome, a: hm(w.startTime), b: hm(w.endTime) }),
+    add('meteorologia', `meteorologia|${today}|${w.idAreaAviso}|${w.awarenessLevelID}|${w.awarenessTypeName}|${w.startTime}`, (l) => ({
+      title: T(l, 'ALERTA {l} — {t} em {c} hoje ({a} às {b})', { l: T(l, LV[w.awarenessLevelID]), t: T(l, w.awarenessTypeName), c: L.name, a: hm(w.startTime), b: hm(w.endTime) }),
       body: w.text || T(l, 'Aviso {l} do IPMA.', { l: T(l, LV[w.awarenessLevelID]).toLowerCase() }),
-    }), './#/meteo', AVISO_MODO(w.awarenessTypeName));
+    }), './#/meteo', AVISO_MODO(w.awarenessTypeName), (tg) => locOf(tg).area === w.idAreaAviso);
   }
 
   // ---- Catástrofes: GDACS vermelho e sismos fortes, de hoje ----
@@ -241,14 +250,14 @@ if (process.env.PUSH_TEST_TEMPO) {
 
 if (!priv || !subs.length) {
   console.log(`push: ${due.length} avisos por enviar, mas falta ${!priv ? 'VAPID_PRIVATE_KEY' : 'algum telemóvel registado'} — nada enviado`);
-  for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.make('pt').title}  |  EN: ${d.make('en').title}`);
+  for (const d of due) console.log(`  por enviar [${d.cat}]: ${d.make('pt').title}  |  EN: ${d.make('en').title}${d.only ? ' (só essa cidade)' : ''}`);
 } else if (due.length) {
   webpush.setVapidDetails('https://steeldeck.github.io/SteelDeck/', VAPID_PUBLIC, priv);
   const gone = new Set();
   for (const d of due.slice(0, 10)) { // nunca mais de 10 de uma vez
     const payload = (lang) => { const m = d.make(lang); return JSON.stringify({ cat: d.cat, title: m.title, body: m.body, tag: d.key.slice(0, 120), url: d.url, icon: `./icons/tempo/${d.icon || 'base'}.png` }); };
     // só para quem tem esta categoria ligada (os registos antigos, sem interruptores, recebem tudo e o telemóvel filtra)
-    const to = targets.filter((t) => !PREF_KEY[d.cat] || t.prefs[PREF_KEY[d.cat]] !== false).filter((t) => !gone.has(t.sub.endpoint));
+    const to = targets.filter((t) => !PREF_KEY[d.cat] || t.prefs[PREF_KEY[d.cat]] !== false).filter((t) => !gone.has(t.sub.endpoint)).filter((t) => !d.only || d.only(t));
     const results = await Promise.allSettled(to.map((t) => webpush.sendNotification(t.sub, payload(t.lang === 'en' ? 'en' : 'pt'), { TTL: 12 * 3600, urgency: 'high' })));
     const ok = results.filter((r) => r.status === 'fulfilled').length;
     results.forEach((r, i) => {

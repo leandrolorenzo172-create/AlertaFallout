@@ -1,6 +1,22 @@
 // Traduções para inglês (EUA). Chave = texto em português tal como está no código (ver src/i18n/index.js).
 // Gerado a partir dos textos da app; para acrescentar, junta "texto em português": "English text".
 export default {
+  "Alertas de última hora ({c}):": "Breaking alerts ({c}):",
+  "Previsão 15 Dias - {c} (IPMA)": "15-Day Forecast - {c} (IPMA)",
+  "Tempo hoje em {c}:": "Weather today in {c}:",
+  "Localização": "Location",
+  "✔ Localização encontrada: {c}.": "✔ Location found: {c}.",
+  "A localização está bloqueada para esta app. Ativa-a nas definições do telemóvel ou escolhe a cidade na lista.": "Location is blocked for this app. Turn it on in your phone's settings or pick the city from the list.",
+  "Não foi possível obter a localização. Escolhe a cidade na lista.": "Couldn't get your location. Pick the city from the list.",
+  "O tempo, os alertas do IPMA e as notificações do tempo são da cidade escolhida. A posição exata fica só no telemóvel; só se usa a cidade.": "The weather, IPMA alerts and weather notifications are for the chosen city. Your exact position stays on the phone; only the city is used.",
+  "automática": "automatic",
+  "escolhida à mão": "chosen manually",
+  "por omissão": "default",
+  "A localizar…": "Locating…",
+  "Usar a minha localização": "Use my location",
+  "Escolher cidade": "Choose city",
+  "Mascote: a exploradora": "Mascot: the explorer",
+  "Lilás": "Lilac",
   "&#10529; SAIR DO ECRÃ INTEIRO": "&#10529; EXIT FULL SCREEN",
   "Pilota a nave pelo espaço, abate as vagas de inimigos que chegam pela direita, desvia-te das montanhas e enfrenta o chefe no fim de cada nível.": "Fly your ship through space, shoot down the waves of enemies coming from the right, dodge the mountains and face the boss at the end of each level.",
   "Come os pontos para crescer e somar pontos. Não batas nas paredes nem no teu corpo. De vez em quando aparece um bicho de bónus por pouco tempo.": "Eat the dots to grow and score points. Don't hit the walls or your own body. Every now and then a bonus bug shows up for a short time.",

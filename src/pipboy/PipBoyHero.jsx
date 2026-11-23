@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Mascot from './Mascot';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { fetchWeather } from '@/api/liveData';
+import { useLoc } from '@/location';
 import { t, locale } from '@/i18n';
 
 const levelColor = (v) => (v >= 8 ? '#ff0000' : v >= 6 ? '#ff6600' : v >= 4 ? '#ffaa00' : 'rgb(var(--c))');
@@ -44,7 +45,7 @@ function WeatherFx({ mode }) {
   return <div key={mode} className="pb-fx" aria-hidden="true">{fx}</div>;
 }
 
-// Escolhe o estado do painel a partir do tempo real em Braga
+// Escolhe o estado do painel a partir do tempo real na cidade do utilizador
 function modeFromWeather(city) {
   if (!city) return 'base';
   const c = (city.condition || '').toLowerCase();
@@ -74,20 +75,21 @@ export default function PipBoyHero({ data }) {
   const [weather, setWeather] = useState(null);
   const [wxError, setWxError] = useState(false);
   const [test, setTest] = useState('auto');
+  const loc = useLoc(); // cidade do telemóvel (ou escolhida nas Definições)
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (IS_ARTIFACT) { setWxError(true); return undefined; } // no claude.ai não há acesso a dados externos
     let alive = true;
-    const load = () => fetchWeather().then((w) => { if (alive) { setWeather(w); setWxError(false); } }).catch(() => { if (alive) setWxError(true); });
+    const load = () => fetchWeather(loc).then((w) => { if (alive) { setWeather(w); setWxError(false); } }).catch(() => { if (alive) setWxError(true); });
     load();
     const t = setInterval(load, 15 * 60000);
     return () => { alive = false; clearInterval(t); };
-  }, []);
+  }, [loc.id]);
 
   const g = Number(data?.global_threat_level) || 0;
-  const braga = weather?.cities?.find((c) => c.name === 'Braga');
-  const alerts = (weather?.alerts || []).filter((a) => /braga/i.test(a.city));
+  const braga = weather?.here || null; // tempo atual na cidade do utilizador
+  const alerts = weather?.here_alerts || [];
   const auto = modeFromWeather(braga);
   const mode = test === 'auto' ? auto : test;
   const date = now.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
@@ -128,7 +130,7 @@ export default function PipBoyHero({ data }) {
         <div className="relative flex gap-3 items-center">
           <Mascot key={mode} mode={mode} className="shrink-0 pb-swap" style={{ width: 96 }} />
           <div className="min-w-0 flex-1 text-xs leading-snug">
-            <p className="font-bold uppercase" style={{ color: 'rgb(var(--c))' }}>{t('Alertas de última hora (Braga):')}</p>
+            <p className="font-bold uppercase" style={{ color: 'rgb(var(--c))' }}>{t('Alertas de última hora ({c}):', { c: loc.name })}</p>
             {wxError && !weather ? (
               <p style={{ color: 'rgb(var(--c) / 0.7)' }}>{t('Sem dados meteorológicos neste momento.')}</p>
             ) : alerts.length ? alerts.slice(0, 2).map((a, i) => (
@@ -139,7 +141,7 @@ export default function PipBoyHero({ data }) {
             <p className="font-bold uppercase mt-2" style={{ color: 'rgb(var(--c))' }}>{t('Clima em tempo real:')}</p>
             {braga ? (
               <>
-                <p className="text-sm" style={{ color: 'rgb(var(--c) / 0.9)' }}>{t('BRAGA —')}{' '}{braga.temp}°C ({braga.condition})</p>
+                <p className="text-sm" style={{ color: 'rgb(var(--c) / 0.9)' }}>{loc.name.toUpperCase()} —{' '}{braga.temp}°C ({braga.condition})</p>
                 <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.7)' }}>
                   {t('Hr:')}{' '}{braga.humidity}{t('% | Vento:')}{' '}{braga.wind_kmh}{' '}{t('km/h')}{' '}{braga.wind_direction}{' '}{t('| UV:')}{' '}{braga.uv_index} ({UV_TXT(braga.uv_index)}{t(') | Term:')}{' '}{braga.min_temp}°/{braga.max_temp}°
                 </p>

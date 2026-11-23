@@ -1,24 +1,31 @@
 import React, { useId } from 'react';
 import mascotPng from '../assets/mascote.png';
+import mascotFemPng from '../assets/mascote-fem.png';
+import { useSettings } from '../theme';
 import { t } from '@/i18n';
 
 // Mascote da app: o explorador de chapéu escolhido pelo utilizador (src/assets/mascote.png).
 // A imagem é usada como máscara, por isso o boneco é pintado com a cor do tema ativo.
 // Os acessórios do tempo são desenhados por cima.
 // mode: 'base' | 'rain' | 'sun' | 'wind' | 'fog' | 'cold' | 'cloud'
+// fem: versão feminina (Easter egg do tema lilás); por omissão segue o tema escolhido
 const INK = 'rgb(var(--cb))';
 const W = 260; const H = 429; // tamanho da imagem do boneco
 
-export default function Mascot({ mode = 'base', className = '', style }) {
+export default function Mascot({ mode = 'base', className = '', style, fem }) {
   const id = useId().replace(/:/g, '');
+  const { theme } = useSettings();
+  const female = fem ?? theme === 'lilac';
+  // na versão feminina a cara e o pescoço ficam um pouco mais abaixo: óculos e cachecol descem
+  const dy = female ? 18 : 0;
   const rain = mode === 'rain'; const sun = mode === 'sun'; const wind = mode === 'wind';
   const fog = mode === 'fog'; const cold = mode === 'cold'; const cloud = mode === 'cloud';
   const acc = { fill: 'currentColor', stroke: INK, strokeWidth: 4, strokeLinejoin: 'round' };
   return (
-    <svg viewBox="-42 -64 344 497" className={`mc ${cold ? 'mc-shiver' : ''} ${wind ? 'mc-lean' : ''} ${className}`} style={{ color: 'rgb(var(--c))', filter: 'drop-shadow(0 0 6px rgb(var(--c) / 0.45))', ...style }} role="img" aria-label={t('Mascote: o explorador')}>
+    <svg viewBox="-42 -64 344 497" className={`mc ${cold ? 'mc-shiver' : ''} ${wind ? 'mc-lean' : ''} ${className}`} style={{ color: 'rgb(var(--c))', filter: 'drop-shadow(0 0 6px rgb(var(--c) / 0.45))', ...style }} role="img" aria-label={female ? t('Mascote: a exploradora') : t('Mascote: o explorador')}>
       <defs>
         <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
-          <image href={mascotPng} x="0" y="0" width={W} height={H} />
+          <image href={female ? mascotFemPng : mascotPng} x="0" y="0" width={W} height={H} />
         </mask>
       </defs>
 
@@ -36,13 +43,13 @@ export default function Mascot({ mode = 'base', className = '', style }) {
 
       {rain && <path {...acc} d="M-36-2a166 62 0 0 1 332 0q-28-18-55 0-28-18-56 0-27-18-55 0-28-18-56 0-27-18-55 0-28-18-55 0z" />}
       {sun && (
-        <g className="mc-glasses">
+        <g transform={dy ? `translate(0 ${dy})` : undefined}><g className="mc-glasses">
           <path fill={INK} d="M76 110h44v20a22 20 0 0 1-44 0zM142 110h44v20a22 20 0 0 1-44 0z" />
           <path stroke={INK} strokeWidth="6" strokeLinecap="round" d="M118 115h26M76 114l-22-8M186 114l22-8" />
-        </g>
+        </g></g>
       )}
       {(cold || wind) && (
-        <g>
+        <g transform={dy ? `translate(0 ${dy})` : undefined}>
           <path {...acc} d="M82 176h98a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8H82a8 8 0 0 1-8-8v-12a8 8 0 0 1 8-8z" />
           <g className={wind ? 'mc-tail' : undefined}>
             <path {...acc} d={wind ? 'M176 180l96-30 8 26-96 32z' : 'M150 200h30v62h-30z'} />

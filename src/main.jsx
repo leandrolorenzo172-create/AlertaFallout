@@ -9,7 +9,8 @@ import { t } from './i18n';
 import { startAutoFlip } from './autoFlip';
 
 applyTheme(); // aplica o tema guardado antes de desenhar a app
-if (!IS_ARTIFACT) startAutoFlip(); // roda a app quando o telemóvel fica de cabeça para baixo
+if (!IS_ARTIFACT) startAutoFlip();
+if (!IS_ARTIFACT) import('./location').then((m) => m.refreshAutoLocation()); // confirma a cidade no modo automático // roda a app quando o telemóvel fica de cabeça para baixo
 
 // Dentro do artefacto do claude.ai o endereço não pode mudar: usa-se um router em memória.
 // Fora do claude.ai usa-se o endereço com # para funcionar em qualquer alojamento estático.

@@ -311,7 +311,7 @@ Inclui:
           <div className="flex items-center gap-2 mb-3">
             <Cloud size={14} style={{ color: 'rgb(var(--c))' }} />
             <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-              {t('Previsão 15 Dias - Braga (IPMA)')}
+              {t('Previsão 15 Dias - {c} (IPMA)', { c: weather?.place || 'Braga' })}
             </h3>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
