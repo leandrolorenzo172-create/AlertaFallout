@@ -139,7 +139,7 @@ export async function streamChat(provider, cfg, { system, messages, onText, sign
   try {
     if (provider === 'anthropic') {
       const client = await anthropicClient(cfg);
-      const params = { model: cfg.model, max_tokens: 64000, system, output_config: { effort: 'medium' }, messages };
+      const params = { model: cfg.model, max_tokens: 4096, system, output_config: { effort: 'medium' }, messages };
       // Se o modelo recusar por política de segurança, a API tenta outro modelo na mesma chamada (o Haiku 5.5 não tem esta opção)
       if (cfg.model !== 'claude-haiku-5-5') Object.assign(params, { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
       const stream = client.beta.messages.stream(params, { signal });

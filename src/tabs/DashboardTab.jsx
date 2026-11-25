@@ -188,7 +188,7 @@ Inclui também os 5 eventos/ameaças mais críticos no momento.`,
       <PipBoyHero data={data} />
 
       {/* A Instabilidade Económica passou para o seu próprio separador; aqui fica só o resumo */}
-      <div className="p-4 rounded-sm mb-6" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
+      <div id="painel-resumo" className="p-4 rounded-sm mb-6" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' }}>
         <div className="p-3 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.13)' }}>
           <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--c) / 0.33)' }}>{t('Resumo')}</p>
           <p className="text-xs leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>{data?.summary}</p>

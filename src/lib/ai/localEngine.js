@@ -8,6 +8,7 @@ import { listDocs, onKbChange } from '@/lib/kb';
 import { DEFAULT_STATIONS } from '@/radio/defaultStations';
 import stationsPT from '@/data/stationsPT.json';
 import { locale } from '../../i18n';
+import { cleanNoise, intentOf, greeting, starter, identity, intro, connector, closing, missing } from './steelPersonaOffline';
 
 // ---------- Texto ----------
 const STOP = new Set(('a o os as um uma uns umas de do da dos das em no na nos nas por para pelo pela pelos pelas com sem sob sobre '
@@ -26,7 +27,7 @@ const clean = (t) => String(t || '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n
 // Texto de documentos importados (muitas vezes de OCR) mostrado tal como está: sem que "~", "*", "_" ou "#" virem
 // riscados, negrito ou títulos por acaso. O manual incluído é Markdown a sério e não passa por aqui.
 const plain = (t) => clean(t).replace(/[\\`*_~[\]<>|]/g, (c) => `\\${c}`).replace(/^(\s*)(#{1,6}|[-+])(\s)/gm, '$1\\$2$3').replace(/^(\s*\d+)([.)])(\s)/gm, '$1\\$2$3');
-const shown = (u, t = u.text) => (u.source === 'kb' ? plain(t) : clean(t));
+const shown = (u, t = u.text) => (u.source === 'kb' ? plain(cleanNoise(t)) : clean(t));
 
 // Divide textos longos em passagens (por parágrafos), para a resposta ser precisa
 function passages(text, size = 900) {
@@ -89,8 +90,22 @@ async function buildIndex() {
   const docs = await listDocs().catch(() => []);
   for (const d of docs) {
     if (d.enabled === false) continue;
+    let chapter = '';
     (d.pages || []).forEach((p, i) => {
-      for (const part of passages(p)) add({ source: 'kb', title: d.title, ref: `${d.name}, ${d.unit} ${i + 1}`, docId: d.id, page: i + 1, text: part });
+      // PDFs com cabeçalho de capítulo (ex.: "05. PURIFICAÇÃO DE ÁGUA…" no eBook): o título passa a ser o capítulo
+      const h = p.match(/STEELDECK\s*\/\/\s*GUIA DE SOBREVIV[ÊE]NCIA\s+\d{2}\.\s+([^\n]+?)\s*$/m);
+      if (h) {
+        let c = h[1].trim();
+        if (c.endsWith('…')) { // título cortado no cabeçalho: completa-o pelo título da secção do manual
+          const cut = norm(c.slice(0, -1)).trim();
+          const full = manualSections.find((m) => norm(m.title).startsWith(cut));
+          c = full ? full.title : c.slice(0, -1).replace(/\s+\S*$/, '');
+        }
+        chapter = c.trim();
+      }
+      const nice = chapter === chapter.toUpperCase() ? `${chapter.charAt(0)}${chapter.slice(1).toLowerCase()}` : chapter;
+      const title = chapter ? `${d.system ? 'Guia SteelDeck' : d.title} · ${nice}` : d.title;
+      for (const part of passages(p)) add({ source: 'kb', title, ref: `${d.name}, ${d.unit} ${i + 1}`, docId: d.id, page: i + 1, text: part });
     });
   }
   // 2. Manual incluído
@@ -138,7 +153,8 @@ export async function search(query, limit = 6) {
       s += idf(t) * ((f * (k1 + 1)) / (f + k1 * (1 - b + (b * u.len) / idx.avg)));
     }
     if (matched) {
-      const boost = u.source === 'kb' ? 1.25 : u.source === 'app' ? 1.15 : 1; // os documentos do utilizador primeiro
+      // prioridade: documentos da Base de Conhecimento (inclui o eBook), depois dados vivos da app; manual e núcleo antigos são secundários
+      const boost = u.source === 'kb' ? 1.5 : u.source === 'app' ? 1.15 : 0.75;
       scored.push({ u, score: s * boost * (0.5 + matched / q.length), matched });
     }
   }
@@ -148,27 +164,98 @@ export async function search(query, limit = 6) {
 }
 
 // Passagens mais relevantes, para dar contexto à IA online
-export async function contextFor(query, limit = 6) {
+// minScore: abaixo disto a passagem não é relevante (evita gastar tokens com "lixo" em perguntas gerais)
+export async function contextFor(query, limit = 6, { chars = 1500, minScore = 0 } = {}) {
   const { hits } = await search(query, limit);
-  return hits.map((h) => ({ ref: h.u.ref, source: h.u.source, title: h.u.title, text: h.u.text.slice(0, 1500), docId: h.u.docId, page: h.u.page, route: h.u.route }));
+  return hits.filter((h) => h.score >= minScore).map((h) => ({ ref: h.u.ref, source: h.u.source, title: h.u.title, score: h.score, text: (h.u.source === 'kb' ? cleanNoise(h.u.text) : h.u.text).slice(0, chars), docId: h.u.docId, page: h.u.page, route: h.u.route }));
 }
 
 const refOfUnit = (u) => ({ label: u.ref, source: u.source, docId: u.docId, page: u.page, route: u.route });
-const SOURCE_NAME = { kb: 'Da tua base de conhecimento', manual: 'Do manual incluído', nucleo: 'Do núcleo do assistente', app: 'Dos dados guardados na app' };
 
 // Tópicos para sugestões: documentos importados primeiro, depois secções do manual
 export async function topics(n = 4, withSource = false) {
   const idx = await getIndex();
-  const kb = [...new Set(idx.units.filter((u) => u.source === 'kb').map((u) => u.title))].map((title) => ({ title, source: 'kb' }));
+  const kbTitles = [...new Set(idx.units.filter((u) => u.source === 'kb').map((u) => u.title))];
+  // de um documento com capítulos, sugere os capítulos (não a capa/páginas iniciais)
+  const kb = kbTitles.filter((t) => t.includes(' · ') || !kbTitles.some((o) => o.includes(' · ') && idx.units.some((u) => u.title === t && idx.units.some((v) => v.title === o && v.docId === u.docId))))
+    .map((title) => ({ title, source: 'kb' }));
   const manual = manualSections.map((s) => ({ title: s.title, source: 'manual' }));
   const all = [...kb, ...manual].slice(0, n);
   return withSource ? all : all.map((t) => t.title);
 }
 
-// Resposta completa do motor local
+// ---------- Resposta do motor local (Mr. Steel offline) ----------
 // reason: 'offline' (sem rede), 'nokey' (online mas sem IA configurada) ou 'error' (a IA online falhou)
-export async function answerLocally(question, { reason = 'offline' } = {}) {
-  // "Saber mais sobre: X" -> todo o conteúdo guardado sobre esse tema
+// history: mensagens anteriores da conversa ({ role, text, refs }), para "continua", "resume isso", etc.
+// Frases completas (não fragmentos de tabela, legendas ou títulos em maiúsculas), para os resumos
+const firstSentences = (text, max = 6) => cleanNoise(clean(text).replace(/\\(.)/g, '$1')).split(/\n+/)
+  .map((l) => l.replace(/^[\s>*#\-•■\d.)]+/, '').trim())
+  .filter((l) => l.length > 30 && !/^FIG\./i.test(l) && (l.match(/[a-zà-ú]/g) || []).length > l.length * 0.45)
+  .map((l) => (l.match(/^.{20,220}?[.!?](\s|$)/) || [l.slice(0, 220)])[0].trim())
+  .sort((a, b) => /[.!?]$/.test(b) - /[.!?]$/.test(a)) // frases completas primeiro
+  .slice(0, max);
+
+async function followupsFor(title, hits = []) {
+  const seen = new Set([norm(title)]);
+  const related = hits.map((h) => h.u.title).filter((t) => { const k = norm(t); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 2);
+  return [`Saber mais sobre: ${title}`, ...related.map((t) => `Fala-me de: ${t}`)].slice(0, 3);
+}
+
+// Unidades já mostradas na última resposta (pela referência e pelo texto)
+async function lastShown(history) {
+  const last = [...(history || [])].reverse().find((m) => m.role === 'assistant' && m.refs && m.refs.length);
+  if (!last) return null;
+  const idx = await getIndex();
+  const ref = last.refs[0];
+  const sameRef = idx.units.filter((u) => u.ref === ref.label);
+  const sameDoc = ref.docId ? idx.units.filter((u) => u.docId === ref.docId) : sameRef;
+  const inText = (u) => last.text.includes(shown(u).slice(0, 60).trim());
+  const shownUnits = sameDoc.filter(inText);
+  return { last, ref, sameDoc, shownUnits: shownUnits.length ? shownUnits : sameRef.slice(0, 1) };
+}
+
+export async function answerLocally(question, { reason = 'offline', history = [] } = {}) {
+  const offline = reason === 'offline';
+  const intent = intentOf(question);
+
+  // 1. Conversa: saudações, quem sou, agradecimentos
+  if (intent === 'greet' || intent === 'who' || intent === 'thanks') {
+    const t = await topics(3);
+    const text = intent === 'greet' ? `${greeting(offline)}\n\n${starter()}`
+      : intent === 'who' ? `${identity()}\n\n${starter()}`
+        : `Sempre ao dispor. ${closing()}`;
+    return { text, refs: [], followups: t.map((x) => `Fala-me de: ${x}`), found: true };
+  }
+
+  // 2. Continuação / resumo do tema anterior
+  if (intent === 'continue' || intent === 'summary') {
+    const ctx = await lastShown(history);
+    if (ctx) {
+      const { shownUnits, sameDoc, ref } = ctx;
+      const main = shownUnits[0];
+      if (intent === 'summary') {
+        const pts = shownUnits.flatMap((u) => firstSentences(shown(u), 4)).slice(0, 6);
+        if (pts.length) {
+          return { text: `Em síntese, sobre **${main.title}**:\n\n${pts.map((p) => `- ${p}`).join('\n')}\n\n_${closing()}_`, refs: [refOfUnit(main)], followups: await followupsFor(main.title), found: true };
+        }
+      } else {
+        const lastPos = Math.max(...shownUnits.map((u) => sameDoc.indexOf(u)));
+        const after = sameDoc.slice(lastPos + 1);
+        const sameTopic = after.filter((u) => u.title === main.title);
+        const next = (sameTopic.length ? sameTopic : after).slice(0, 2);
+        if (next.length) {
+          const body = next.map((u) => shown(u)).join('\n\n');
+          return { text: `Prossigo em **${next[0].title}**${next[0].page && next[0].page !== ref.page ? ` (pág. ${next[0].page})` : ''}:\n\n${body}\n\n_${closing()}_`, refs: [refOfUnit(next[0])], followups: ['Continua', 'Resume isso', `Saber mais sobre: ${next[0].title}`], found: true };
+        }
+        return { text: `Chegámos ao fim do que tenho sobre **${main.title}**. ${closing()}`, refs: [refOfUnit(main)], followups: await followupsFor(main.title), found: true };
+      }
+    }
+    // sem tema anterior: tenta com a última pergunta do utilizador
+    const prevQ = [...(history || [])].reverse().find((m) => m.role === 'user' && !intentOf(m.text));
+    if (prevQ) question = prevQ.text;
+  }
+
+  // 3. "Saber mais sobre: X" -> todo o conteúdo guardado sobre esse tema
   const more = String(question).match(/^saber mais sobre:?\s*(.+)$/i);
   if (more) {
     const idx = await getIndex();
@@ -177,36 +264,28 @@ export async function answerLocally(question, { reason = 'offline' } = {}) {
       const u0 = parts[0];
       let body = ''; for (const u of parts) { if (body.length > 3500) break; body += `${shown(u)}\n\n`; }
       const related = (await search(u0.title, 8)).hits.map((h) => h.u.title).filter((t, i, a) => t !== u0.title && a.indexOf(t) === i).slice(0, 2);
-      return { text: `**${SOURCE_NAME[u0.source]} — ${u0.title}**\n\n${body.trim()}${body.length > 3500 ? '\n\n_(Continua no documento original.)_' : ''}`, refs: [refOfUnit(u0)], followups: related.map((t) => `Fala-me de: ${t}`), found: true };
+      return { text: `${intro()}\n\n**${u0.title}**\n\n${body.trim()}${body.length > 3500 ? '\n\n_(Continua no documento original.)_' : ''}\n\n_${closing()}_`, refs: [refOfUnit(u0)], followups: ['Continua', ...related.map((t) => `Fala-me de: ${t}`)].slice(0, 3), found: true };
     }
   }
-  const { hits, coverage, terms } = await search(question.replace(/^fala-me de:?\s*/i, ''), 8);
+
+  // 4. Pesquisa: até 3 passagens complementares, ligadas numa resposta só
+  const { hits, coverage } = await search(String(question).replace(/^fala-me de:?\s*/i, ''), 10);
   const best = hits[0];
-  const enough = best && (best.score >= 2.2 || (terms === 1 && best.score >= 1.2)) && coverage >= (terms <= 2 ? 0.5 : 0.34);
-  const intro = reason === 'offline' ? 'Estou **sem ligação à internet**' : reason === 'nokey' ? 'A **IA online não está ligada** (falta a chave nas Definições)' : 'A **IA online não respondeu**';
+  const enough = best && best.score >= 1.4 && coverage >= 0.25;
   if (!enough) {
     const t = await topics(3);
-    return {
-      text: `${intro}, por isso só consigo responder com o que está guardado na app e na aba **Conhecimento** — e não encontrei nada sobre isso.\n\nExperimenta perguntar sobre um destes temas, ou importa documentos na aba **Ficheiros IA** para eu os poder consultar sem rede:\n\n${t.map((x) => `- ${x}`).join('\n')}`,
-      refs: [],
-      followups: t.map((x) => `Fala-me de: ${x}`),
-      found: false,
-    };
+    return { text: missing(t, reason), refs: [], followups: t.map((x) => `Fala-me de: ${x}`), found: false };
   }
   const main = best.u;
-  // Junta a passagem seguinte do mesmo documento se também for relevante (resposta mais completa)
-  const extra = hits.slice(1).find((h) => h.u.ref === main.ref && h.score > best.score * 0.6);
-  const other = hits.slice(1).find((h) => h.u.title !== main.title && h.score > best.score * 0.55);
-  let text = `**${SOURCE_NAME[main.source]} — ${main.title}**\n\n${shown(main)}`;
+  const extra = hits.slice(1).find((h) => h.u.ref === main.ref && h.score > best.score * 0.55);
+  const other = hits.slice(1).find((h) => h.u.title !== main.title && h.score > best.score * 0.5);
+  let text = `${intro()}\n\n**${main.title}**\n\n${shown(main)}`;
   if (extra) text += `\n\n${shown(extra.u)}`;
   if (other) {
-    const snippet = shown(other.u, clean(other.u.text).split(/\n{2,}/)[0].slice(0, 420));
-    text += `\n\n---\n\n**Também relacionado — ${other.u.title}** (${SOURCE_NAME[other.u.source].toLowerCase()})\n\n${snippet}${snippet.length >= 420 ? '…' : ''}`;
+    const snippet = shown(other.u, clean(other.u.text).split(/\n{2,}/).slice(0, 2).join('\n\n').slice(0, 600));
+    text += `\n\n---\n\n${connector()}\n\n**${other.u.title}**\n\n${snippet}${snippet.length >= 600 ? '…' : ''}`;
   }
+  text += `\n\n_${closing()}_`;
   const refs = [refOfUnit(main), ...(other ? [refOfUnit(other.u)] : [])];
-  // Perguntas de seguimento: tópicos relacionados encontrados na pesquisa
-  const seenT = new Set([norm(main.title)]);
-  const related = hits.map((h) => h.u.title).filter((t) => { const k = norm(t); if (seenT.has(k)) return false; seenT.add(k); return true; }).slice(0, 2);
-  const followups = [`Saber mais sobre: ${main.title}`, ...related.map((t) => `Fala-me de: ${t}`)];
-  return { text, refs, followups: followups.slice(0, 3), found: true };
+  return { text, refs, followups: await followupsFor(main.title, hits), found: true };
 }

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Mascot from './Mascot';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { fetchWeather } from '@/api/liveData';
 import { useLoc } from '@/location';
 import { t, locale } from '@/i18n';
+import { useSettings } from '@/theme';
 
 const levelColor = (v) => (v >= 8 ? '#ff0000' : v >= 6 ? '#ff6600' : v >= 4 ? '#ffaa00' : 'rgb(var(--c))');
 
@@ -16,15 +18,34 @@ function Bar({ value }) {
     </div>
   );
 }
-function Metric({ label, value, align = 'left' }) {
+// Bloco tocável (barra + rótulo): abre o separador do indicador. Funciona com toque, rato e teclado.
+// go: um caminho ('/guerra') ou uma função (ex.: descer até ao resumo do painel)
+function useGo() {
+  const navigate = useNavigate();
+  return (go) => (typeof go === 'function' ? go() : navigate(go));
+}
+function Tap({ go, label, className = '', style, children }) {
+  const open = useGo();
   return (
-    <div className="min-w-0" style={{ textAlign: align }}>
-      <p className="text-[11px] sm:text-xs uppercase tracking-wide font-bold leading-tight" style={{ color: 'rgb(var(--c) / 0.75)' }}>{label}</p>
-      <p className="text-[11px] sm:text-xs uppercase mb-1" style={{ color: '#ffaa00' }}>{t('Nível:')}{' '}{value.toFixed(1)}/10</p>
-      <Bar value={value} />
+    <div role="button" tabIndex={0} aria-label={label} className={`th-link ${className}`} style={style}
+      onClick={() => open(go)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(go); } }}
+      onTouchStart={() => {}} /* ativa o :active no Safari do iPhone */>
+      {children}
     </div>
   );
 }
+function Metric({ label, value, align = 'left', go, hint }) {
+  return (
+    <Tap go={go} label={`${label}: ${value.toFixed(1)}/10. ${hint}`} className="min-w-0" style={{ textAlign: align }}>
+      <p className="text-[11px] sm:text-xs uppercase tracking-wide font-bold leading-tight" style={{ color: 'rgb(var(--c) / 0.75)' }}>{label}</p>
+      <p className="text-[11px] sm:text-xs uppercase mb-1" style={{ color: '#ffaa00' }}>{t('Nível:')}{' '}{value.toFixed(1)}/10</p>
+      <Bar value={value} />
+    </Tap>
+  );
+}
+// Desce até ao resumo do painel (visão geral), por baixo dos indicadores
+const toSummary = () => document.getElementById('painel-resumo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 // Efeitos animados de cada estado do tempo. Ficam dentro da caixa do painel, que os corta nos limites.
 const seq = (n) => Array.from({ length: n }, (_, i) => i);
@@ -76,6 +97,9 @@ export default function PipBoyHero({ data }) {
   const [wxError, setWxError] = useState(false);
   const [test, setTest] = useState('auto');
   const loc = useLoc(); // cidade do telemóvel (ou escolhida nas Definições)
+  const { theme } = useSettings(); // muda em tempo real quando se troca de tema
+  const fem = theme === 'lilac'; // tema lilás = mascote feminina
+  const name = fem ? 'Mrs. Steel' : 'Mr.Steel';
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => {
@@ -104,24 +128,30 @@ export default function PipBoyHero({ data }) {
         <span className="text-sm tracking-wider" style={{ color: 'rgb(var(--c) / 0.8)' }}>{date}</span>
       </div>
 
-      {/* Nível global */}
-      <p className="text-center text-base sm:text-xl font-bold uppercase tracking-wider mb-2" style={{ color: '#ffaa00', textShadow: '0 0 10px #ffaa0066' }}>
-        {t('Nível de ameaça global:')}{' '}{g.toFixed(1)}
-      </p>
-      <div className="mb-5"><Bar value={g} /></div>
+      {/* Nível global: toque abre a visão geral (resumo e eventos críticos do painel) */}
+      <Tap go={toSummary} label={`${t('Nível de ameaça global:')} ${g.toFixed(1)}. ${t('Ver visão geral')}`} className="mb-5">
+        <p className="text-center text-base sm:text-xl font-bold uppercase tracking-wider mb-2" style={{ color: '#ffaa00', textShadow: '0 0 10px #ffaa0066' }}>
+          {t('Nível de ameaça global:')}{' '}{g.toFixed(1)}
+        </p>
+        <Bar value={g} />
+      </Tap>
 
       {/* Indicadores à volta da mascote: 3 à esquerda, 3 à direita */}
       <div className="grid items-center gap-x-2 gap-y-6" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(84px,30%) minmax(0,1fr)' }}>
-        <Metric label={t('Risco de guerra')} value={Number(data?.war_risk) || 0} />
-        <Mascot mode="base" className="w-full" style={{ gridRow: 'span 3', maxHeight: 260 }} />
-        <Metric label={t('Tensão geopolítica')} value={Number(data?.geopolitical_tension) || 0} align="right" />
-        <Metric label={t('Catástrofes')} value={Number(data?.natural_disaster_risk) || 0} />
-        <Metric label={t('Risco cibernético')} value={Number(data?.cyber_risk) || 0} align="right" />
-        <Metric label={t('Instab. económica')} value={Number(data?.economic_instability) || 0} />
-        <Metric label={t('Greves')} value={Number(data?.strike_index) || 0} align="right" />
+        <Metric label={t('Risco de guerra')} value={Number(data?.war_risk) || 0} go="/guerra" hint={t('Abrir separador Guerra')} />
+        <div className="flex flex-col items-center min-w-0" style={{ gridRow: 'span 3' }}>
+          <Mascot mode="base" fem={fem} className="w-full" style={{ maxHeight: 240 }} />
+          {/* nome da mascote, conforme o tema (Mr.Steel / Mrs. Steel no tema lilás) */}
+          <p className="pb-name text-center text-sm sm:text-base font-bold tracking-wider mt-1 whitespace-nowrap" aria-live="polite"
+            style={{ color: 'rgb(var(--c))', textShadow: fem ? '0 0 10px rgb(var(--c) / 0.9), 0 0 2px #fff' : '0 0 8px rgb(var(--c) / 0.6)' }}>{name}</p>
+        </div>
+        <Metric label={t('Tensão geopolítica')} value={Number(data?.geopolitical_tension) || 0} align="right" go="/guerra" hint={t('Abrir separador Guerra')} />
+        <Metric label={t('Catástrofes')} value={Number(data?.natural_disaster_risk) || 0} go="/catastrofes" hint={t('Abrir separador Catástrofes')} />
+        <Metric label={t('Risco cibernético')} value={Number(data?.cyber_risk) || 0} align="right" go={toSummary} hint={t('Ver visão geral')} />
+        <Metric label={t('Instab. económica')} value={Number(data?.economic_instability) || 0} go="/economia" hint={t('Abrir separador Economia')} />
+        <Metric label={t('Greves')} value={Number(data?.strike_index) || 0} align="right" go="/greves" hint={t('Abrir separador Greves')} />
       </div>
-      <p className="text-center text-sm font-bold uppercase tracking-wider mt-3" style={{ color: 'rgb(var(--c) / 0.85)' }}>{t('Ameaça global')}</p>
-      <p className="text-center text-sm uppercase mb-4" style={{ color: '#ffaa00' }}>{t('Índice:')}{' '}{g.toFixed(1)}</p>
+      <p className="text-center text-sm uppercase mt-3 mb-4" style={{ color: '#ffaa00' }}>{t('Índice:')}{' '}{g.toFixed(1)}</p>
 
       {/* Alertas e clima */}
       <div className="pb-wx relative overflow-hidden rounded-xl p-3" style={{ background: 'linear-gradient(rgb(var(--c) / 0.16), rgb(var(--cd) / 0.7))', border: '1px solid rgb(var(--c) / 0.35)' }}>
