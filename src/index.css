@@ -164,3 +164,30 @@ html.pb-flip #root > .crt { height: 100%; overflow-y: auto; overscroll-behavior:
 @media (hover: hover) { .th-link:hover { border-color: rgb(var(--c) / 0.3); background: rgb(var(--c) / 0.05); } }
 .th-link:active { border-color: rgb(var(--c) / 0.75); background: rgb(var(--c) / 0.12); box-shadow: 0 0 12px rgb(var(--c) / 0.35), inset 0 0 8px rgb(var(--c) / 0.15); filter: brightness(1.3); }
 .th-link:focus-visible { outline: 2px solid rgb(var(--c)); outline-offset: 2px; }
+
+/* Mr. Steel: barra lateral de conversas (Novo chat + histórico) */
+.ai-layout { display: flex; align-items: flex-start; gap: 0; }
+.ai-layout > .ai-tab { flex: 1; }
+.ai-side { display: flex; flex-direction: column; width: 250px; flex: none; position: sticky; top: 8px; margin: 12px 0 12px 12px;
+  height: calc(100vh - 170px); padding: 10px; border-radius: 10px; border: 2px solid rgb(var(--c) / 0.55);
+  background: rgb(var(--cb) / 0.85); box-shadow: 0 0 14px rgb(var(--c) / 0.18), inset 0 0 12px rgb(var(--c) / 0.06); overflow: hidden; }
+.ai-side-new { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border-radius: 8px; font-size: 14px;
+  color: rgb(var(--c)); border: 1px solid rgb(var(--c) / 0.3); background: rgb(var(--c) / 0.06); transition: background .12s, border-color .12s; }
+.ai-side-new:hover, .ai-side-new.active { background: rgb(var(--c) / 0.14); border-color: rgb(var(--c) / 0.6); }
+.ai-side-new:disabled { opacity: .5; }
+.ai-side-label { margin: 16px 8px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: rgb(var(--c) / 0.5); }
+.ai-side-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+.ai-side-item { display: flex; align-items: center; gap: 4px; padding: 7px 8px; border-radius: 7px; font-size: 13px; color: rgb(var(--c) / 0.8); }
+.ai-side-item:hover { background: rgb(var(--c) / 0.08); color: rgb(var(--c)); }
+.ai-side-item.active { background: rgb(var(--c) / 0.15); color: rgb(var(--c)); font-weight: bold; }
+.ai-side-del { flex: none; padding: 3px; color: #ff8888; opacity: 0; transition: opacity .12s; }
+.ai-side-item:hover .ai-side-del, .ai-side-item.active .ai-side-del, .ai-side-del:focus-visible { opacity: 1; }
+.ai-side-backdrop { display: none; }
+@media (max-width: 767px) {
+  .ai-side { position: fixed; z-index: 60; top: 0; left: 0; bottom: 0; margin: 0; height: auto; width: min(82vw, 300px); border-radius: 0 12px 12px 0;
+    border-width: 0 2px 0 0; transform: translateX(-105%); transition: transform .22s ease; padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    background: rgb(var(--cb)); z-index: 1000; }
+  .ai-side.open { transform: none; }
+  .ai-side-backdrop { display: block; position: fixed; inset: 0; z-index: 999; background: rgb(0 0 0 / 0.7); }
+  .ai-side-del { opacity: 1; }
+}

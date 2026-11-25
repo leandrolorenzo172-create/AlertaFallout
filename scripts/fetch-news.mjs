@@ -1,6 +1,7 @@
 // Recolhe notícias de feeds RSS de jornais portugueses e grava public/data/news.json.
 // Corre no GitHub Actions antes de compilar a app (o browser não pode ler estes feeds diretamente).
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { isValidStrikeNotice, strikeSector } from '../src/lib/strikeFilter.js';
 
 const FEEDS = [
   { source: 'RTP', url: 'https://www.rtp.pt/noticias/rss/mundo' },
@@ -30,20 +31,7 @@ const ECON_NEG = /\b(crise|recessao|inflacao (sobe|dispara|acelera|aumenta)|subi
 // greves: notícias sobre greves e paralisações (exclui "greve de fome")
 // notícias de economia (para a lista do separador): têm de falar de economia, não basta virem do feed
 const ECON_WIDE = /\b(economi\w+|empresas?|precos?|salari\w+|orcamento|oe20\d\d|impostos?|irs|iva|pib|bolsas?|bancos?|banca|mercados?|investi\w+|exportac\w+|inflacao|juros|euribor|credito|habitacao|rendas?|combustive\w+|gasolina|gasoleo|energia|eletricidade|lucros?|receitas|despesa|divida|defice|emprego|desemprego|tarifas|accoes|acoes|cotac\w+|fiscal)\b/;
-const STRIKE = /\b(greves?|grevistas?|paralisac\w+|pre-avisos? de greve|plenarios? de trabalhadores)\b/;
-const STRIKE_EXCLUDE = /greve de fome/;
-const SECTORS = [
-  [/medic|enfermeir|hospital|saude|sns|farmac/, 'Saúde'],
-  [/professor|escola|ensino|educacao|universidad|fenprof/, 'Educação'],
-  [/greve geral/, 'Greve geral'],
-  [/italia|franca|espanha|alemanha|belgica|reino unido|grecia|brasil|eua|estados unidos|argentina/, 'Internacional'],
-  [/comboio|\bcp\b|metro|carris|stcp|\btap\b|sata|azores airlines|ryanair|easyjet|handling|tripulantes|pilotos|aeroporto|aviacao|transportes?|motoristas|camionistas|portos?|estivadores|ferrovia/, 'Transportes'],
-  [/funcao publica|administracao publica|funcionarios publicos|frente comum/, 'Função pública'],
-  [/oficiais de justica|tribuna|justica|magistrad|guardas prisionais/, 'Justiça'],
-  [/policia|psp|gnr|bombeiros|forcas de seguranca/, 'Segurança'],
-  [/recolha do lixo|lixo|limpeza urbana|autarquia|camara municipal/, 'Autarquias'],
-  [/correios|ctt|banca|bancarios|comercio|industria|fabrica|call center/, 'Privado'],
-];
+// greves: o validador e os setores estão em src/lib/strikeFilter.js (partilhado com a app)
 // ---------- Data da greve (o dia em que acontece, tirado do título/resumo) ----------
 // Reconhece: "12 de dezembro", "11 e 12 de dezembro", "de 3 a 5 de dezembro", "12/12", "amanhã", "hoje",
 // "esta/próxima sexta-feira", "no sábado". Datas relativas contam a partir da data da notícia.
@@ -157,8 +145,9 @@ for (const a of recent) {
     if (neg) econNeg++;
     econArticles.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, negative: neg });
   }
-  if (STRIKE.test(text) && !STRIKE_EXCLUDE.test(text)) {
-    strikesNow.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, sector: (SECTORS.find(([re]) => re.test(text)) || [null, 'Outros'])[1] });
+  // só avisos de greve reais: o título tem de falar de greve e não pode ser desporto, direto sobre outro tema, opinião...
+  if (isValidStrikeNotice(a)) {
+    strikesNow.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, sector: strikeSector(a.title.replace(/^\s*\d{1,2}h\S*\s*/, ''), a.summary) });
   }
 }
 war.sort((x, y) => y.date - x.date);
@@ -185,7 +174,10 @@ try {
   if (seed.year === year) { seedSince = seed.since; for (const x of seed.items) if (!items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x); }
 } catch { /* sem ficheiro */ }
 for (const x of strikesNow) if (new Date(x.date).getFullYear() === year && !items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x);
-const strikeItems = [...items.values()].sort((x, y) => y.date - x.date);
+// o filtro corre também sobre as greves acumuladas antes (limpa falsos positivos antigos) e recalcula o setor
+const strikeItems = [...items.values()].filter(isValidStrikeNotice)
+  .map((x) => ({ ...x, sector: strikeSector(x.title.replace(/^\s*\d{1,2}h\S*\s*/, ''), x.summary) }))
+  .sort((x, y) => y.date - x.date);
 // greves desconvocadas/suspensas/adiadas não geram aviso (e anulam as do mesmo setor nesses dias)
 const CANCEL = /\b(suspens\w*|suspend\w*|desconvoc\w*|cancelad\w*|cancela\w*|adiad\w*|adia|sem efeito|levantad\w*|desmarcad\w*)\b/;
 for (const x of strikeItems) { const t = norm(`${x.title} ${x.summary || ''}`); x.days = strikeDays(t, x.date); x.cancelled = CANCEL.test(norm(x.title)); }

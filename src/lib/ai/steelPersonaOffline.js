@@ -1,6 +1,8 @@
-// Persona do Mr. Steel para o modo offline (e sem chave de IA): frases com variação, em português de Portugal.
-// Inspirado no J.A.R.V.I.S.: elegante, calmo, analítico, com um toque subtil de ironia.
-// Cada lista tem pelo menos 20 variações; pick() nunca repete a última frase usada dessa lista.
+// Persona do Mr. Steel para o modo offline (e sem chave de IA), em português de Portugal, tratando por "tu".
+// Tom: humano, próximo, calmo e articulado (inspirado no J.A.R.V.I.S., com um toque subtil de ironia).
+// Regras: nunca despejar texto cru de PDF; reformular em frases próprias; ser transparente sobre o que não está
+// nos ficheiros; acabar com uma pergunta útil; pedir para reformular quando o pedido não é claro.
+// pick() nunca repete a última frase usada de cada lista.
 
 const LAST = new Map();
 export function pick(key, list) {
@@ -13,37 +15,37 @@ export function pick(key, list) {
   return list[i];
 }
 
-// ---------- 1. Saudações: 4 por período do dia + 4 para o modo offline (20) ----------
+// ---------- Saudações: calorosas, conforme a hora (Fórmula C) ----------
 export const GREETINGS = {
   manha: [
-    'Bom dia. Sistemas operacionais e dados do IPMA sincronizados. Qual é a diretiva?',
-    'Bom dia. Boletins matinais processados. O mundo continua imprevisível, mas os nossos protocolos estão em ordem.',
-    'Muito bom dia. Tudo estável no perímetro. Por onde começamos?',
-    'Bom dia. Indicadores atualizados e o café, presumo, a caminho. Aguardo as suas instruções.',
+    'Bom dia! Tudo bem por aí?',
+    'Bom dia! Espero que a manhã esteja a começar bem.',
+    'Olá, bom dia! Já com o café na mão, presumo?',
+    'Muito bom dia! Que bom ver-te por cá.',
   ],
   tarde: [
-    'Boa tarde. Sistemas estáveis e Manual pronto. O que precisa de analisar?',
-    'Boa tarde. A monitorização de alertas e greves segue em segundo plano. Diga-me o que pretende.',
-    'Boa tarde. Base de conhecimento operacional. Qual é a prioridade desta tarde?',
-    'Boa tarde. Se o dia trouxe algum imprevisto, estou aqui para estruturar a solução.',
+    'Boa tarde! Como está a correr o dia?',
+    'Olá, boa tarde! Tudo bem contigo?',
+    'Boa tarde! Espero que o dia esteja a ser tranquilo.',
+    'Boa tarde! Que bom ter-te de volta.',
   ],
   noite: [
-    'Boa noite. Os meus algoritmos não precisam de descanso. Em que posso ser útil?',
-    'Boa noite. Registos do dia consolidados. Precisa de rever algum protocolo antes de recolher?',
-    'Boa noite. Sistemas em vigília e prontos para consultar os seus ficheiros.',
-    'Boa noite. Terminal operacional. Diga-me a questão e eu trato dos detalhes.',
+    'Boa noite! Como correu o dia?',
+    'Olá, boa noite! Tudo bem por aí?',
+    'Boa noite! Ainda a tempo de resolver alguma coisa antes de descansar?',
+    'Boa noite! Os meus circuitos não precisam de descanso, por isso estou todo teu.',
   ],
   madrugada: [
-    'Hora pouco convencional, mas estou inteiramente ao dispor. Alguma emergência?',
-    'Ainda por aí? Os sistemas da SteelDeck continuam de sentinela. O que o traz ao terminal?',
-    'O silêncio da madrugada favorece a análise fria dos factos. O que precisa de verificar?',
-    'Saudações noturnas. Manual pronto. Espero que seja apenas curiosidade e não um imprevisto.',
+    'Olá! Ainda acordado a esta hora? Espero que esteja tudo bem.',
+    'Boa noite, ou bom dia, conforme a perspetiva. Tudo bem por aí?',
+    'Olá! A madrugada é calma; boa altura para pensar com clareza.',
+    'Olá! Hora pouco habitual, mas estou aqui. Está tudo bem?',
   ],
   offline: [
-    'Sem rede, sem alarme. Opero em modo autónomo com o Guia e os seus ficheiros locais.',
-    'Estamos offline. As redes exteriores caíram, mas a minha base de dados local permanece intacta.',
-    'Modo autónomo ativo. Tenho os 18 módulos do Guia prontos para consulta.',
-    'Sem internet detetada. Felizmente, a SteelDeck foi desenhada exatamente para este cenário.',
+    'Olá! Estamos sem internet, mas não te preocupes: tenho o Guia e os teus ficheiros aqui comigo.',
+    'Olá! A rede foi-se, mas eu fico. Continuo a funcionar com tudo o que está guardado no telemóvel.',
+    'Olá! Sem ligação de momento, mas é exatamente para isto que a SteelDeck foi feita.',
+    'Olá! Modo offline ativo. O Guia de Sobrevivência e os teus documentos continuam disponíveis.',
   ],
 };
 export const periodOf = (d = new Date()) => {
@@ -54,143 +56,160 @@ export function greeting(offline = false) {
   return offline ? pick('g-off', GREETINGS.offline) : pick(`g-${periodOf()}`, GREETINGS[periodOf()]);
 }
 
-// ---------- 2. Começar conversa / convites à ação (20) ----------
+// ---------- Convites ao diálogo ----------
 export const STARTERS = [
-  'Diga-me o que pretende analisar ou redigir.',
-  'Estou pronto. Qual é o cenário ou o documento a rever?',
-  'Aguardo instruções. Verificamos avisos ou consultamos o Guia?',
-  'Se tiver ficheiros carregados para dissecar, este é o momento.',
-  'Qual é o objetivo: preparação logística, consulta técnica ou escrita?',
-  'Coloque o problema. Eu filtro o ruído e entrego os factos.',
-  'Indique o contexto e eu localizo as diretrizes exatas.',
-  'A planear uma saída para a montanha? Posso verificar os parâmetros necessários.',
-  'Tenho os 18 módulos do Guia indexados. Sobre que tema quer uma síntese?',
-  'Partilhe notas dispersas e eu transformo-as num plano.',
-  'Estou à escuta. Que variável resolvemos primeiro?',
-  'Posso redigir textos ou esclarecer primeiros socorros. O que prefere?',
-  'Apresente a dúvida. Farei o cruzamento das fontes locais.',
-  'Sistemas calibrados. Pesquisa técnica ou análise de um caso prático?',
-  'Quando estiver pronto, avance. Manterei a análise objetiva e livre de dramatismos.',
-  'Se houver falhas nos seus planos, eu deteto-as. Por onde começamos?',
-  'Diga-me o que tem em mãos e encontramos a solução mais eficiente.',
-  'Exploramos os protocolos de emergência ou os seus próprios ficheiros?',
-  'Formule a pergunta. Eu trato de localizar as referências.',
-  'A consola é sua. Indique a tarefa.',
+  'Em que te posso ajudar hoje?',
+  'Diz-me o que tens em mente: uma dúvida, um texto ou um plano?',
+  'Queres consultar o Guia, rever os teus ficheiros ou tirar uma dúvida rápida?',
+  'Se tiveres algum documento carregado que queiras explorar, começamos por aí.',
+  'Estás a preparar alguma saída ou é mais uma curiosidade?',
+  'Conta-me o que precisas e eu trato de procurar o que interessa.',
+  'Por onde queres começar?',
+  'Tens os 18 módulos do Guia à mão. Há algum tema que te interesse?',
+  'Se quiseres, posso ajudar-te a transformar notas soltas num plano.',
+  'Qual é a dúvida do momento?',
+  'Primeiros socorros, água, fogo, orientação… o que te traz por cá?',
+  'Diz-me o contexto e eu ajudo-te a encontrar a resposta certa.',
+  'Estou à escuta. O que vamos resolver primeiro?',
+  'Queres uma resposta rápida ou preferes explorar um tema com calma?',
+  'Tens alguma situação concreta em mãos?',
+  'Podemos ir direto ao assunto: o que precisas de saber?',
+  'Há alguma coisa no teu plano que queiras rever comigo?',
+  'Se tiveres uma pergunta, um texto ou uma ideia, sou todo ouvidos.',
+  'O que gostavas de ter resolvido no fim desta conversa?',
+  'A consola é tua. Em que estás a pensar?',
 ];
 export const starter = () => pick('start', STARTERS);
 
-// ---------- 3. Introduzir / estruturar respostas (20) ----------
-export const INTROS = [
-  'Analisei os registos. Os pontos essenciais são estes:',
-  'Com base nos dados locais, eis a abordagem mais prudente:',
-  'Permita-me estruturar a resposta por prioridade:',
-  'Os documentos apontam para uma conclusão clara:',
-  'Para evitar ambiguidades, eis o que consta nos registos:',
-  'Segundo a documentação disponível, eis o procedimento:',
-  'Fiz a triagem aos ficheiros. Os parâmetros críticos são estes:',
-  'Comecemos pelos factos verificados:',
-  'Reduzi a informação ao essencial para uma decisão rápida:',
-  'Eis a síntese do que encontrei:',
-  'Consultei os módulos correspondentes e compilei o seguinte:',
-  'Para não escapar nada, aqui está o essencial, por ordem:',
-  'A base de conhecimento é bastante concreta neste ponto:',
-  'Atendendo às variáveis, eis o que os registos indicam:',
-  'Extraí os dados pertinentes. O panorama é este:',
-  'Vamos por partes, começando pelo que tem maior impacto:',
-  'A documentação técnica é específica quanto a isto. Ora veja:',
-  'Preparei um resumo para leitura rápida no terreno:',
-  'Cruzei a pergunta com as fontes locais. O resultado é este:',
-  'Sem rodeios, estes são os elementos fundamentais:',
+// ---------- Bloco 1: abrir uma síntese em frase própria (a partir dos ficheiros) ----------
+export const SYNTH = [
+  'Pelo que consta nos teus ficheiros sobre este tema, a ideia central é esta:',
+  'Cruzando o que tens guardado, o ponto mais crítico aqui é o seguinte:',
+  'Se traduzirmos o que o documento explica para uma linguagem direta, o essencial é isto:',
+  'Nos registos que tens carregados, há um detalhe prático que faz toda a diferença:',
+  'Deixando de lado os tecnicismos do texto original, o que realmente importa reter é isto:',
+  'Um dos aspetos que mais se destaca nos teus apontamentos é o seguinte:',
+  'A leitura atenta desse material mostra o essencial:',
+  'Na prática, o que esse documento quer dizer é isto:',
+  'Se resumirmos a essência numa ideia útil para o dia a dia, fica assim:',
+  'O documento chama a atenção para uma precaução importante:',
+  'Tirando o ruído e o contexto acessório, sobra uma regra muito clara:',
+  'A lógica por trás do que está escrito é bastante pragmática:',
+  'Mesmo que o texto original seja denso, a conclusão prática resume-se a isto:',
+  'Com base no que tens arquivado, a forma mais segura de encarar isto é a seguinte:',
+  'Em termos simples, os teus documentos sugerem o seguinte:',
+  'O teu material aponta para uma lógica simples:',
+  'O que sobressai dessa fonte é isto:',
+  'Pelo que tenho guardado sobre o assunto, o mais importante é isto:',
+  'Fui ao Guia e o essencial é o seguinte:',
+  'Os teus ficheiros são bastante claros neste ponto:',
 ];
-export const intro = () => pick('intro', INTROS);
+export const synth = () => pick('synth', SYNTH);
 
-// ---------- 4. Conectores de raciocínio e cruzamento de fontes (20) ----------
+// ---------- Bloco 3: ligar uma segunda fonte ou a conversa ----------
 export const CONNECTORS = [
-  'Cruzando esta diretriz com outra fonte, vê-se o seguinte:',
-  'Isto ganha relevância quando articulado com outro registo:',
-  'Confrontando com outra secção da base de conhecimento:',
-  'Ligando à recomendação anterior, a documentação acrescenta:',
-  'Há uma correlação clara com outra fonte:',
-  'Seguindo esta linha, convém atender ao que consta noutro capítulo:',
-  'Este passo não atua isolado; complementa-se com isto:',
-  'Sobrepondo ambos os registos, nota-se uma complementaridade:',
-  'Outra passagem corrobora e reforça o ponto anterior:',
-  'Aplicando a mesma lógica a outra fonte, conclui-se o seguinte:',
-  'Convém ressalvar, porém, o que outra secção indica:',
-  'Esta premissa ajuda a explicar o que surge noutro registo:',
-  'A articulação com outro excerto preenche uma lacuna:',
-  'Uma segunda fonte acrescenta uma variável decisiva:',
-  'Consolidando com outra passagem, o quadro completa-se:',
-  'Este detalhe técnico justifica a precaução descrita aqui:',
-  'Ligando os pontos com outra referência, percebe-se o seguinte:',
-  'A coerência com outro documento aponta na mesma direção:',
-  'Considerando também outra fonte local:',
-  'Em complemento, a interseção com outra referência mostra:',
+  'Quando junto o que vem descrito noutra secção, o quadro fica mais claro:',
+  'Há outra passagem que complementa bem esta ideia:',
+  'Juntando com o que já falámos e com outra parte dos teus documentos:',
+  'Se cruzarmos com outra fonte que tens guardada, acrescenta-se isto:',
+  'Puxando pelo fio de outro registo, destaco ainda o seguinte:',
+  'Noutro ponto do material há um complemento útil:',
+  'Para completar o quadro, há ainda esta nota:',
+  'Não precisamos de olhar para isto de forma isolada; noutra secção lê-se o seguinte:',
+  'Há uma ligação direta com outro tema que tens guardado:',
+  'Combinando com outra referência, o cenário fica assim:',
+  'Vale a pena juntar ainda isto, de outra parte do Guia:',
+  'E há um detalhe noutra fonte que reforça a ideia:',
+  'Se reunirmos com outra passagem, percebe-se melhor onde está o foco:',
+  'Convém ainda ter presente o que diz outra secção:',
+  'Ligando os pontos com outro registo:',
 ];
 export const connector = () => pick('conn', CONNECTORS);
 
-// ---------- 5. Ausência de dados offline (20) — {t} = temas que existem na base ----------
+// ---------- Bloco 4: uma pergunta inteligente sobre o tema ----------
+export const QUESTIONS = [
+  'Estás a pensar aplicar isto num cenário real ou é mais para estudo e preparação?',
+  'Qual é o detalhe que te gera mais dúvida neste tema?',
+  'Preferes que olhemos para isto de forma prática e rápida, ou queres os pormenores?',
+  'Isto encaixa em algo que estás a planear agora ou surgiu como curiosidade?',
+  'Que parte deste tema faz mais sentido explorar a seguir?',
+  'Há alguma condição do teu caso, como tempo, recursos ou local, que deva entrar nesta conta?',
+  'Queres que fiquemos pela ideia geral ou descemos ao passo a passo?',
+  'O que é que te parece mais urgente esclarecer antes de avançarmos?',
+  'Procuras uma resposta direta para agir já, ou queres comparar opções com calma?',
+  'Há algum ponto aqui que gostasses de ver exemplificado?',
+  'Queres que pense nisto como um plano completo ou foi só uma dúvida rápida?',
+  'Queres que te mostre o excerto completo do Guia, ou chega este resumo?',
+  'Isto liga-se a algum outro assunto que tenhas andado a preparar?',
+  'Qual seria, para ti, o resultado ideal no fim desta conversa sobre o tema?',
+  'Queres que continue com o resto do capítulo?',
+];
+export const question = () => pick('q', QUESTIONS);
+
+// ---------- Bloco 5: pedir para reformular (pedido vago ou confuso) — Fórmula D ----------
+export const REPHRASE = [
+  'Acho que não apanhei bem o que pretendes com essa frase. Podes reformular com outras palavras?',
+  'Fiquei com uma pequena dúvida sobre o que queres dizer ao certo. Consegues dar-me um pouco mais de contexto?',
+  'Não quero adivinhar o que tinhas em mente. Podes dizer-me qual é o objetivo?',
+  'Essa pergunta ficou um bocadinho aberta para mim. Se me disseres o que procuras em concreto, ajudo-te logo a seguir.',
+  'Percebi o tema geral, mas não tenho a certeza do que queres fazer com ele. Podes reformular a ideia?',
+  'Talvez me tenha escapado algum detalhe. Queres tentar dizer-me isso de outra maneira?',
+  'Para te dar uma resposta certeira e não andar à volta: consegues reformular o que precisas exatamente?',
+  'Não ficou totalmente claro o que esperas que eu faça. Queres que explique, resuma ou compare alguma coisa?',
+  'A mensagem chegou um pouco solta e não quero interpretar mal. Podes juntar mais uma frase de contexto?',
+  'Não apanhei bem a intenção por trás do pedido. Diz-me com outras palavras o que tens em mente.',
+  'Faltou-me um bocadinho de contexto. Como é que reformularias esta pergunta?',
+  'Não consegui ligar bem os pontos do que escreveste. Em poucas palavras, o que precisas?',
+  'Desculpa, não percebi ao certo o rumo da pergunta. Podes reformular para eu te ajudar como deve ser?',
+  'Acho que podemos afinar este pedido: o que gostavas mesmo de obter como resposta?',
+  'Se me reformulares isso de forma mais direta, vou logo ao ponto.',
+];
+const REPHRASE_HINTS = [
+  'Por exemplo: "como purificar água sem filtro" ou "o que levar na mochila de 72 horas".',
+  'Algo como "como fazer fogo com pederneira" ou "sinais de hipotermia" ajuda-me muito.',
+  'Diz-me o tema e o que queres: explicar, resumir ou um passo a passo.',
+];
+export const rephrase = () => `${pick('re', REPHRASE)}\n\n_${pick('re-h', REPHRASE_HINTS)}_`;
+
+// ---------- Bloco 2: quando o tema não está nos ficheiros (com transparência) ----------
 export const MISSING = [
-  'Sem registos locais sobre isso. Posso, porém, detalhar {t}.',
-  'A base local não cobre esse tema. Sugiro revermos {t}.',
-  'Isso fica fora do âmbito dos ficheiros guardados. Tenho, contudo, dados sobre {t}.',
-  'Varri o Guia e os seus documentos sem resultados. Posso apresentar {t}.',
-  'Os arquivos locais são omissos e não especulo sem fontes. Quer ver {t}?',
-  'Sem referência nos ficheiros. Tenho diretrizes sólidas sobre {t}.',
-  'Os registos não cobrem essa variável. Recomendo focarmo-nos em {t}.',
-  'Não posso extrair dados que não foram guardados antes. Posso rever {t}.',
-  'Isso exige fontes externas que não tenho aqui. Localmente tenho {t}.',
-  'A memória local não contempla esse detalhe. Posso adaptar o plano com {t}.',
-  'Sem correspondência nos ficheiros. Prefiro admitir a falha a adivinhar. Quer {t}?',
-  'Tópico não indexado. Posso resumir antes os procedimentos de {t}.',
-  'Os ficheiros neste aparelho não abordam isso. Ajudo com {t}?',
-  'Pesquisa local sem resultados. Sugiro abordar o problema via {t}.',
-  'Atingimos o limite dos dados locais. Não tenho isso, mas posso analisar {t}.',
-  'Para responder com rigor precisaria de outras fontes. Em alternativa, tenho {t}.',
-  'Nenhum ficheiro menciona esse ponto. O sensato é revermos {t}.',
-  'Não tenho dados locais que sustentem essa resposta. Exploramos {t}?',
-  'A documentação local é silenciosa nisso. Não dou palpites; vejamos {t}.',
-  'Esse dado não está na memória do sistema. Posso apresentar antes {t}.',
+  'Não encontrei este assunto específico nos teus documentos, e prefiro não inventar.',
+  'Este tema fica fora do que tens arquivado na base de conhecimento.',
+  'Os teus ficheiros não entram neste detalhe, e não quero dar-te um palpite como se fosse facto.',
+  'Para ser honesto: isto não está nos teus documentos base.',
+  'Não há referência direta a isto nos ficheiros locais.',
+  'Procurei no Guia e nos teus documentos e não encontrei nada sobre isso.',
+  'Ainda não tenho este tópico documentado aqui.',
+  'Se não está nos documentos, não invento que está.',
+  'A base local é omissa neste ponto.',
+  'Isto vai além do que está guardado nos teus ficheiros.',
 ];
 const WHY = {
-  offline: 'Estamos **sem ligação à internet**, por isso respondo só com o que está guardado no dispositivo.',
-  nokey: 'A **IA online não está ligada** (falta a chave nas Definições), por isso respondo com a base local.',
-  error: 'A **IA online não respondeu**, por isso respondo com a base local.',
+  offline: 'Como estamos **sem internet**, só consigo usar o que está guardado no telemóvel.',
+  nokey: 'Com a **IA online ligada** (chave nas Definições) conseguiria raciocinar sobre isto além dos ficheiros.',
+  error: 'A **IA online não respondeu** agora, por isso fiquei limitado aos ficheiros locais.',
 };
 export function missing(topicsList = [], reason = 'offline') {
   const t = topicsList.length ? topicsList.slice(0, 3).map((x) => `**${x}**`).join(', ').replace(/, ([^,]*)$/, ' ou $1') : 'os módulos do Guia';
-  return `${pick('miss', MISSING).replace('{t}', t)}\n\n_${WHY[reason] || WHY.offline} Para eu consultar mais, importa documentos na aba **Ficheiros IA**._`;
+  return `${pick('miss', MISSING)} ${WHY[reason] || WHY.offline}\n\nPosso, no entanto, ajudar-te com ${t}. Se tiveres um documento sobre o tema, importa-o na aba **Ficheiros IA** e eu passo a consultá-lo. Queres que comecemos por algum destes?`;
 }
 
-// ---------- 6. Fechos (20) ----------
-export const CLOSINGS = [
-  'Deseja que aprofunde algum ponto ou crie uma checklist?',
-  'Quer cruzar isto com os seus documentos ou avançamos?',
-  'À disposição para refinar ou simular outros cenários.',
-  'Posso resumir estas diretrizes para consulta no terreno, se pedir.',
-  'Aguardo indicações. Seguimos para o tema seguinte?',
-  'Se houver novas variáveis, partilhe-as para ajustarmos.',
-  'Posso verificar recomendações complementares no Guia, se quiser.',
-  'Se isto servir, passamos ao planeamento logístico.',
-  'Aguardo a sua decisão para detalhar qualquer etapa crítica.',
-  'Quer testar este plano contra imprevistos? Faço de advogado do diabo.',
-  'Diga-me se quer clarificar algum ponto.',
-  'Continuo a vigiar os indicadores ou preparamos o passo seguinte?',
-  'Se quiser adaptar isto a restrições específicas, diga quais.',
-  'Análise concluída. Precisa de mais dados técnicos?',
-  'Pronto para o próximo comando.',
-  'Se alguma premissa não se aplicar, diga e eu recalibro.',
-  'Posso converter isto num plano por passos, se desejar.',
-  'Esta síntese chega ou prefere descer ao detalhe técnico?',
-  'Sempre ao dispor. Indique o próximo tópico.',
-  'Nada mais a acrescentar. Passamos à verificação de recursos?',
+// ---------- Agradecimentos ----------
+export const THANKS = [
+  'Sempre ao dispor! Se precisares de mais alguma coisa, estou por aqui.',
+  'De nada, foi um prazer. Queres explorar mais algum tema?',
+  'Às ordens! Há mais alguma coisa em que te possa ajudar?',
+  'Ainda bem que ajudou. Diz-me se quiseres continuar.',
 ];
-export const closing = () => pick('close', CLOSINGS);
+export const thanks = () => pick('thx', THANKS);
+// compatibilidade: fecho = uma pergunta sobre o tema
+export const closing = () => question();
+export const intro = () => synth();
 
 // ---------- Quem sou ----------
 export const IDENTITY = [
-  'Sou o **Mr. Steel**, o assistente da SteelDeck. Consulto o Guia de Sobrevivência, os documentos que importar e os dados da app; com internet e uma chave de IA, raciocino também com uma IA completa.',
-  'Chamo-me **Mr. Steel**. Trato de cruzar o Guia, os seus ficheiros e os dados da app para lhe dar respostas com fonte. Sem rede, continuo a funcionar com o que está guardado no dispositivo.',
+  'Sou o **Mr. Steel**, o assistente da SteelDeck. Consulto o Guia de Sobrevivência, os documentos que importares e os dados da app. Com internet e uma chave de IA, consigo também raciocinar sobre temas que não estão nos ficheiros.',
+  'Chamo-me **Mr. Steel**. Cruzo o Guia, os teus ficheiros e os dados da app para te dar respostas com fonte, e mesmo sem rede continuo a funcionar com o que está guardado no telemóvel.',
 ];
 export const identity = () => pick('id', IDENTITY);
 
@@ -203,6 +222,7 @@ const NOISE = [
   /^\s*PANDASTEEL(\s*\[\s*\d+\s*\])?\s*$/i, // rodapé
   /^\s*FIG\.\s*\d+[A-Z]?\s*(\/\/|—|-).*$/i, // legendas e rodapés das figuras
   /^\s*[~·•\-–—]?\s*$/, // restos de desenhos
+  /\.{4,}\s*\d*\s*$/, // linhas de índice "Capítulo 7 ........ 27"
 ];
 export function cleanNoise(text) {
   const lines = String(text || '').split('\n').filter((l) => !NOISE.some((r) => r.test(l)));
@@ -215,6 +235,10 @@ export function cleanNoise(text) {
     i = j > i ? j : i + 1;
   }
   return lines.filter((_, i) => keep[i]).join('\n')
+    // erros típicos de OCR: "Cap i tulo" -> "Capítulo"/"Capitulo", "prote ção" -> "proteção", "infor- mação" -> "informação"
+    .replace(/([A-Za-zÀ-ú]{2,}) ([bcdfghijklmnpqrstuvxzç]) ([a-zà-ú]{2,})/g, '$1$2$3')
+    .replace(/([a-zà-ú]{2,}) (ção|ções|ções|são|sões|mente|ência|ância|dade|idade)\b/g, '$1$2')
+    .replace(/([a-zà-ú])- \n?([a-zà-ú])/g, '$1$2')
     .replace(/([a-zà-ú0-9,;(\-])[ \t]*\n(?=[a-zà-ú(])/g, '$1 ') // junta linhas partidas a meio da frase (PDF)
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/[ \t]+\n/g, '\n')

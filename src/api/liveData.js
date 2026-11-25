@@ -1,5 +1,6 @@
 import { locale, t as tr, isEn } from '../i18n';
 import { getLoc } from '../location';
+import { isValidStrikeNotice, strikeSector } from '../lib/strikeFilter';
 // Dados reais de fontes públicas, usados quando a app corre fora do claude.ai.
 // - Meteorologia e avisos: IPMA (api.ipma.pt). Previsão a 15 dias: Open-Meteo, com o IPMA (5 dias) como reserva.
 // - Catástrofes: GDACS (alertas laranja/vermelho) e USGS (sismos).
@@ -296,7 +297,7 @@ export async function fetchDashboard() {
   const economic_instability = n ? (n.economy?.level ?? scoreFromCount(c.econ, Math.max(10, c.total * 0.12))) : 0;
   const cyber_risk = n ? scoreFromCount(c.cyber, Math.max(6, c.total * 0.05)) : 0;
   // índice de greves (só para mostrar no Painel; não entra na ameaça global)
-  const strike_index = n?.strikes?.level ?? 0;
+  const strike_index = n?.strikes ? cleanStrikes(n.strikes).level : 0;
   const global_threat_level = round1(war_risk * 0.35 + geopolitical_tension * 0.2 + natural_disaster_risk * 0.2 + economic_instability * 0.15 + cyber_risk * 0.1);
   const critical_events = [
     ...war.map((a) => ({ title: a.title, severity: a.severity, type: 'guerra', region: a.region })),
@@ -317,10 +318,24 @@ export async function fetchEconomy() {
   return { ...n.economy, generated: n.generated };
 }
 // strikes = { year, since, reference, count, last30, level 1-10, bySector: { setor: n }, items: [{ title, summary, url, source, date, sector }] }
+// Volta a validar na app (protege contra dados antigos publicados antes do filtro) e recalcula contagens e índice
+export function cleanStrikes(st) {
+  if (!st) return st;
+  const live = (x) => x.title.replace(/^\s*\d{1,2}h\S*\s*/, '');
+  const items = (st.items || []).filter(isValidStrikeNotice).map((x) => ({ ...x, sector: strikeSector(live(x), x.summary) }));
+  const bySector = {}; for (const x of items) bySector[x.sector] = (bySector[x.sector] || 0) + 1;
+  const monthAgo = Date.now() - 30 * 86400000;
+  const ref = st.reference || 150;
+  return {
+    ...st, items, bySector, count: items.length, last30: items.filter((x) => x.date > monthAgo).length,
+    level: Math.min(10, Math.round((1 + (items.length / ref) * 9) * 10) / 10),
+    upcoming: (st.upcoming || []).filter(isValidStrikeNotice).map((u) => ({ ...u, sector: strikeSector(live(u), u.summary) })),
+  };
+}
 export async function fetchStrikes() {
   const n = await fetchNewsFile().catch(() => null);
   if (!n?.strikes) throw new Error(tr('Dados de greves ainda não disponíveis. São recolhidos de hora a hora.'));
-  return { ...n.strikes, generated: n.generated };
+  return { ...cleanStrikes(n.strikes), generated: n.generated };
 }
 
 export async function fetchPizza() {

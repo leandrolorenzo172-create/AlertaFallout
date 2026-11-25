@@ -9,6 +9,7 @@ import { IS_ARTIFACT } from '@/api/base44Client';
 import { syncPush } from './push';
 import { getLoc } from '@/location';
 import { t, isEn } from '@/i18n';
+import { isValidStrikeNotice } from '../lib/strikeFilter';
 
 export const ANTECEDENCIA_DIAS = 2;
 const STATE_CACHE = 'pipboy-avisos';
@@ -151,7 +152,7 @@ export async function checkStrikeAlerts() {
     if (enabled) {
       const res = await fetch('./data/news.json', { cache: 'no-cache' });
       const news = res.ok ? await res.json() : null;
-      for (const a of dueAlerts(news?.strikes?.upcoming, st.shown)) {
+      for (const a of dueAlerts((news?.strikes?.upcoming || []).filter(isValidStrikeNotice), st.shown)) {
         const msg = strikeMessage(a.s, a.kind);
         banner(msg); await systemNotify(msg, `greve-${a.key}`);
         st.shown[a.key] = Date.now();

@@ -41,6 +41,7 @@ async function buildSystem(question) {
   const casual = intentOf(question) || CASUAL.test(question.trim());
   const ctx = casual ? [] : await contextFor(question, CTX_N, { chars: CTX_CHARS, minScore: CTX_MIN }).catch(() => []);
   const blocks = ctx.map((c) => `### [${c.ref}]\n${c.text}`).join('\n\n');
+  const greet = intentOf(question) === 'greet';
   const system = `${getInstructions()}
 
 # CONTEXTO DA APLICAÇÃO
@@ -51,7 +52,7 @@ ${blocks || '(Sem excertos locais necessários.)'}
 
 # FORMATO
 Responde em português de Portugal, em Markdown. Prosa fluida em conversa e escrita; listas, passos ou tabelas só quando a tarefa pedir estrutura. Sê direto.
-No fim da resposta, numa linha à parte, escreve exatamente ${FOLLOW} seguido de 3 perguntas curtas de seguimento que o utilizador possa querer fazer a seguir, separadas por " | ". Não escrevas mais nada depois dessa linha.`;
+${greet ? 'Esta mensagem é só um cumprimento: responde em uma ou duas frases (saudação + "Em que te posso ser útil?") e não escrevas a linha de seguimento.' : `No fim da resposta, numa linha à parte, escreve exatamente ${FOLLOW} seguido de 3 perguntas curtas de seguimento que o utilizador possa querer fazer a seguir, separadas por " | ". Não escrevas mais nada depois dessa linha.`}`;
   return { system, ctx };
 }
 

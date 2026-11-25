@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUp, Square, Trash2, Copy, Check, FileText, BookOpen, LayoutGrid, Settings, Plus, History } from 'lucide-react';
+import { ArrowUp, Square, Trash2, Copy, Check, FileText, BookOpen, LayoutGrid, Settings, Plus, SquarePen, X, MessageSquare } from 'lucide-react';
 import { ask, onlineProvider, providerName } from '@/lib/ai/aiService';
 import { useNetwork } from '@/lib/ai/net';
 import { useAiConfig } from '@/lib/ai/config';
@@ -182,6 +182,7 @@ export default function SurvivalAITab() {
       if (r.source !== 'online') { const wait = 450 - (Date.now() - started); if (wait > 0) await new Promise((res) => setTimeout(res, wait)); } // indicador de leitura breve
       patch(aiId, { text: r.text, followups: r.followups || [], refs: r.refs || [], source: r.source, notice: r.notice, provider: r.provider });
     } catch (e) {
+      if (!ctrl.signal.aborted) console.error('Mr. Steel:', e); // eslint-disable-line no-console
       setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: m.text ? `${m.text}\n\n_Interrompido._` : '_Interrompido._', followups: [] } : m)));
     } finally {
       setBusyId(null);
@@ -192,42 +193,57 @@ export default function SurvivalAITab() {
   const lastAi = [...messages].reverse().find((m) => m.role === 'assistant');
   const empty = messages.length === 0;
 
+  const history = convs.filter((c) => c.messages.length);
+  const newChat = () => { setActiveId(uid()); setShowList(false); setTimeout(() => taRef.current?.focus(), 50); };
+  const openConv = (id) => { setActiveId(id); setShowList(false); };
+  const delConv = (id) => { setConvs((prev) => prev.filter((x) => x.id !== id)); if (id === activeId) setActiveId(uid()); };
+
   return (
-    <div className="ai-tab px-4 pt-3 flex flex-col">
+    <div className="ai-layout">
+      {/* Barra lateral: Novo chat em cima, histórico das últimas conversas em baixo.
+          No computador fica sempre visível; no telemóvel abre como gaveta pelo botão "Conversas". */}
+      {showList && <button type="button" className="ai-side-backdrop" aria-label={t('Fechar conversas')} onClick={() => setShowList(false)} />}
+      <aside className={`ai-side ${showList ? 'open' : ''}`} aria-label={t('Conversas')}>
+        <div className="flex items-center justify-between md:hidden mb-2">
+          <span className="text-[11px] uppercase tracking-wider font-bold">{t('Conversas')}</span>
+          <button type="button" onClick={() => setShowList(false)} aria-label={t('Fechar')} className="p-1"><X size={16} /></button>
+        </div>
+        <button type="button" disabled={!!busyId} onClick={newChat} className={`ai-side-new ${empty ? 'active' : ''}`}>
+          <SquarePen size={16} />{' '}{t('Novo chat')}
+        </button>
+        <p className="ai-side-label">{t('Recentes')}</p>
+        {history.length ? (
+          <ul className="ai-side-list">
+            {history.map((c) => (
+              <li key={c.id} className={`ai-side-item ${c.id === activeId ? 'active' : ''}`}>
+                <button type="button" disabled={!!busyId} onClick={() => openConv(c.id)} className="flex-1 min-w-0 text-left truncate" title={`${titleOf(c.messages)} · ${new Date(c.updated || Date.now()).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' })}`}>
+                  {titleOf(c.messages) || t('Conversa')}
+                </button>
+                <button type="button" disabled={!!busyId} onClick={() => delConv(c.id)} aria-label={t('Apagar conversa')} className="ai-side-del"><Trash2 size={13} /></button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-[11px] px-2" style={{ color: 'rgb(var(--c) / 0.45)' }}>{t('Ainda sem conversas guardadas.')}</p>}
+        <p className="text-[10px] px-2 mt-auto pt-3" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('Guardo as últimas 10 conversas neste dispositivo.')}</p>
+      </aside>
+
+    <div className="ai-tab px-4 pt-3 flex flex-col min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <h2 className="text-sm uppercase tracking-wider font-bold">{t('Mr. Steel')}</h2>
           <StatusBadge net={net} provider={provider} />
         </div>
-        <div className="flex items-center gap-3">
-          {convs.some((c) => c.messages.length) && (
-            <button type="button" onClick={() => setShowList((v) => !v)} aria-expanded={showList} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}>
-              <History size={12} />{' '}{t('Conversas')}
-            </button>
-          )}
+        <div className="flex items-center gap-3 md:hidden">
+          <button type="button" onClick={() => setShowList(true)} aria-expanded={showList} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}>
+            <MessageSquare size={12} />{' '}{t('Conversas')}
+          </button>
           {!empty && (
-            <button type="button" disabled={!!busyId} onClick={() => { setActiveId(uid()); setShowList(false); }} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider disabled:opacity-40" style={{ color: 'rgb(var(--c) / 0.7)' }}>
-              <Plus size={12} />{' '}{t('Nova conversa')}
+            <button type="button" disabled={!!busyId} onClick={newChat} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider disabled:opacity-40" style={{ color: 'rgb(var(--c) / 0.7)' }}>
+              <Plus size={12} />{' '}{t('Novo chat')}
             </button>
           )}
         </div>
       </div>
-
-      {showList && (
-        <ul className="mb-3 rounded-sm divide-y" style={{ border: '1px solid rgb(var(--c) / 0.25)', background: 'rgb(var(--cd) / 0.5)', borderColor: 'rgb(var(--c) / 0.25)' }} aria-label={t('Últimas conversas')}>
-          {convs.filter((c) => c.messages.length).map((c) => (
-            <li key={c.id} className="flex items-center gap-2 px-3 py-2" style={{ borderColor: 'rgb(var(--c) / 0.12)' }}>
-              <button type="button" disabled={!!busyId} onClick={() => { setActiveId(c.id); setShowList(false); }} className="flex-1 min-w-0 text-left">
-                <span className="block text-xs truncate" style={{ color: c.id === activeId ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.8)', fontWeight: c.id === activeId ? 700 : 400 }}>{titleOf(c.messages) || t('Conversa')}</span>
-                <span className="block text-[10px]" style={{ color: 'rgb(var(--c) / 0.5)' }}>{new Date(c.updated || Date.now()).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' })} · {t('{n} mensagens', { n: c.messages.length })}</span>
-              </button>
-              <button type="button" disabled={!!busyId} onClick={() => { setConvs((prev) => prev.filter((x) => x.id !== c.id)); if (c.id === activeId) setActiveId(uid()); }} aria-label={t('Apagar conversa')} className="p-1 disabled:opacity-40" style={{ color: '#ff8888' }}>
-                <Trash2 size={13} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
 
       <div className="ai-thread flex-1">
         {empty ? (
@@ -289,6 +305,7 @@ export default function SurvivalAITab() {
           <button type="submit" disabled={!input.trim()} className="ai-send" aria-label={t('Enviar')}><ArrowUp size={18} /></button>
         )}
       </form>
+    </div>
     </div>
   );
 }
