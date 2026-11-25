@@ -5,6 +5,7 @@
 import { knowledgeBase } from '@/data/survivalKnowledge';
 import { manualSections } from '@/data/survivalManual';
 import { listDocs, onKbChange } from '@/lib/kb';
+import { ensureGuide } from '@/lib/guide';
 import { DEFAULT_STATIONS } from '@/radio/defaultStations';
 import stationsPT from '@/data/stationsPT.json';
 import { locale } from '../../i18n';
@@ -92,6 +93,7 @@ async function buildIndex() {
     units.push({ ...u, key: `${u.ref}#${part}`, toks, len: toks.length });
   };
   // 1. Documentos importados (aba Conhecimento): cada página/secção
+  await ensureGuide().catch(() => {}); // o Guia tem de estar na Base de Conhecimento mesmo sem abrir o Manual
   const docs = await listDocs().catch(() => []);
   for (const d of docs) {
     if (d.enabled === false) continue;

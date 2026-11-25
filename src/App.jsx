@@ -76,7 +76,8 @@ export default function App() {
           </div>
         )}
       </div>
-      <main key={lang} className="max-w-2xl mx-auto pb-40">
+      {/* o Mr. Steel usa a largura toda no computador (barra lateral + conversa); os outros separadores ficam numa coluna */}
+      <main key={lang} className={`${activeTab === 'assistente' ? 'max-w-6xl' : 'max-w-2xl'} mx-auto pb-40`}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {TABS.map((tab) => (

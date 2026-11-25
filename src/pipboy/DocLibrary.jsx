@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Star, Search, X, List, Maximize2, Minimize2, Upload, FileText, Image as ImageIcon, Database, Moon, Zap, MoveHorizontal } from 'lucide-react';
-import { listDocs, getDoc, getFile, getMeta, setMeta, onKbChange, takeOpenRequest, pdfjs, importFile, updateDoc, deleteDoc, ACCEPT } from '@/lib/kb';
+import { listDocs, getDoc, getFile, getMeta, setMeta, onKbChange, takeOpenRequest, pdfjs, importFile, ACCEPT } from '@/lib/kb';
 import { t } from '@/i18n';
 
 // Biblioteca do Manual em estilo e-reader (Kindle/Kobo):
@@ -43,32 +43,8 @@ Toca em "Importar documentos" e escolhe ficheiros PDF, DOCX, TXT, MD, JSON, CSV 
 
 Os manuais são para consultar muitas vezes: ao abrir, o leitor volta à última página que viste. Para saltar para outra página, escreve o número na barra de baixo.`;
 
-// ---------- eBook do sistema: GUIA DE SOBREVIVÊNCIA STEELDECK (PANDASTEEL) ----------
-// PDF gerado por scripts/build-guia.py a partir dos módulos do manual; fica sempre no topo da estante.
-// Ao mudar a edição, sobe GUIDE_VERSION: a cópia antiga é substituída.
-const GUIDE_VERSION = 7;
-const GUIDE_FILE = 'GUIA DE SOBREVIVENCIA STEELDECK.pdf';
-const GUIDE_ID = (v) => `${GUIDE_FILE}|guia|${v}`;
-export const isGuide = (d) => !!d?.system || String(d?.id || '').startsWith(`${GUIDE_FILE}|`);
-let guideJob = null;
-function ensureGuide() {
-  if (guideJob) return guideJob;
-  guideJob = (async () => {
-    try {
-      const id = GUIDE_ID(GUIDE_VERSION);
-      if (await getDoc(id)) return;
-      const res = await fetch('./guia-steeldeck.pdf');
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const file = new File([blob], GUIDE_FILE, { type: 'application/pdf', lastModified: GUIDE_VERSION });
-      for (const d of await listDocs()) if (isGuide(d) && d.id !== id) await deleteDoc(d.id).catch(() => {});
-      const r = await importFile(file);
-      const docId = r.doc?.id;
-      if (docId) await updateDoc(docId, { title: 'GUIA DE SOBREVIVÊNCIA STEELDECK', author: 'PANDASTEEL', category: 'Manual de campo', system: true });
-    } catch { /* sem rede na 1.ª abertura: tenta de novo da próxima vez */ } finally { guideJob = null; }
-  })();
-  return guideJob;
-}
+import { ensureGuide, isGuide } from '@/lib/guide';
+export { isGuide };
 // o guia do sistema primeiro, depois os outros pela data
 const shelfOrder = (list) => [...list].sort((a, b) => (isGuide(b) - isGuide(a)) || b.created_date.localeCompare(a.created_date));
 

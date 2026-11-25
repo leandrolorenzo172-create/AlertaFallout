@@ -168,8 +168,8 @@ html.pb-flip #root > .crt { height: 100%; overflow-y: auto; overscroll-behavior:
 /* Mr. Steel: barra lateral de conversas (Novo chat + histórico) */
 .ai-layout { display: flex; align-items: flex-start; gap: 0; }
 .ai-layout > .ai-tab { flex: 1; }
-.ai-side { display: flex; flex-direction: column; width: 250px; flex: none; position: sticky; top: 8px; margin: 12px 0 12px 12px;
-  height: calc(100vh - 170px); padding: 10px; border-radius: 10px; border: 2px solid rgb(var(--c) / 0.55);
+.ai-side { display: flex; flex-direction: column; width: 270px; flex: none; position: sticky; top: 44px; margin: 12px 0 12px 12px;
+  height: calc(100vh - 200px); padding: 10px; border-radius: 10px; border: 2px solid rgb(var(--c) / 0.55);
   background: rgb(var(--cb) / 0.85); box-shadow: 0 0 14px rgb(var(--c) / 0.18), inset 0 0 12px rgb(var(--c) / 0.06); overflow: hidden; }
 .ai-side-new { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border-radius: 8px; font-size: 14px;
   color: rgb(var(--c)); border: 1px solid rgb(var(--c) / 0.3); background: rgb(var(--c) / 0.06); transition: background .12s, border-color .12s; }
@@ -191,3 +191,5 @@ html.pb-flip #root > .crt { height: 100%; overflow-y: auto; overscroll-behavior:
   .ai-side-backdrop { display: block; position: fixed; inset: 0; z-index: 999; background: rgb(0 0 0 / 0.7); }
   .ai-side-del { opacity: 1; }
 }
+
+@media (min-width: 1280px) { .ai-thread, .ai-composer { max-width: 820px; } .ai-side { width: 290px; } }
