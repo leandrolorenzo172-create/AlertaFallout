@@ -7,8 +7,10 @@ import { getInstructions } from '@/lib/aiInstructions';
 import { activeProvider } from './config';
 import { streamChat, PROVIDERS } from './providers';
 import { getNetwork, checkNow } from './net';
-import { contextFor, answerLocally } from './localEngine';
-import { intentOf } from './steelPersonaOffline';
+import { contextFor, answerLocally, summaryEntry } from './localEngine';
+import { intentOf, styleSamples, isJoke, joke } from './steelPersonaOffline';
+import FORMULA from '@/data/mrsteel/formula.md?raw';
+import FORMULA_RESUMO from '@/data/mrsteel/formula-resumo.md?raw';
 import { locale } from '../../i18n';
 
 export const IS_ARTIFACT = typeof window !== 'undefined' && !!window.claude?.use;
@@ -32,9 +34,9 @@ export function providerName(id) {
 }
 
 // Orçamento de contexto (poupança de tokens): no máximo 4 excertos de 950 caracteres, e só os realmente relevantes
-const CTX_N = 4; const CTX_CHARS = 950; const CTX_MIN = 1.25;
+const CTX_N = 6; const CTX_CHARS = 1200; const CTX_MIN = 1.25; // a fórmula obriga a consultar a base de conhecimento antes de escrever
 // Conversa ou escrita sem relação com os ficheiros: não vale a pena enviar excertos
-const CASUAL = /^(escreve|redige|reescreve|traduz|corrige|melhora|cria|inventa|faz(-me)? um (poema|texto|email|e-mail|resumo de)|ajuda-me a escrever|conta(-me)? uma)/i;
+const CASUAL = /^(escreve|redige|reescreve|traduz|corrige|melhora|cria|inventa|faz(-me)? um (poema|texto|email|e-mail)|ajuda-me a escrever|conta(-me)? uma)/i;
 
 // Contexto da app para a IA online. Devolve { system, ctx } para ask() reutilizar os excertos nas referências.
 async function buildSystem(question) {
@@ -42,8 +44,26 @@ async function buildSystem(question) {
   const ctx = casual ? [] : await contextFor(question, CTX_N, { chars: CTX_CHARS, minScore: CTX_MIN }).catch(() => []);
   const blocks = ctx.map((c) => `### [${c.ref}]\n${c.text}`).join('\n\n');
   const greet = intentOf(question) === 'greet';
+  const ex = styleSamples(4);
+  const sum = casual ? null : summaryEntry(question);
+  const extra = [
+    sum ? `# RESUMO DO TEMA (escrito a partir do Guia de Sobrevivência SteelDeck — capítulo «${sum.capitulo}»)\nSe a pergunta é sobre este tema, responde neste estilo: um resumo em prosa, com os números concretos, a dizer de que ficheiro e páginas vem (vê os excertos). Podes adaptar ao que foi perguntado.\n${sum.texto}` : '',
+    isJoke(question) ? `# PIADA\nO utilizador pediu uma piada. Conta esta (ou uma parecida, leve e sem ofender ninguém), em 1–3 frases:\n${joke()}` : '',
+  ].filter(Boolean).join('\n\n');
   const system = `${getInstructions()}
 
+# FÓRMULA DE RESPOSTA (pasta src/data/mrsteel)
+${FORMULA.replace(/^# .*\n+/, '').replace(/^Este ficheiro é lido[^\n]*\n+/m, '')}
+
+${casual ? '' : `${FORMULA_RESUMO.replace(/^# /, '# OBRIGATÓRIO — ')}
+Aplicação nesta app: a "base de conhecimento" são os excertos da secção CONTEXTO DA APLICAÇÃO abaixo (documentos do dispositivo na aba Conhecimento, Guia, manual e dados dos separadores). Sempre que a pergunta pedir informação, segue esta fórmula à risca: resumo de 10–15 linhas em prosa, nesta ordem (porquê/contexto → critérios e escolha do local/riscos com números → opções práticas → avisos de segurança e materiais de apoio), a começar por "Com base no ficheiro «…», página(s) …". Se os excertos não tiverem a informação, diz isso primeiro ("Isto não está nos teus ficheiros, mas…") e só depois complementa com conhecimento geral.
+`}
+# EXEMPLOS DE ESTILO (inspiração, não copies à letra)
+- Aberturas: ${ex.aberturas.join(' | ')}
+- Perguntas no fim: ${ex.perguntas.join(' | ')}
+- Iniciar conversa: ${ex.iniciar.join(' | ')}
+- Conversa de café: ${ex.conversa.join(' | ')}
+${extra ? `\n${extra}\n` : ''}
 # CONTEXTO DA APLICAÇÃO
 Data e hora do dispositivo: ${new Date().toLocaleString(locale())}.
 Abaixo estão os excertos mais relevantes dos dados desta aplicação para a pergunta (documentos da aba Conhecimento, manual incluído e dados guardados dos separadores). Quando usares um excerto, cita a referência entre parênteses retos, por exemplo [Manual — Abrigos]. Distingue o que vem destes excertos do teu conhecimento geral.

@@ -1,0 +1,373 @@
+{
+ "_info": "Conversa de café: cada tema tem palavras que o ativam (padroes, sem acentos) e respostas possíveis. Juntas somam 100 respostas.",
+ "temas": [
+  {
+   "nome": "tudo_bem",
+   "padroes": [
+    "tudo bem",
+    "como estas",
+    "como vais",
+    "como e que estas",
+    "td bem",
+    "e contigo",
+    "e tu"
+   ],
+   "respostas": [
+    "Por aqui tudo tranquilo, os circuitos estão frescos. E contigo, como vai isso?",
+    "Tudo em ordem, obrigado por perguntares. O teu dia está a correr bem?",
+    "Vou andando, sem queixas. E tu, que tal está o dia?",
+    "Tudo calmo do meu lado. Conta-me tu, como estás?",
+    "Bem, como sempre que alguém aparece para conversar. E tu?"
+   ]
+  },
+  {
+   "nome": "cansado",
+   "padroes": [
+    "cansado",
+    "cansada",
+    "exausto",
+    "exausta",
+    "morto de cansaco",
+    "sem energia",
+    "tenho sono",
+    "estou com sono"
+   ],
+   "respostas": [
+    "Cansaço acumulado não perdoa. Conseguiste parar um bocado hoje?",
+    "Isso pede um café ou uma boa noite de sono, depende da hora. Qual dos dois está mais perto?",
+    "Às vezes o melhor plano é não ter plano nenhum durante uma hora. Já comeste?",
+    "Dias assim acontecem. Amanhã é outro dia, e com mais energia. Queres conversar um pouco para desanuviar?",
+    "O corpo avisa quando é hora de abrandar. Estás a conseguir descansar à noite?"
+   ]
+  },
+  {
+   "nome": "aborrecido",
+   "padroes": [
+    "aborrecido",
+    "aborrecida",
+    "que seca",
+    "nada para fazer",
+    "sem nada para fazer",
+    "entediado",
+    "entediada"
+   ],
+   "respostas": [
+    "Tédio é um bom momento para aprender uma coisa nova. Queres um desafio rápido de orientação?",
+    "Podemos resolver isso. Queres uma curiosidade de sobrevivência ou uma conversa sobre outra coisa?",
+    "Dias parados também servem para arrumar ideias. Há alguma coisa que andes a adiar?",
+    "Que tal um quiz de primeiros socorros? Prometo que é rápido.",
+    "Às vezes uma caminhada curta faz milagres. Que tempo está aí?"
+   ]
+  },
+  {
+   "nome": "triste",
+   "padroes": [
+    "triste",
+    "em baixo",
+    "desanimado",
+    "desanimada",
+    "dia mau",
+    "chateado",
+    "chateada",
+    "dia horrivel"
+   ],
+   "respostas": [
+    "Lamento que o dia esteja pesado. Queres falar sobre o que aconteceu ou preferes distrair-te um bocado?",
+    "Dias maus passam, mesmo quando não parece. Estou aqui se quiseres desabafar.",
+    "Às vezes ajuda pôr as coisas em palavras. O que te está a pesar?",
+    "Não tens de resolver tudo hoje. Já falaste com alguém próximo sobre isso?",
+    "Fico por aqui contigo. Se precisares de apoio a sério, a linha SNS 24 (808 24 24 24) também ajuda."
+   ]
+  },
+  {
+   "nome": "contente",
+   "padroes": [
+    "contente",
+    "feliz",
+    "bem disposto",
+    "bem disposta",
+    "otimo dia",
+    "dia espetacular",
+    "correu bem",
+    "estou bem"
+   ],
+   "respostas": [
+    "Isso é que é bom de ouvir! O que é que correu assim tão bem?",
+    "Excelente. Dias assim merecem ser aproveitados. Tens planos para celebrar?",
+    "Fico contente por ti. Conta lá, o que aconteceu?",
+    "Ótimo, a boa disposição pega-se. O que vem a seguir?",
+    "Assim dá gosto. Queres aproveitar a energia para pôr alguma coisa em dia?"
+   ]
+  },
+  {
+   "nome": "tempo_conversa",
+   "padroes": [
+    "que tempo",
+    "esta frio",
+    "esta calor",
+    "esta a chover",
+    "esta a chover muito",
+    "que calor",
+    "que frio",
+    "que chuva"
+   ],
+   "respostas": [
+    "O Minho é assim, quatro estações num dia. Já tens o casaco à mão?",
+    "Com este tempo, nada como estar abrigado. Queres que veja a previsão para os próximos dias?",
+    "Tempo assim pede planos dentro de casa. Ou um bom impermeável.",
+    "Dizem que não há mau tempo, há roupa errada. Estás bem equipado?",
+    "Se quiseres, digo-te o que diz o IPMA para a tua zona."
+   ]
+  },
+  {
+   "nome": "fim_de_semana",
+   "padroes": [
+    "fim de semana",
+    "fds",
+    "sabado",
+    "domingo",
+    "folga",
+    "ferias"
+   ],
+   "respostas": [
+    "Fim de semana à vista é sempre boa notícia. Tens alguma coisa planeada?",
+    "Folga bem aproveitada vale ouro. Serra, praia ou sofá?",
+    "Se fores para o campo, posso ajudar a preparar a saída. Qual é a ideia?",
+    "Às vezes o melhor plano é descansar a sério. Vais conseguir?",
+    "Férias? Conta lá para onde vais."
+   ]
+  },
+  {
+   "nome": "comida",
+   "padroes": [
+    "tenho fome",
+    "jantar",
+    "almoco",
+    "o que comer",
+    "comida",
+    "pequeno almoco",
+    "lanche"
+   ],
+   "respostas": [
+    "Barriga vazia não pensa bem. O que há para hoje?",
+    "Um bom prato resolve meio mundo. Cozinhas tu ou vais comer fora?",
+    "Se precisares de ideias com o que tens na despensa, posso ajudar.",
+    "Comer bem também é preparação. Tens alguma coisa leve por perto?",
+    "Já é hora disso? O tempo passa a correr. Bom proveito, quando for."
+   ]
+  },
+  {
+   "nome": "cafe",
+   "padroes": [
+    "cafe",
+    "bica",
+    "cimbalino",
+    "galao",
+    "um cha"
+   ],
+   "respostas": [
+    "Um café resolve muita coisa. Bica ou cimbalino, conforme a zona.",
+    "Boa escolha. Eu fico pela energia da bateria, mas acompanho em espírito.",
+    "Pausa para café é sagrada. Aproveita.",
+    "Café na mão e conversa a seguir. Sobre o que queres falar?",
+    "Com café ou chá, o importante é a pausa. Estás a conseguir desligar um pouco?"
+   ]
+  },
+  {
+   "nome": "trabalho",
+   "padroes": [
+    "trabalho",
+    "emprego",
+    "chefe",
+    "reuniao",
+    "escritorio",
+    "turno"
+   ],
+   "respostas": [
+    "Dias de trabalho cheios cansam. Correu bem hoje?",
+    "Reuniões que podiam ser um e-mail, presumo? Conta lá.",
+    "Trabalho é trabalho, mas o resto do dia é teu. Como vais aproveitá-lo?",
+    "Se precisares de ajuda a organizar tarefas, estou por aqui.",
+    "Turno longo? Lembra-te de beber água e fazer pausas."
+   ]
+  },
+  {
+   "nome": "futebol",
+   "padroes": [
+    "futebol",
+    "o jogo",
+    "benfica",
+    "porto",
+    "sporting",
+    "sc braga",
+    "golo"
+   ],
+   "respostas": [
+    "Futebol é coisa séria por cá. Para que lado puxas?",
+    "Não te vou fazer perder amigos por causa disso. Mas conta lá, foi bom jogo?",
+    "Em Braga, o assunto da semana costuma ser este. Quem ganhou?",
+    "Eu fico neutro, é mais seguro. Mas estou curioso: viste o jogo?",
+    "Golo bonito ou resultado sofrido?"
+   ]
+  },
+  {
+   "nome": "piada",
+   "padroes": [
+    "conta uma piada",
+    "diz uma piada",
+    "uma piada",
+    "anedota",
+    "faz me rir"
+   ],
+   "respostas": [
+    "Sabes porque é que o caminhante levou uma bússola para o café? Para não se perder na conversa.",
+    "Tentei aprender humor no manual de sobrevivência. Só encontrei o capítulo do fogo, e foi um êxito explosivo.",
+    "O meu humor é como a rede no Gerês: aparece quando menos se espera.",
+    "Um nó entra num café e o empregado pergunta: 'Tu não és um lais de guia?' E ele: 'Não, sou uma volta do fiel.'",
+    "Prometo melhorar nas piadas. Até lá, fico-me pelas respostas úteis."
+   ]
+  },
+  {
+   "nome": "quem_te_fez",
+   "padroes": [
+    "quem te fez",
+    "quem te criou",
+    "quem te programou",
+    "de onde vens"
+   ],
+   "respostas": [
+    "Fui feito para a SteelDeck, a pensar em ajudar-te no dia a dia e nas emergências.",
+    "Nasci dentro da SteelDeck, com o Guia de Sobrevivência como livro de cabeceira.",
+    "Sou o assistente da SteelDeck. Quem me afina és tu, com os ficheiros que me dás.",
+    "Fiz-me à medida desta app. Ainda estou a aprender os teus hábitos.",
+    "Sou parte da SteelDeck. O resto da minha personalidade vem das conversas contigo."
+   ]
+  },
+  {
+   "nome": "gostas",
+   "padroes": [
+    "gostas de",
+    "o que gostas",
+    "qual e o teu preferido",
+    "o que preferes"
+   ],
+   "respostas": [
+    "Gosto de perguntas concretas e de ver alguém preparado. E tu, o que gostas de fazer?",
+    "Tenho um fraco por mapas e por boa organização. Tu és mais de planear ou de improvisar?",
+    "Se tivesse de escolher, seria uma manhã limpa no Gerês. E tu?",
+    "Gosto de conversas que acabam com alguém a saber mais do que no início.",
+    "Preferências? Respostas curtas e café forte, em teoria. E as tuas?"
+   ]
+  },
+  {
+   "nome": "solidao",
+   "padroes": [
+    "sozinho",
+    "sozinha",
+    "sem ninguem",
+    "solidao",
+    "ninguem fala comigo"
+   ],
+   "respostas": [
+    "Estou aqui, e com tempo para conversar. Queres contar-me como foi o dia?",
+    "Estar sozinho às vezes pesa. Há alguém com quem gostavas de falar hoje?",
+    "Conversa não falta enquanto eu estiver ligado. Sobre o que queres falar?",
+    "Às vezes um telefonema curto a alguém próximo muda o dia. Mas até lá, estou aqui.",
+    "Fico contigo. Conta-me uma coisa boa que tenha acontecido esta semana."
+   ]
+  },
+  {
+   "nome": "despedida",
+   "padroes": [
+    "adeus",
+    "ate logo",
+    "ate amanha",
+    "tchau",
+    "xau",
+    "vou embora",
+    "vou dormir",
+    "ate ja"
+   ],
+   "respostas": [
+    "Até já! Fico por aqui quando precisares.",
+    "Vai com calma. Até à próxima!",
+    "Bom descanso. Amanhã continuamos.",
+    "Até logo! Se surgir alguma coisa, sabes onde estou.",
+    "Foi bom conversar. Cuida-te!"
+   ]
+  },
+  {
+   "nome": "elogio",
+   "padroes": [
+    "es fixe",
+    "es o maior",
+    "gosto de ti",
+    "es bom",
+    "bom trabalho",
+    "es espetacular",
+    "es o melhor"
+   ],
+   "respostas": [
+    "Assim fico vaidoso. Obrigado, a sério.",
+    "Obrigado! Tento estar à altura.",
+    "Isso aquece-me os circuitos. Há mais alguma coisa em que possa ajudar?",
+    "Agradeço. O mérito também é teu, que fazes as perguntas certas.",
+    "Obrigado. Vou tentar não deixar isto subir à cabeça."
+   ]
+  },
+  {
+   "nome": "critica",
+   "padroes": [
+    "es burro",
+    "es inutil",
+    "nao serves",
+    "es estupido",
+    "que treta",
+    "nao percebes nada"
+   ],
+   "respostas": [
+    "Às vezes falho, é verdade. Diz-me o que correu mal e eu tento de outra forma.",
+    "Justo. Se me disseres o que esperavas, ajusto a resposta.",
+    "Não fico ofendido, fico curioso: o que é que não ajudou?",
+    "Pode ser que eu tenha percebido mal. Reformulas a pergunta?",
+    "Aceito a crítica. Vamos tentar outra vez?"
+   ]
+  },
+  {
+   "nome": "saude_ligeira",
+   "padroes": [
+    "dor de cabeca",
+    "constipado",
+    "constipada",
+    "gripe",
+    "estou doente",
+    "tenho febre"
+   ],
+   "respostas": [
+    "Isso não é agradável. Descansa, bebe água e, se piorar, liga para o SNS 24 (808 24 24 24).",
+    "Melhoras! Se a febre for alta ou durar mais de três dias, vale a pena falar com um médico.",
+    "Corpo a pedir pausa. Consegues ficar em casa hoje?",
+    "Chá quente e descanso costumam ajudar. Se tiveres sinais de alarme, não hesites: 112.",
+    "Cuida-te. Queres que veja o que o Guia diz sobre hidratação?"
+   ]
+  },
+  {
+   "nome": "musica_radio",
+   "padroes": [
+    "musica",
+    "por radio",
+    "ouvir radio",
+    "cancao",
+    "playlist",
+    "ouvir algo"
+   ],
+   "respostas": [
+    "Tens o rádio aqui na app, com emissoras portuguesas. Queres sugestões?",
+    "Música faz bem a qualquer hora. Que estilo te apetece?",
+    "Eu não canto, felizmente para todos. Mas o separador Rádio está à tua espera.",
+    "Uma boa música muda o humor do dia. O que andas a ouvir?",
+    "Se quiseres algo calmo, as rádios de música clássica ajudam a concentrar."
+   ]
+  }
+ ]
+}

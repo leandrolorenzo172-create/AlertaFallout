@@ -4,6 +4,14 @@
 // nos ficheiros; acabar com uma pergunta útil; pedir para reformular quando o pedido não é claro.
 // pick() nunca repete a última frase usada de cada lista.
 
+// Fórmula e frases editáveis em src/data/mrsteel/ (ver README.md dessa pasta)
+import RESPOSTAS from '@/data/mrsteel/respostas.json';
+import PERGUNTAS from '@/data/mrsteel/perguntas.json';
+import INICIAR from '@/data/mrsteel/iniciar.json';
+import CONVERSA from '@/data/mrsteel/conversa.json';
+import PIADAS from '@/data/mrsteel/piadas.json';
+const list = (f, fallback) => (Array.isArray(f?.frases) && f.frases.length ? f.frases : fallback);
+
 const LAST = new Map();
 export function pick(key, list) {
   if (!list || !list.length) return '';
@@ -79,7 +87,7 @@ export const STARTERS = [
   'O que gostavas de ter resolvido no fim desta conversa?',
   'A consola é tua. Em que estás a pensar?',
 ];
-export const starter = () => pick('start', STARTERS);
+export const starter = () => pick('start', list(INICIAR, STARTERS));
 
 // ---------- Bloco 1: abrir uma síntese em frase própria (a partir dos ficheiros) ----------
 export const SYNTH = [
@@ -144,7 +152,16 @@ export const QUESTIONS = [
   'Qual seria, para ti, o resultado ideal no fim desta conversa sobre o tema?',
   'Queres que continue com o resto do capítulo?',
 ];
-export const question = () => pick('q', QUESTIONS);
+export const question = () => pick('q', list(PERGUNTAS, QUESTIONS));
+// abertura curta antes de uma resposta com fonte ("Fui ver ao Guia.")
+// guide=false: documento do utilizador -> sem aberturas que falam do "Guia"
+export const opener = (guide = true) => pick(guide ? 'open' : 'open-doc', list(RESPOSTAS, ['Fui ver.']).filter((f) => guide || !/\bguia\b/i.test(f))).replace(/:\s*$/, '.');
+// exemplos de estilo para a IA online (poucos, ao acaso, para não gastar tokens)
+export function styleSamples(n = 4) {
+  const take = (arr) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+  const chat = (CONVERSA?.temas || []).flatMap((t) => t.respostas || []);
+  return { aberturas: take(list(RESPOSTAS, [])), perguntas: take(list(PERGUNTAS, [])), iniciar: take(list(INICIAR, [])), conversa: take(chat) };
+}
 
 // ---------- Bloco 5: pedir para reformular (pedido vago ou confuso) — Fórmula D ----------
 export const REPHRASE = [
@@ -237,7 +254,7 @@ export function cleanNoise(text) {
   return lines.filter((_, i) => keep[i]).join('\n')
     // erros típicos de OCR: "Cap i tulo" -> "Capítulo"/"Capitulo", "prote ção" -> "proteção", "infor- mação" -> "informação"
     .replace(/([A-Za-zÀ-ú]{2,}) ([bcdfghijklmnpqrstuvxzç]) ([a-zà-ú]{2,})/g, '$1$2$3')
-    .replace(/([a-zà-ú]{2,}) (ção|ções|ções|são|sões|mente|ência|ância|dade|idade)\b/g, '$1$2')
+    .replace(/([a-zà-ú]{2,}) (ção|ções|sões|mente|ência|ância|dade|idade)\b/g, '$1$2')
     .replace(/([a-zà-ú])- \n?([a-zà-ú])/g, '$1$2')
     .replace(/([a-zà-ú0-9,;(\-])[ \t]*\n(?=[a-zà-ú(])/g, '$1 ') // junta linhas partidas a meio da frase (PDF)
     .replace(/[ \t]{2,}/g, ' ')
@@ -246,9 +263,29 @@ export function cleanNoise(text) {
     .trim();
 }
 
+// ---------- Conversa de café (conversa.json) ----------
+const nrm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+export function smallTalk(text) {
+  const q = ` ${nrm(text)} `;
+  for (const t of CONVERSA?.temas || []) {
+    if ((t.padroes || []).some((p) => q.includes(` ${nrm(p)} `)) && t.respostas?.length) return { tema: t.nome, text: pick(`chat-${t.nome}`, t.respostas) };
+  }
+  return null;
+}
+
+// ---------- Piadas (piadas.json) ----------
+const JOKE_RE = /\b(piadas?|anedotas?|faz me rir|fazer me rir|algo engracado|coisa engracada|conta outra|outra piada|anima me)\b/;
+export const isJoke = (text) => JOKE_RE.test(` ${nrm(text)} `);
+const JOKE_INTRO = ['Aqui vai uma:', 'Lá vai:', 'Esta é das boas:', 'Prepara-te:', 'Uma para animar:', 'Tenho uma:'];
+const JOKE_END = ['Queres outra?', 'Pronto, já me podes avaliar.', 'Se te riste, conta como vitória minha.', 'Há mais de onde esta veio.', 'Não me julgues, sou um assistente de sobrevivência.'];
+export function joke() {
+  const j = pick('joke', list(PIADAS, ['Porque é que a mochila nunca vai a festas? Porque já anda sempre carregada.']));
+  return `${pick('joke-in', JOKE_INTRO)} ${j}\n\n${pick('joke-end', JOKE_END)}`;
+}
+
 // ---------- Intenções simples (antes da pesquisa) ----------
 const n = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[!?.,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-const GREET_RE = /^(ola|oi|ole|hey|hello|hi|bom dia|boa tarde|boa noite|boas|saudacoes|mr\.? ?steel|mister steel|steel|estas ai|esta ai|estas por ai|alguem ai|tudo bem|como estas|como vai)( (mr\.? ?steel|steel|tudo bem|como estas))?$/;
+const GREET_RE = /^(ola|oi|ole|hey|hello|hi|bom dia|boa tarde|boa noite|boas|saudacoes|mr\.? ?steel|mister steel|steel|estas ai|esta ai|estas por ai|alguem ai)( (mr\.? ?steel|steel))?$/;
 const WHO_RE = /^(quem es( tu)?|o que es( tu)?|quem e o mr\.? ?steel|o que fazes|o que sabes fazer|como funcionas|apresenta te|ajuda|help|menu)$/;
 const THANKS_RE = /^(obrigad[oa]|muito obrigad[oa]|obg|valeu|thanks|obrigado mr\.? ?steel|perfeito|otimo|excelente|fixe|top)( mr\.? ?steel)?$/;
 const CONT_RE = /^(continua|continue|mais|e depois|e entao|segue|seguinte|prossegue|explica melhor|explica|desenvolve|aprofunda|mais detalhes|da exemplos|exemplos|resume|resume isso|resumo|em resumo|sintetiza|tl ?dr|o que mais)( isso| isto| por favor| pf)?$/;

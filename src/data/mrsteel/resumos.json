@@ -1,0 +1,758 @@
+{
+ "_info": "Resumos em prosa do Guia de Sobrevivência SteelDeck, um por capítulo e outros por palavra-chave. O Mr. Steel usa-os quando perguntas por um tema (\"abrigo\", \"fala-me de hipotermia\"). Em 'chaves' (palavras que ativam o resumo) e 'exatas' (só quando a mensagem é exatamente essa), escreve sem acentos e em minúsculas. 'capitulo' tem de ser o nome do capítulo do Guia.",
+ "capitulos": [
+  {
+   "tema": "Abrigos Táticos e Engenharia de Campanha",
+   "capitulo": "Abrigos Táticos e Engenharia de Campanha",
+   "chaves": [
+    "abrigo",
+    "abrigos",
+    "construir abrigo",
+    "montar abrigo",
+    "alpendre",
+    "lean-to",
+    "cabana"
+   ],
+   "texto": "Em zonas chuvosas e ventosas como o Minho, o abrigo é a primeira prioridade porque o frio e a humidade fazem perder calor muito mais depressa do que a falta de água ou comida. Escolhe um local a meia encosta, com o vento pelas costas (abertura a sul ou este em Portugal), sem perigos acima — como árvores mortas a menos de 30 m — nem zonas baixas onde se acumule água. Mantém os materiais num raio de 50 m e procura ficar perto de uma clareira visível para sinalização. Conforme o cenário e os recursos, podes montar um alpendre inclinado a 45°–60°, um abrigo de detritos sem ferramentas, uma lona em A, uma trincheira com ventilação ou usar um saco do lixo em emergência. Isola-te sempre do solo com pelo menos 15 cm, evita roupa molhada, nunca faças fogueiras dentro de abrigos de folhas ou sem ventilação e usa plantas locais como silva, urtiga, salgueiro, tília ou junco para cordame natural."
+  },
+  {
+   "tema": "Armadilhas Táticas de Gatilho Mecânico",
+   "capitulo": "Armadilhas Táticas de Gatilho Mecânico",
+   "chaves": [
+    "armadilha",
+    "armadilhas",
+    "laco",
+    "lacos",
+    "gatilho",
+    "figura 4",
+    "paiute"
+   ],
+   "texto": "As armadilhas trabalham por ti enquanto tratas de água, fogo e abrigo, mas só fazem sentido numa sobrevivência de vários dias e são proibidas em Portugal fora de uma situação real de risco de vida, porque também ferem cães, pessoas e espécies protegidas como o lobo-ibérico. O segredo está mais no local do que na armadilha: trilhos, passagens entre arbustos, margens de água e tocas com pegadas ou excrementos frescos. Como uma armadilha raramente apanha, coloca 8 a 12 em linha, marca-as, disfarça o cheiro das mãos com terra ou fumo e usa ramos em funil para levar o animal ao gatilho. Os modelos principais são o laço de mola com entalhe duplo, a figura 4 e a paiute (a mais sensível, ideal para roedores), além da pesca passiva com nassa de garrafa, linha de fundo ou cerco de pedras. Verifica-as ao amanhecer e ao fim da tarde e, para treinar, monta só os gatilhos, sem laço nem peso."
+  },
+  {
+   "tema": "Armas Improvisadas de Defesa e Caça",
+   "capitulo": "Armas Improvisadas de Defesa e Caça",
+   "chaves": [
+    "arma",
+    "armas",
+    "defesa",
+    "lanca",
+    "bordao",
+    "arco e flecha",
+    "funda",
+    "fisga"
+   ],
+   "texto": "Uma ferramenta comprida mantém perigos à distância, serve de bordão e ajuda a pescar, mas a melhor defesa continua a ser evitar o conflito: primeiro afastas-te e fazes barulho, depois dissuades ficando maior e falando alto, a seguir pões uma barreira entre ti e a ameaça e só em último caso te defendes, apenas para ganhar distância e fugir. O bordão-lança faz-se com uma vara de freixo, carvalho ou castanheiro de 1,8 m, com a ponta talhada e endurecida junto às brasas durante 5 a 10 minutos; aberta em 3 ou 4 dentes serve para pescar. O arco de emergência usa uma vara de 1,5 a 1,8 m afinada só do lado de dentro, a funda leva duas cordas de 60 a 80 cm e uma bolsa, e lascas de quartzo ou vidro dão lâminas encabadas com resina de pinheiro. Lembra-te de que a caça exige licença e o porte de certas armas brancas é crime pela Lei das Armas."
+  },
+  {
+   "tema": "Caça, Pesca e Preparação de Animais",
+   "capitulo": "Caça, Pesca e Preparação de Animais",
+   "chaves": [
+    "caca",
+    "cacar",
+    "pesca",
+    "pescar",
+    "peixe",
+    "coelho",
+    "carne",
+    "preparar animais"
+   ],
+   "texto": "Proteína e gordura dão energia e calor, mas obter carne gasta energia, por isso a pesca e os animais pequenos compensam muito mais do que perseguir caça grande. Para pescar improvisa o anzol com um alfinete-de-ama, um clipe ou um espinho, usa minhocas ou larvas como isca e procura sombras, raízes submersas e poços abaixo de quedas de água, de madrugada ou ao fim da tarde; nos rios do Minho há truta nos troços de montanha e boga e escalo mais abaixo. O peixe mata-se logo, escama-se da cauda para a cabeça e esvazia-se; o coelho pendura-se pelas patas, esfola-se como uma meia e deita-se fora inteiro se o fígado tiver manchas. A carne conserva-se dias ou meses com fumo, secagem em tiras de 5 mm, salga ou salmoura, e insetos como gafanhotos e larvas comem-se sempre cozinhados. Nunca comas animais encontrados mortos ou doentes, usa luvas com coelhos e lebres e cozinha o javali até ao centro."
+  },
+  {
+   "tema": "Purificação de Água (Técnicas Avançadas)",
+   "capitulo": "Purificação de Água (Técnicas Avançadas)",
+   "chaves": [
+    "agua",
+    "purificar agua",
+    "purificacao",
+    "tratar agua",
+    "agua potavel",
+    "beber agua"
+   ],
+   "texto": "Água com aspeto limpo pode estar cheia de bactérias, vírus e parasitas, e nas montanhas do Minho há gado, javalis e aldeias a montante, por isso purifica sempre, em três etapas: clarificar, desinfetar e só depois melhorar o sabor. Ferver com fervura forte durante 1 minuto é o método mais seguro; a lixívia sem perfume funciona com 2 gotas por litro a 5–6 % (o dobro se a água estiver turva) e 30 minutos de espera; o SODIS pede garrafas PET transparentes 6 horas ao sol; e o iodo a 2 % leva 5 gotas por litro. Um filtro de garrafa com pano, carvão, areia e cascalho só clarifica, não torna a água segura. A chuva recolhida numa lona é a água mais limpa que vais encontrar, e o destilador solar dá 0,2 a 1 litro por dia. Nunca bebas água do mar, urina ou água com cheiro a combustível ou junto a fábricas e explorações agrícolas, porque os químicos não saem com fervura."
+  },
+  {
+   "tema": "Técnicas de Fogo (12 Métodos)",
+   "capitulo": "Técnicas de Fogo (12 Métodos)",
+   "chaves": [
+    "fogo",
+    "fogueira",
+    "fazer fogo",
+    "acender fogo",
+    "acender uma fogueira",
+    "lume"
+   ],
+   "texto": "O fogo aquece, seca, purifica água, cozinha, afasta animais, sinaliza e levanta a moral, por isso deves ter sempre três formas de o fazer e manter uma delas seca no corpo. Tudo depende do triângulo calor, combustível e oxigénio: prepara antes duas mãos cheias de acendalha, duas braçadas de gravetos e lenha de reserva, porque a maioria das falhas vem de pouca acendalha, material húmido ou lenha grossa cedo demais. Dos 12 métodos, os mais fiáveis são o isqueiro, os fósforos de tempestade e a pederneira de ferrocério, que funciona molhada; com sol servem a lupa, uma garrafa de água ou o fundo polido de uma lata, e sem nada resta o arco de fogo, que exige madeira seca e macia como salgueiro ou amieiro. No Minho, a casca de vidoeiro e o pinho resinoso acendem mesmo à chuva. Fazer fogo em espaços rurais é proibido no período crítico, normalmente de 1 de julho a 30 de setembro: limpa 3 m à volta, tem água perto e nunca deixes o fogo sozinho."
+  },
+  {
+   "tema": "Plantas: Identificação, Comestibilidade e Preparação",
+   "capitulo": "Plantas: Identificação, Comestibilidade e Preparação",
+   "chaves": [
+    "plantas",
+    "planta",
+    "plantas comestiveis",
+    "plantas toxicas",
+    "ervas",
+    "comer plantas"
+   ],
+   "texto": "O campo minhoto está cheio de alimento e também de algumas das plantas mais mortais da Europa, por isso a regra é simples: se não tens a certeza absoluta, não comes. Identifica pela planta inteira, compara com pelo menos duas fontes e colhe longe de estradas, campos tratados e águas poluídas. Entre as comestíveis mais comuns estão o dente-de-leão, a urtiga (sempre cozida), a beldroega, a tanchagem, a amora, o medronho, a castanha e a rosa-canina. O perigo maior são as umbelíferas de flor branca em guarda-chuva, como a cicuta e o embude, que matam em pequena quantidade, além da dedaleira, do teixo, do acónito e das bagas pretas brilhantes. O teste de comestibilidade de 24 horas é só para último recurso e nunca serve para umbelíferas, cogumelos ou bagas desconhecidas; ferver em duas águas reduz o amargor, e as bolotas comem-se depois de demolhadas até deixarem de amargar."
+  },
+  {
+   "tema": "Árvores Úteis: Identificação e Usos",
+   "capitulo": "Árvores Úteis: Identificação e Usos",
+   "chaves": [
+    "arvores",
+    "arvore",
+    "madeira",
+    "lenha",
+    "lenha seca"
+   ],
+   "texto": "Cada árvore é uma caixa de ferramentas que dá lenha, cordame, comida, remédio e material, e saber qual é qual poupa horas de trabalho. O pinheiro-bravo é a farmácia e o fósforo do Minho: a resina serve de cola e antisséptico, o pinho resinoso acende à chuva e as agulhas dão chá com vitamina C. O carvalho e o castanheiro dão bolotas, castanhas e lenha com brasas para toda a noite; o salgueiro tem na casca um parente natural da aspirina; o vidoeiro dá casca que acende com faísca; e a tília dá a melhor fibra para cordame. Para o fogo de fricção usa salgueiro, choupo ou amieiro secos, para arcos freixo ou aveleira e para estacas carvalho verde. A lenha seca parte com um estalo limpo e soa a oco, e os melhores ramos são os mortos ainda presos à árvore. Cuidado com o azevinho e o teixo, cujas bagas e folhas são tóxicas."
+  },
+  {
+   "tema": "Alimentos Não Perecíveis e de Alto Rendimento",
+   "capitulo": "Alimentos Não Perecíveis e de Alto Rendimento",
+   "chaves": [
+    "alimentos",
+    "comida",
+    "despensa",
+    "comer",
+    "racao",
+    "calorias",
+    "mantimentos"
+   ],
+   "texto": "Na despensa e na mochila conta calorias por quilo e meses de validade, porque a comida certa poupa peso, combustível e água. A base de uma despensa de longa duração é arroz, leguminosas secas, massa, aveia, açúcar, sal, mel, leite em pó, conservas de peixe, azeite e chocolate negro, guardados num sítio fresco, seco e escuro, em recipientes herméticos e com rotação: come o que guardas e guarda o que comes. Na mochila rendem mais o azeite, os frutos secos, a manteiga de amendoim e o chocolate, por terem mais calorias por grama. Em repouso precisas de 1600 a 2000 kcal por dia, a caminhar com carga de 2500 a 3500 e com frio e trabalho pesado até 4500. Sem água suficiente come menos, sobretudo proteína, e deita fora sem provar latas inchadas, enferrujadas ou amolgadas na costura, pelo risco de botulismo."
+  },
+  {
+   "tema": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "primeiros socorros",
+    "medicina",
+    "ferimento",
+    "ferida",
+    "feridas",
+    "socorrismo",
+    "ferido"
+   ],
+   "texto": "Quando não há ambulância por perto, trata primeiro o que mata mais depressa e previne a infeção, que no terreno é o que mais complica as feridas, e liga 112 logo que possível. A avaliação segue a ordem X-ABCDE: hemorragia grave, via aérea, respiração, circulação, consciência e exposição ao frio. Uma hemorragia grave controla-se com pressão direta máxima e, num membro que não para de sangrar, com um torniquete largo 5 a 7 cm acima da ferida, anotando a hora e sem o retirar. As feridas lavam-se com muita água sob pressão e, se estiverem sujas, ficam abertas com penso húmido; fraturas imobilizam-se na posição em que estão, e queimaduras arrefecem 20 minutos em água corrente fresca. Na hipotermia, roupa seca, abrigo e bebida quente; numa víbora, imobilizar e ligar 112 sem cortar nem chupar; e se alguém não respira, RCP com 30 compressões e 2 insuflações. Cauterizar com metal em brasa é um mito perigoso."
+  },
+  {
+   "tema": "Orientação e Geografia Regional (Braga/Minho)",
+   "capitulo": "Orientação e Geografia Regional (Braga/Minho)",
+   "chaves": [
+    "orientacao",
+    "orientar",
+    "navegacao",
+    "bussola",
+    "mapa",
+    "perdido",
+    "geografia"
+   ],
+   "texto": "Saber onde estás e para onde corre a água é metade da sobrevivência, e o Minho tem uma regra de ouro: os rios correm para oeste, para o mar, e levam-te às vilas. Com bússola, usa as Cartas Militares 1:25 000, orienta o mapa pelo norte e segue um rumo de ponto de referência em ponto de referência, contando cerca de 60 a 65 passos duplos por cada 100 m. Sem bússola, a Estrela Polar é o método mais preciso, seguida do sol e da sombra de um pau; o musgo é pouco fiável. As principais referências são os rios Minho, Lima, Cávado, Homem, Este e Ave, as serras do Gerês, Peneda, Amarela e Cabreira e, em Braga, o Sameiro e o Bom Jesus a este. Se te perderes na montanha, desce por cumeadas secundárias e não por vales encaixados, segue muros, levadas e linhas elétricas até às aldeias e nunca atravesses albufeiras a nado."
+  },
+  {
+   "tema": "Nós Táticos Essenciais",
+   "capitulo": "Nós Táticos Essenciais",
+   "chaves": [
+    "nos taticos",
+    "fazer nos",
+    "fazer um no",
+    "nos de corda",
+    "atar corda",
+    "corda"
+   ],
+   "exatas": [
+    "nos",
+    "no",
+    "nos de marinheiro"
+   ],
+   "texto": "Doze nós resolvem quase tudo no abrigo, na carga, no resgate, na pesca e nas armadilhas, e mais vale saber seis de olhos fechados do que trinta com o livro aberto. O lais de guia faz um laço fixo que não aperta, a volta do fiel prende depressa a um poste ou trave, o nó de tensão ajusta as espias da lona e o nó de camionista estica com força a corda de cumeeira, funcionando como uma roldana. O oito trava a ponta da corda, o nó de escota une cordas de grossuras diferentes, o pescador duplo une fios finos e o prusik bloqueia sob carga e desliza sem ela. Numa lona em A combinam-se o camionista na cumeeira e o nó de tensão nas espias, e na trave-mestra do alpendre a volta do fiel com dois cotes. Para descer encostas ou resgatar pessoas usa só corda certificada e com formação, e testa sempre cada nó com carga antes de confiares nele."
+  },
+  {
+   "tema": "Kit de Sobrevivência (Bug Out Bag)",
+   "capitulo": "Kit de Sobrevivência (Bug Out Bag)",
+   "chaves": [
+    "kit",
+    "kit de sobrevivencia",
+    "mochila",
+    "mochila de emergencia",
+    "bug out bag",
+    "mochila 72"
+   ],
+   "texto": "A mochila de 72 horas é o que levas se tiveres de sair de casa em 5 minutos por incêndio, cheia, sismo ou evacuação, e deve ser preparada hoje, com calma. Um adulto deve carregar entre 10 e 15 kg, no máximo 20 a 25 % do peso do corpo, organizados em sacos estanques por cor e com o essencial em duplicado, porque dois é um e um é nenhum. Leva 3 litros de água e um filtro, comida para três dias, lona, paracord e mantas térmicas, roupa por camadas, dois isqueiros e uma pederneira, frontal com pilhas, kit de primeiros socorros com torniquete, medicação para 7 dias, mapa e bússola, rádio, apito, cópias dos documentos e dinheiro em notas pequenas. A medicação crónica é a primeira coisa a pôr e a rever. Revê a mochila de 6 em 6 meses, quando muda a hora, e tem ainda uma versão reduzida no carro e outra no trabalho."
+  },
+  {
+   "tema": "Comunicação de Emergência",
+   "capitulo": "Comunicação de Emergência",
+   "chaves": [
+    "comunicacao",
+    "comunicar",
+    "telemovel",
+    "bateria",
+    "radio",
+    "sinais",
+    "pedir ajuda",
+    "socorro"
+   ],
+   "texto": "Ser encontrado depende de seres ouvido ou visto, por isso planeia a comunicação antes de ela falhar. Poupa o telemóvel com o modo de poupança extrema, desliga dados, Wi-Fi e localização e liga-o só a horas combinadas; os SMS passam com rede fraca e o 112 funciona com qualquer operador, podendo partilhar a localização pela app 112 PT. Para longe, um apito chega a 1–2 km, um rádio PMR446 a 1–5 km, uma lanterna a vários km de noite e um espelho de sinais a mais de 10 km com sol. Três sinais iguais significam socorro, o SOS em Morse é três curtos, três longos e três curtos, e no chão um V pede ajuda e um X assistência médica. Combina com a família dois pontos de encontro e um contacto fora da região, guarda os números em papel e tem um rádio a pilhas ou de manivela, porque num corte total é o único que continua a dar os avisos da Proteção Civil."
+  },
+  {
+   "tema": "Previsão de Tempo sem Instrumentos",
+   "capitulo": "Previsão de Tempo sem Instrumentos",
+   "chaves": [
+    "previsao do tempo",
+    "prever o tempo",
+    "estado do tempo",
+    "meteorologia",
+    "nuvens",
+    "vai chover"
+   ],
+   "texto": "No Minho o tempo muda depressa e quase sempre vem do Atlântico, e ler o céu dá-te horas de vantagem para te abrigares. Cirros a aumentar e um véu com halo à volta do sol ou da lua anunciam chuva em 12 a 24 horas, nimbostratos escuros trazem chuva contínua e uma torre escura em bigorna, o cumulonimbo, significa trovoada, granizo e rajadas em 30 a 60 minutos. Orvalho de manhã, fumo a subir a direito e andorinhas altas indicam bom tempo; vento a rodar para sul ou sudoeste, fumo a descer e andorinhas baixas avisam que vem mau tempo. Na trovoada conta os segundos entre o relâmpago e o trovão e divide por 3 para saber os quilómetros: abaixo de 30 segundos abriga-te já e espera 30 minutos depois do último trovão. Sem abrigo na montanha, afasta-te de cumes, árvores isoladas e água e agacha-te sobre a mochila com os pés juntos."
+  },
+  {
+   "tema": "Sobrevivência Psicológica",
+   "capitulo": "Sobrevivência Psicológica",
+   "chaves": [
+    "psicologia",
+    "psicologica",
+    "panico",
+    "medo",
+    "stress",
+    "ansiedade",
+    "moral",
+    "calma"
+   ],
+   "texto": "A cabeça é a primeira ferramenta: o pânico leva a decisões erradas, gasta energia e separa o grupo, e a calma é algo que se treina. Sempre que algo correr mal aplica o P.A.R.A.R.: parar e sentar-te nos primeiros minutos, avaliar perigos, feridos, recursos e luz, respirar com 4 segundos a inspirar, 7 a suster e 8 a expirar, agir um passo de cada vez e rever de hora a hora. O corpo passa pelo choque, pela reação, pela adaptação e pela recuperação, e as tarefas concretas como água, abrigo e fogo são o melhor antídoto para o medo. Para manter a moral define metas pequenas, cria rotina, cuida da tua higiene, dá a cada pessoa uma função e usa o humor e a conversa. Num companheiro, apatia, isolamento ou deixar de comer são sinais de alarme; com crianças, explica com verdade simples, dá-lhes uma tarefa e mostra-te calmo."
+  },
+  {
+   "tema": "Sobrevivência Marítima",
+   "capitulo": "Sobrevivência Marítima",
+   "chaves": [
+    "mar",
+    "maritima",
+    "afogamento",
+    "agua fria",
+    "praia",
+    "barco",
+    "nadar"
+   ],
+   "texto": "O mar do Norte de Portugal é frio, entre 14 e 18 °C, com ondulação forte e correntes de retorno, e na água o frio e o pânico matam mais do que o cansaço. A regra 1-10-1 resume tudo: no primeiro minuto o choque térmico tira-te o ar, por isso flutua em vez de nadar; nos 10 minutos seguintes ainda tens força para te agarrares ou saíres; e ao fim de cerca de 1 hora a hipotermia pode fazer-te perder a consciência. Se uma corrente de retorno te apanhar, não nades contra ela: flutua, levanta um braço e nada em paralelo à praia até saíres da faixa. Sozinho, usa a posição H.E.L.P. com os joelhos ao peito; em grupo, abraçados em círculo, sempre de roupa vestida. Num barco usa colete, liga 112 ou o canal 16 de VHF e nunca bebas água do mar. Nas albufeiras e cascatas do Gerês, a água é funda e fria, e 30 cm de corrente bastam para derrubar um adulto."
+  },
+  {
+   "tema": "Higiene e Saneamento",
+   "capitulo": "Higiene e Saneamento",
+   "chaves": [
+    "higiene",
+    "saneamento",
+    "latrina",
+    "casa de banho",
+    "lavar maos",
+    "sabao",
+    "doencas"
+   ],
+   "texto": "Depois de catástrofes, a doença costuma matar mais do que os ferimentos, por isso mãos limpas, água segura e latrinas bem feitas são medicina preventiva. A latrina fica a 60 m ou mais da água e a 30 m do abrigo, a jusante, e faz-se com uma vala de 30 cm de largura, 60 cm de fundo e 1 m de comprimento, tapada com terra e cinza depois de cada uso; numa caminhada basta um buraco de 15 a 20 cm. Lava as mãos com sabão durante 20 segundos antes de cozinhar e depois da latrina, ou usa gel com pelo menos 60 % de álcool, e monta uma estação com uma garrafa furada pendurada num ramo. A água para beber e lavar alimentos é sempre tratada, a carne cozinha-se até deixar de estar rosada e os restos sem frio deitam-se fora ao fim de 2 horas. Em improviso, o sabão faz-se com barrela de cinza e gordura, e meias secas e pés arejados evitam o pé de trincheira e os fungos."
+  }
+ ],
+ "palavras": [
+  {
+   "tema": "Lixívia",
+   "capitulo": "Purificação de Água (Técnicas Avançadas)",
+   "chaves": [
+    "lixivia",
+    "cloro",
+    "gotas de lixivia"
+   ],
+   "procura": [
+    "lixivia",
+    "cloro"
+   ],
+   "texto": "Para desinfetar água com lixívia, usa só lixívia sem perfume, sem detergente e sem gel, e confirma a percentagem de cloro no rótulo. Com lixívia a 5–6 % chegam 2 gotas por litro de água clara e 4 se estiver turva; a 2,5–3 % são 4 e 8 gotas. Espera 30 minutos, ou 60 se a água estiver muito fria. No fim deve sentir-se um leve cheiro a cloro: se não cheirar, repete a dose e espera mais 15 minutos. Se a água tiver terra, filtra-a primeiro por um pano ou um filtro de camadas, porque a sujidade gasta o cloro."
+  },
+  {
+   "tema": "Ferver água",
+   "capitulo": "Purificação de Água (Técnicas Avançadas)",
+   "chaves": [
+    "ferver agua",
+    "ferver a agua",
+    "fervura",
+    "agua fervida"
+   ],
+   "procura": [
+    "ferver",
+    "fervura"
+   ],
+   "texto": "Ferver é o método mais seguro de tornar a água potável: basta uma fervura forte durante 1 minuto, ou 3 minutos acima dos 2000 m de altitude. Deixa arrefecer tapada e, para tirar o sabor a chato, passa-a várias vezes entre dois recipientes. Sem panela, serve uma garrafa de metal sem tinta, uma lata limpa ou pedras quentes deitadas num recipiente de casca ou num buraco forrado com plástico. A fervura mata micróbios, mas não tira químicos como combustíveis, nitratos ou pesticidas."
+  },
+  {
+   "tema": "Filtro de água",
+   "capitulo": "Purificação de Água (Técnicas Avançadas)",
+   "chaves": [
+    "filtro",
+    "filtro de agua",
+    "filtro de camadas",
+    "filtrar agua",
+    "filtro de garrafa"
+   ],
+   "procura": [
+    "filtro",
+    "camadas"
+   ],
+   "texto": "O filtro de camadas monta-se numa garrafa de 1,5 a 2 litros com o fundo cortado e virada ao contrário: pano bem apertado no gargalo, 5 cm de carvão da fogueira esmagado, 5 a 8 cm de areia fina, 5 cm de areia grossa e cascalho por cima. Deita a água devagar e rejeita os primeiros 2 litros, que só lavam o filtro. O mais importante é saber que este filtro apenas clarifica: tira terra e partículas, mas não torna a água segura, por isso depois tens sempre de a ferver, clorar ou pôr ao sol."
+  },
+  {
+   "tema": "SODIS",
+   "capitulo": "Purificação de Água (Técnicas Avançadas)",
+   "chaves": [
+    "sodis",
+    "desinfecao solar",
+    "agua ao sol",
+    "garrafa ao sol"
+   ],
+   "procura": [
+    "sodis",
+    "solar"
+   ],
+   "texto": "O SODIS desinfeta a água com o sol: enche garrafas PET transparentes e sem riscos, de até 2 litros, com água já clarificada, de forma a conseguires ler texto através da garrafa. Enche 3/4, agita 20 segundos para oxigenar, acaba de encher e deita as garrafas ao sol, de preferência sobre chapa ou outra superfície refletora. Bastam 6 horas de sol direto, ou 2 dias se o céu estiver muito nublado; com chuva contínua o método não funciona."
+  },
+  {
+   "tema": "Destilador solar",
+   "capitulo": "Purificação de Água (Técnicas Avançadas)",
+   "chaves": [
+    "destilador",
+    "destilador solar",
+    "agua salgada",
+    "agua do mar"
+   ],
+   "procura": [
+    "destilador"
+   ],
+   "texto": "O destilador solar é uma cova de cerca de 1 m por 60 cm com um recipiente no centro, plantas verdes à volta e um plástico por cima, preso nas bordas e com uma pedra no meio para a água condensada pingar para o recipiente. Dá entre 0,2 e 1 litro por dia e também serve para tornar potável a água salgada. Nunca bebas água do mar sem a destilar, nem urina, porque desidratam ainda mais."
+  },
+  {
+   "tema": "Pederneira",
+   "capitulo": "Técnicas de Fogo (12 Métodos)",
+   "chaves": [
+    "pederneira",
+    "ferrocerio",
+    "ferro cerio",
+    "magnesio"
+   ],
+   "procura": [
+    "pederneira",
+    "ferroc"
+   ],
+   "texto": "A pederneira de ferrocério é um dos métodos de fogo mais fiáveis porque funciona mesmo molhada e lança faíscas a cerca de 3000 °C. Raspa a vareta com as costas da faca a 45°, com a ponta encostada à acendalha, e puxa a vareta para trás em vez de empurrar a faca, para não desfazeres o ninho. Prepara antes uma boa acendalha, como casca de vidoeiro, algodão com vaselina ou um ninho de erva seca, e tem os gravetos à mão antes de fazer faísca."
+  },
+  {
+   "tema": "Arco de fogo",
+   "capitulo": "Técnicas de Fogo (12 Métodos)",
+   "chaves": [
+    "arco de fogo",
+    "bow drill",
+    "friccao",
+    "fogo por friccao",
+    "fogo sem isqueiro",
+    "fogo sem fosforos"
+   ],
+   "procura": [
+    "arco de fogo",
+    "fuso"
+   ],
+   "texto": "O arco de fogo usa um fuso de 20 a 25 cm e uma tábua de 2 cm de madeira seca e macia, como salgueiro, choupo, amieiro ou hera seca. Faz uma pequena cova a 2 cm da borda, roda o fuso até escurecer e corta um entalhe em V até ao centro da cova, com uma folha por baixo para apanhar o pó. Começa com movimentos longos e lentos, acelera quando sair fumo e continua mais 20 a 30 segundos; se o pó fumegar sozinho, tens uma brasa, que levas ao ninho de acendalha e sopras devagar. As falhas mais comuns são madeira húmida ou resinosa, corda frouxa, entalhe pequeno ou desistir cedo demais."
+  },
+  {
+   "tema": "Acendalha",
+   "capitulo": "Técnicas de Fogo (12 Métodos)",
+   "chaves": [
+    "acendalha",
+    "acendalhas",
+    "isca de fogo",
+    "tinder"
+   ],
+   "procura": [
+    "acendalha",
+    "vidoeiro"
+   ],
+   "texto": "A acendalha é o material fino que apanha a primeira chama, e a falta dela é a causa mais comum de um fogo falhar: prepara pelo menos duas mãos cheias antes de acender. No Minho, a casca de vidoeiro arde mesmo húmida por causa dos óleos, o pinho resinoso de tocos velhos acende à chuva, e servem ainda o ninho de erva seca, os fetos secos, a barba-de-velho e a penugem de tabúa. Em dia de chuva, procura ramos mortos ainda presos à árvore e o interior de troncos rachados."
+  },
+  {
+   "tema": "Hipotermia",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "hipotermia",
+    "frio extremo",
+    "congelar",
+    "tremores"
+   ],
+   "procura": [
+    "hipotermia"
+   ],
+   "texto": "A hipotermia ligeira nota-se pelos tremores e pelas mãos desajeitadas: leva a pessoa para um abrigo, troca a roupa molhada por seca, dá-lhe uma bebida quente e açucarada e põe-na a mexer-se. Na hipotermia grave a pessoa deixa de tremer, fica confusa e com sono; aí os movimentos têm de ser suaves, isola-a do chão e do vento, aquece-lhe o tronco e liga 112. Prevenir é mais fácil: isola-te sempre do solo, evita roupa molhada e não fiques parado ao vento."
+  },
+  {
+   "tema": "Torniquete",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "torniquete",
+    "hemorragia",
+    "sangrar",
+    "sangramento",
+    "parar sangue"
+   ],
+   "procura": [
+    "torniquete",
+    "hemorragia"
+   ],
+   "texto": "Numa hemorragia grave começa com pressão direta máxima e contínua sobre a ferida, com um pano limpo e as duas mãos; em feridas fundas na axila, virilha ou pescoço, enche a ferida com gaze e pressiona pelo menos 3 minutos. Se um membro continuar a sangrar, aplica um torniquete 5 a 7 cm acima da ferida, nunca sobre uma articulação, e aperta até o sangue parar, mesmo que doa. Improvisado, faz-se com uma faixa de pano de pelo menos 4 cm e um pau para rodar; corda fina ou arame não servem. Anota a hora na pele e não o alivies nem retires: isso fica para a equipa médica."
+  },
+  {
+   "tema": "RCP",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "rcp",
+    "reanimacao",
+    "massagem cardiaca",
+    "nao respira",
+    "paragem cardiaca"
+   ],
+   "procura": [
+    "rcp",
+    "compress"
+   ],
+   "texto": "Se um adulto não responde e não respira normalmente, liga 112, põe o telemóvel em alta voz e pede um desfibrilhador. Coloca as mãos no centro do peito, com os braços esticados, e faz 30 compressões com 5 a 6 cm de profundidade, a um ritmo de 100 a 120 por minuto, seguidas de 2 insuflações se souberes e puderes; senão, faz só compressões. Continua sem parar até chegar ajuda, o desfibrilhador mandar parar ou ficares exausto."
+  },
+  {
+   "tema": "Queimaduras",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "queimadura",
+    "queimaduras",
+    "queimei"
+   ],
+   "procura": [
+    "queimadura"
+   ],
+   "texto": "Uma queimadura arrefece-se com água corrente fresca, não gelada, durante 20 minutos. Tira anéis e relógios antes de a zona inchar, não rebentes as bolhas e cobre com película aderente ou um pano limpo e húmido; nada de pasta de dentes, manteiga ou azeite. Queimaduras na face, nas mãos ou nos genitais, ou maiores do que a mão do ferido, são caso para ligar 112."
+  },
+  {
+   "tema": "Víbora",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "vibora",
+    "cobra",
+    "mordedura de cobra",
+    "serpente"
+   ],
+   "procura": [
+    "vibora"
+   ],
+   "texto": "As víboras vivem sobretudo no Gerês, na Peneda e na Cabreira. Se alguém for mordido, acalma a pessoa, imobiliza o membro abaixo do nível do coração, tira anéis e pulseiras e liga 112. Não cortes, não chupes o veneno e não faças garrote, porque isso só piora a lesão."
+  },
+  {
+   "tema": "Carraça",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "carraca",
+    "carracas",
+    "lyme"
+   ],
+   "procura": [
+    "carra"
+   ],
+   "texto": "Uma carraça retira-se com uma pinça fina, agarrada rente à pele e puxada a direito, sem torcer. Depois desinfeta a zona e vigia-a durante 30 dias: se aparecer uma mancha vermelha em forma de alvo ou febre, vai ao médico, porque pode ser doença de Lyme."
+  },
+  {
+   "tema": "Picadas de vespa",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "vespa",
+    "vespa asiatica",
+    "abelha",
+    "picada",
+    "anafilaxia",
+    "alergia"
+   ],
+   "procura": [
+    "vespa",
+    "picada"
+   ],
+   "texto": "Uma picada isolada de vespa ou abelha trata-se com frio e vigilância, mas muitas picadas, ou inchaço da boca e falta de ar, são uma emergência: liga 112 de imediato, porque pode ser anafilaxia. Se a pessoa tiver uma caneta de adrenalina, usa-a. A tanchagem mastigada ou esmagada sobre a pele alivia picadas pequenas."
+  },
+  {
+   "tema": "Desidratação",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "desidratacao",
+    "desidratado",
+    "soro",
+    "reidratacao",
+    "solucao de reidratacao"
+   ],
+   "procura": [
+    "reidrata",
+    "desidrata"
+   ],
+   "texto": "A desidratação nota-se pela urina escura, dor de cabeça e tonturas, e trata-se bebendo aos poucos uma solução de reidratação: 1 litro de água potável com 6 colheres de chá rasas de açúcar e meia colher de chá rasa de sal. Em calor, a insolação é mais grave: pele quente, confusão e falta de transpiração pedem sombra, molhar e abanar a pessoa, gelo nas virilhas e axilas e 112."
+  },
+  {
+   "tema": "Fraturas",
+   "capitulo": "Medicina de Abrigo e Primeiros Socorros Extremos",
+   "chaves": [
+    "fratura",
+    "fraturas",
+    "osso partido",
+    "entorse",
+    "tala"
+   ],
+   "procura": [
+    "fratura",
+    "tala"
+   ],
+   "texto": "Uma fratura imobiliza-se na posição em que está, apanhando a articulação de cima e a de baixo, com talas de ramos, bastões ou revistas enroladas, bem almofadadas. Verifica a cor, a temperatura e a sensibilidade dos dedos antes e depois de atar. Numa fratura exposta, cobre com pano limpo, controla a hemorragia e não empurres o osso; se suspeitares da coluna, não movas o ferido a não ser que haja perigo imediato."
+  },
+  {
+   "tema": "Estrela Polar",
+   "capitulo": "Orientação e Geografia Regional (Braga/Minho)",
+   "chaves": [
+    "estrela polar",
+    "norte pelas estrelas",
+    "ursa maior",
+    "orientar de noite"
+   ],
+   "procura": [
+    "polar",
+    "ursa"
+   ],
+   "texto": "A Estrela Polar é o método sem bússola mais preciso, com cerca de 1° de erro. Encontra a Ursa Maior e prolonga cinco vezes a distância entre as duas estrelas da ponta: chegas à Polar, que marca o norte. De dia, o sol nasce a este, põe-se a oeste e ao meio-dia solar está a sul, e a sombra de um pau marcada duas vezes com 15 minutos de intervalo dá a linha oeste-este. O musgo é pouco fiável e deve ser confirmado com outro método."
+  },
+  {
+   "tema": "Sinais de socorro",
+   "capitulo": "Orientação e Geografia Regional (Braga/Minho)",
+   "chaves": [
+    "sinais de socorro",
+    "sos",
+    "pedir socorro",
+    "sinal de socorro",
+    "morse"
+   ],
+   "procura": [
+    "sos",
+    "socorro"
+   ],
+   "texto": "Três sinais iguais, sejam apitos, clarões ou fogueiras em triângulo, significam pedido de socorro. O SOS em Morse é três curtos, três longos e três curtos. No chão, com pelo menos 3 m, um V quer dizer que precisas de ajuda, um X que precisas de assistência médica e uma seta a direção em que segues. Para um helicóptero, os braços em Y levantados pedem ajuda."
+  },
+  {
+   "tema": "Perdido",
+   "capitulo": "Orientação e Geografia Regional (Braga/Minho)",
+   "chaves": [
+    "perdi me",
+    "estou perdido",
+    "perdido na montanha",
+    "perdido na serra",
+    "perdido no monte"
+   ],
+   "procura": [
+    "cumeada",
+    "perdido"
+   ],
+   "texto": "Perdido na montanha, primeiro para e acalma-te. Desce pelas linhas de cumeada secundárias e não pelo fundo de vales encaixados, onde há cascatas, ravinas e mato fechado. Seguir a água para baixo leva a aldeias, mas no Gerês as margens têm penhascos e poços fundos; muros de pedra, levadas, caminhos de carro de bois e linhas elétricas também levam sempre a povoações. Com nevoeiro, para e espera em vez de caminhar às cegas."
+  },
+  {
+   "tema": "Lais de guia",
+   "capitulo": "Nós Táticos Essenciais",
+   "chaves": [
+    "lais de guia",
+    "bowline"
+   ],
+   "procura": [
+    "lais de guia"
+   ],
+   "texto": "O lais de guia faz um laço fixo que não aperta, ideal para pôr à cintura ou à volta de uma árvore. Faz um pequeno anel na corda, sobe a ponta pelo anel, dá a volta por trás da corda principal e volta a descer pelo anel: é o coelho que sai da toca, dá a volta à árvore e volta para a toca. Aperta puxando pela ponta e pela corda principal e deixa uma ponta solta de cerca de 10 vezes a grossura da corda."
+  },
+  {
+   "tema": "Nó de tensão",
+   "capitulo": "Nós Táticos Essenciais",
+   "chaves": [
+    "no de tensao",
+    "taut line",
+    "espias"
+   ],
+   "procura": [
+    "tensao",
+    "taut"
+   ],
+   "texto": "O nó de tensão serve para ajustar a tensão das espias de uma lona. Passa a ponta à volta da estaca, dá duas voltas para dentro do laço à volta da corda que vai para a lona e uma terceira por fora, mais acima, e aperta. Desliza à mão para ajustar e bloqueia quando está sob tensão. Numa lona em A combina-se com o nó de camionista na cumeeira."
+  },
+  {
+   "tema": "Nó de camionista",
+   "capitulo": "Nós Táticos Essenciais",
+   "chaves": [
+    "no de camionista",
+    "camionista",
+    "esticar corda"
+   ],
+   "procura": [
+    "camionista"
+   ],
+   "texto": "O nó de camionista estica muito uma corda de cumeeira porque funciona como uma roldana 2:1. Faz uma alça a meio da corda, passa a ponta à volta da árvore ou da estaca, volta a passá-la pela alça, puxa para tensionar e bloqueia com dois cotes junto à alça."
+  },
+  {
+   "tema": "Cicuta",
+   "capitulo": "Plantas: Identificação, Comestibilidade e Preparação",
+   "chaves": [
+    "cicuta",
+    "embude",
+    "umbeliferas",
+    "plantas venenosas",
+    "planta venenosa"
+   ],
+   "procura": [
+    "cicuta",
+    "embude"
+   ],
+   "texto": "A cicuta e o embude são duas das plantas mais mortais da Europa e crescem no Minho. Ambas são umbelíferas, com flores brancas em guarda-chuva parecidas com as da cenoura e do funcho: a cicuta tem o caule com manchas roxas e cheiro a rato, e o embude cresce junto a ribeiros, com raízes brancas em fuso que parecem nabos e um suco amarelo. Basta uma pequena porção para matar, por isso nunca comas plantas de flor branca em umbela. A dedaleira, o teixo e o acónito também são mortais."
+  },
+  {
+   "tema": "Bolotas",
+   "capitulo": "Plantas: Identificação, Comestibilidade e Preparação",
+   "chaves": [
+    "bolota",
+    "bolotas",
+    "farinha de bolota"
+   ],
+   "procura": [
+    "bolota"
+   ],
+   "texto": "As bolotas comem-se depois de lhes tirar o amargor: descasca-as, parte-as e ferve-as trocando a água até deixarem de amargar, ou demolha-as 2 a 3 dias em água corrente. Depois seca-as e mói-as em farinha. Bem secas, as bolotas e as castanhas dão hidratos de carbono para semanas."
+  },
+  {
+   "tema": "Teste de comestibilidade",
+   "capitulo": "Plantas: Identificação, Comestibilidade e Preparação",
+   "chaves": [
+    "teste de comestibilidade",
+    "teste universal",
+    "saber se uma planta e comestivel"
+   ],
+   "procura": [
+    "comestibilidade"
+   ],
+   "texto": "O teste de comestibilidade universal é só para último recurso, com uma única planta abundante, e nunca serve para umbelíferas, cogumelos, plantas com látex leitoso ou bagas desconhecidas, nem deteta venenos lentos. Leva 24 horas: jejum de 8 horas, testar uma parte de cada vez, cheirar, esfregar no pulso 15 minutos, encostar aos lábios e à língua, mastigar sem engolir 15 minutos e, se nada acontecer, engolir um pedaço pequeno e esperar 8 horas antes de comer uma porção pequena cozinhada."
+  },
+  {
+   "tema": "Cogumelos",
+   "capitulo": "Plantas: Identificação, Comestibilidade e Preparação",
+   "chaves": [
+    "cogumelo",
+    "cogumelos"
+   ],
+   "procura": [
+    "cogumelo"
+   ],
+   "texto": "Nunca comas cogumelos sem identificação feita por um especialista. Não existe um teste caseiro fiável para os distinguir, e o teste de comestibilidade universal não se aplica a cogumelos. Em sobrevivência, compensa muito mais procurar plantas que conheces com certeza, como o dente-de-leão, a urtiga cozida ou as castanhas."
+  },
+  {
+   "tema": "Corrente de retorno",
+   "capitulo": "Sobrevivência Marítima",
+   "chaves": [
+    "corrente de retorno",
+    "agueiro",
+    "corrente no mar"
+   ],
+   "procura": [
+    "agueiro",
+    "retorno"
+   ],
+   "texto": "Uma corrente de retorno, ou agueiro, reconhece-se por uma faixa de água mais escura e calma entre zonas de rebentação, com espuma e areia a irem para o largo. Se fores apanhado, não nades contra ela: flutua de costas, levanta um braço a pedir ajuda e nada em paralelo à praia até saíres da faixa, normalmente 20 a 50 m. Depois nada para terra na diagonal, aproveitando as ondas."
+  },
+  {
+   "tema": "Posição H.E.L.P.",
+   "capitulo": "Sobrevivência Marítima",
+   "chaves": [
+    "help",
+    "posicao help",
+    "h e l p"
+   ],
+   "procura": [
+    "help",
+    "h.e.l.p"
+   ],
+   "texto": "A posição H.E.L.P. reduz a perda de calor na água fria: joelhos ao peito, braços cruzados e cabeça fora de água. Em grupo, abraçados em círculo, com os mais frágeis no centro. Mantém a roupa vestida, porque retém calor e ajuda a flutuar, e tira só as botas pesadas."
+  },
+  {
+   "tema": "Trovoada",
+   "capitulo": "Previsão de Tempo sem Instrumentos",
+   "chaves": [
+    "trovoada",
+    "raio",
+    "raios",
+    "relampago",
+    "regra 30 30"
+   ],
+   "procura": [
+    "trov",
+    "30-30"
+   ],
+   "texto": "Na trovoada usa a regra 30-30: conta os segundos entre o relâmpago e o trovão e divide por 3 para saber a distância em quilómetros; abaixo de 30 segundos, ou 10 km, procura abrigo já, e espera 30 minutos depois do último trovão antes de sair. Na montanha sem abrigo, afasta-te de cumes, árvores isoladas, cercas metálicas e água, e agacha-te sobre a mochila com os pés juntos e as mãos nos joelhos, a pelo menos 15 m dos outros."
+  },
+  {
+   "tema": "P.A.R.A.R.",
+   "capitulo": "Sobrevivência Psicológica",
+   "chaves": [
+    "p a r a r",
+    "ataque de panico",
+    "respiracao"
+   ],
+   "procura": [
+    "p.a.r.a.r",
+    "respirar"
+   ],
+   "texto": "O P.A.R.A.R. é o método para quando algo corre mal: Parar e sentar-te nos primeiros minutos sem fazer nada, Avaliar perigos, feridos, recursos e tempo de luz, Respirar com 4 segundos a inspirar, 7 a suster e 8 a expirar durante 4 ciclos, Agir um passo de cada vez pela ordem de prioridades e Rever de hora a hora se está a resultar."
+  },
+  {
+   "tema": "Latrina",
+   "capitulo": "Higiene e Saneamento",
+   "chaves": [
+    "latrina",
+    "latrinas",
+    "fazer necessidades",
+    "cathole"
+   ],
+   "procura": [
+    "latrina"
+   ],
+   "texto": "A latrina de cova serve um grupo pequeno até uma semana: escolhe um local a 60 m ou mais da água e a 30 m do abrigo, a jusante, e cava uma vala de 30 cm de largura, 60 cm de fundo e 1 m de comprimento. Depois de cada uso cobre com terra e, se houver, cinza, e quando faltarem 30 cm para o topo enche, compacta e marca o local. Numa caminhada basta um buraco de 15 a 20 cm tapado depois; em casa, sem água, um balde com dois sacos e cinza ou serradura."
+  },
+  {
+   "tema": "Mochila de 72 horas",
+   "capitulo": "Kit de Sobrevivência (Bug Out Bag)",
+   "chaves": [
+    "72 horas",
+    "72h",
+    "mochila de 72",
+    "racao de 72"
+   ],
+   "procura": [
+    "72"
+   ],
+   "texto": "A mochila de 72 horas deve pesar entre 10 e 15 kg e conter 3 litros de água com filtro e pastilhas, comida pronta para três dias, lona, paracord e mantas térmicas, roupa por camadas, dois isqueiros e pederneira, frontal, kit de primeiros socorros com torniquete e medicação para 7 dias, mapa, bússola, rádio, apito, cópias dos documentos e dinheiro trocado. Para a comida, uma ração de cerca de 2500 kcal por dia pode ser aveia com leite em pó e mel de manhã, pão rijo com sardinhas ao almoço e massa com atum e azeite ao jantar, com chocolate e frutos secos pelo meio."
+  },
+  {
+   "tema": "Conservar carne",
+   "capitulo": "Caça, Pesca e Preparação de Animais",
+   "chaves": [
+    "conservar carne",
+    "secar carne",
+    "fumar carne",
+    "charque",
+    "salga"
+   ],
+   "procura": [
+    "fumo",
+    "salga"
+   ],
+   "texto": "Sem frigorífico, a carne conserva-se com fumo quente em tiras de 1 a 2 cm durante 6 a 12 horas, o que dura 1 a 2 semanas; secando tiras de 5 mm sem gordura ao sol e ao vento, protegidas das moscas, dura meses; e com salga em camadas de sal grosso, ou salmoura com sal até um ovo flutuar, também dura semanas a meses. No inverno de montanha, um saco dentro de água corrente fria guarda-a alguns dias."
+  }
+ ]
+}
