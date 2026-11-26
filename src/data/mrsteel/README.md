@@ -13,8 +13,12 @@ Tudo o que define **como o Mr. Steel fala** está aqui, em ficheiros simples que
 | `resumos.json` | Resumos em prosa do Guia: 18 por capítulo (abrigo, água, fogo…) e 34 por palavra-chave (lixívia, pederneira, hipotermia, torniquete, RCP, víbora…). Cada um tem `chaves` (palavras que o ativam, sem acentos), `capitulo` e `texto` | Offline: "abrigo" ou "fala-me de hipotermia" dá o resumo com o ficheiro e as páginas do PDF; online, vai como modelo de resposta |
 | `conversa.json` | Conversa de café: 20 temas (tudo bem, cansaço, tempo, futebol, café, piadas…), cada um com as palavras que o ativam e 5 respostas (100 no total) | Offline; online serve de exemplo de tom |
 
+| `en.json` | As mesmas frases em **inglês (EUA)**: aberturas, perguntas, iniciar conversa, piadas, saudações, conversa de café e sugestões iniciais. Com a app em English, o modo offline usa estas frases e mostra o texto do Guia (em português) em citação, com aviso | Offline em inglês |
+
 ## Regras para editar
 - Mantém o formato JSON: cada frase entre aspas `"..."` e separada por vírgula. Se o ficheiro ficar inválido, a publicação falha e o site continua com a versão anterior (vês o erro no separador Actions do GitHub).
 - Em `conversa.json`, as palavras de `padroes` escrevem-se **sem acentos e em minúsculas** ("cansaco", "cafe").
 - Português de Portugal, a tratar por "tu". Evita clichés ("boa pergunta", "claro!") e emojis nas respostas sérias.
 - Podes acrescentar mais frases do que 100: o Mr. Steel escolhe ao acaso e nunca repete a última.
+- Cada frase tem de ser **completa**, acabar em pontuação e não ter palavras em falta. As aberturas de `respostas.json` que acabam em ":" não são usadas (vêm logo antes de "Com base no ficheiro…").
+- Depois de editar, corre `npm run test:ai`: verifica gralhas de formato, formas do Brasil, mistura de idiomas e frases cortadas em todas as frases e em respostas reais do modo offline.

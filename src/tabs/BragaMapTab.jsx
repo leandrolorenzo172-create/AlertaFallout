@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMapEvents } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Trash2, X, Palette, Save, Crosshair } from 'lucide-react';
+import { MapPin, Trash2, X, Palette, Save, Crosshair, Ruler } from 'lucide-react';
+import { useQuickTools, showToolToast } from '../tools/quickTools';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { alpha } from '../theme';
 import { t } from '@/i18n';
 
 const BRAGA_CENTER = [41.5518, -8.4229];
+
+// Camadas do mapa (ferramenta "Alternar camadas" do menu ≡)
+const LAYERS = [
+  { id: 'rotas', label: 'Rotas', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
+  { id: 'terreno', label: 'Terreno', url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenStreetMap contributors, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)' },
+  { id: 'vigilancia', label: 'Vigilância', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; OpenStreetMap contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
+];
+const fmtDist = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`);
 
 const PIN_COLORS = [
   { name: 'Verde', value: 'rgb(var(--c))' },
@@ -45,6 +54,43 @@ export default function BragaMapTab() {
   const [pinName, setPinName] = useState('');
   const [pinDesc, setPinDesc] = useState('');
   const [pinColor, setPinColor] = useState(PIN_COLORS[0].value);
+  const mapRef = useRef(null);
+  const listRef = useRef(null);
+  const [layer, setLayer] = useState(() => { try { return LAYERS.find((l) => l.id === localStorage.getItem('map_layer')) || LAYERS[0]; } catch { return LAYERS[0]; } });
+  const [measuring, setMeasuring] = useState(false);
+  const [measurePts, setMeasurePts] = useState([]);
+  const [myPos, setMyPos] = useState(null);
+  const measureTotal = measurePts.reduce((sum, p, i) => (i && mapRef.current ? sum + mapRef.current.distance(measurePts[i - 1], p) : sum), 0);
+
+  // Ferramentas do menu ≡ (src/tools/toolMenus.js → mapa)
+  useQuickTools('mapa', {
+    centrar: () => {
+      if (!navigator.geolocation) { showToolToast(t('Este dispositivo não dá a localização.')); return; }
+      showToolToast(t('A localizar…'));
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { const ll = [pos.coords.latitude, pos.coords.longitude]; setMyPos(ll); mapRef.current?.flyTo(ll, 15); showToolToast(t('Mapa centrado na tua posição.')); },
+        (err) => showToolToast(err.code === 1 ? t('A localização está bloqueada para esta app.') : t('Não foi possível obter a localização.')),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      );
+    },
+    marcadores: () => {
+      if (!pins.length) { showToolToast(t('Sem marcadores. Toca no mapa para criar uma zona segura.')); return; }
+      // enquadra todos os marcadores e mostra a lista
+      if (mapRef.current) mapRef.current.fitBounds(L.latLngBounds(pins.map((p) => [p.lat, p.lng])).pad(0.2), { maxZoom: 16 });
+      setTimeout(() => listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350);
+    },
+    camadas: () => {
+      const next = LAYERS[(LAYERS.findIndex((l) => l.id === layer.id) + 1) % LAYERS.length];
+      setLayer(next);
+      try { localStorage.setItem('map_layer', next.id); } catch { /* sem armazenamento */ }
+      showToolToast(t('Camada: {x}', { x: t(next.label) }));
+    },
+    medir: () => {
+      const on = !measuring;
+      setMeasuring(on); setMeasurePts([]); setShowForm(false);
+      showToolToast(on ? t('Medir: toca no mapa para marcar os pontos.') : t('Medição terminada.'));
+    },
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem('braga_custom_pins');
@@ -63,6 +109,7 @@ export default function BragaMapTab() {
   };
 
   const handleMapClick = (latlng) => {
+    if (measuring) { setMeasurePts((prev) => [...prev, [latlng.lat, latlng.lng]]); return; } // modo "Medir distância"
     setNewPin({ lat: latlng.lat, lng: latlng.lng });
     setPinName('');
     setPinDesc('');
@@ -115,6 +162,18 @@ export default function BragaMapTab() {
           {t('📍 Clique no mapa para adicionar um pino. Defina nome, descrição e cor. Os pinos ficam guardados no dispositivo (offline).')}
         </p>
       </div>
+
+      {/* Medir distância (ferramenta do menu ≡) */}
+      {measuring && (
+        <div className="flex items-center gap-2 p-2.5 rounded-sm mb-3 text-xs" role="status" style={{ background: 'rgb(var(--c) / 0.08)', border: '1px solid rgb(var(--c) / 0.35)', color: 'rgb(var(--c))' }}>
+          <Ruler size={14} className="shrink-0" />
+          <span className="flex-1 min-w-0">
+            {measurePts.length < 2 ? t('Toca no mapa para marcar pelo menos dois pontos.') : t('Distância total: {d} ({n} pontos)', { d: fmtDist(measureTotal), n: measurePts.length })}
+          </span>
+          {measurePts.length > 0 && <button type="button" onClick={() => setMeasurePts((p) => p.slice(0, -1))} className="text-[10px] uppercase tracking-wider underline">{t('Desfazer')}</button>}
+          <button type="button" onClick={() => { setMeasuring(false); setMeasurePts([]); }} aria-label={t('Terminar medição')} className="p-1"><X size={14} /></button>
+        </div>
+      )}
 
       {/* Add pin form */}
       <AnimatePresence>
@@ -208,16 +267,17 @@ export default function BragaMapTab() {
       {/* Map */}
       <div className="rounded-sm overflow-hidden relative" style={{ border: '1px solid rgb(var(--c) / 0.2)', height: '450px' }}>
         <MapContainer
+          ref={mapRef}
           center={BRAGA_CENTER}
           zoom={13}
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
+          <TileLayer key={layer.id} url={layer.url} attribution={layer.attribution} />
           <MapClickHandler onMapClick={handleMapClick} />
+          {myPos && <CircleMarker center={myPos} radius={7} pathOptions={{ color: '#00aaff', fillColor: '#00aaff', fillOpacity: 0.6 }} />}
+          {measurePts.length > 0 && <Polyline positions={measurePts} pathOptions={{ color: '#ffaa00', weight: 3, dashArray: '6 6' }} />}
+          {measurePts.map((p, i) => <CircleMarker key={`m${i}`} center={p} radius={4} pathOptions={{ color: '#ffaa00', fillColor: '#ffaa00', fillOpacity: 1 }} />)}
           {pins.map((pin) => (
             <Marker
               key={pin.id}
@@ -241,7 +301,7 @@ export default function BragaMapTab() {
 
       {/* Pin list */}
       {pins.length > 0 && (
-        <div className="mt-3">
+        <div className="mt-3" ref={listRef} style={{ scrollMarginTop: 90 }}>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c) / 0.53)' }}>
               {t('Pinos Guardados')}

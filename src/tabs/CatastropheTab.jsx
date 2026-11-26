@@ -1,9 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Loader2, ShieldAlert, X } from 'lucide-react';
 import NewsCard from '../pipboy/NewsCard';
 import { t, locale } from '@/i18n';
+import { useQuickTools, setToolBadge, showToolToast } from '../tools/quickTools';
+
+// Gravidade a partir da qual um evento conta como "alerta ativo" (indicador vermelho no menu ≡)
+const ALERT_MIN = 7;
+// Filtro de gravidade (ferramenta "Filtrar gravidade")
+const SEVERITY_FILTERS = [
+  { min: 0, label: 'Todas as gravidades' },
+  { min: 4, label: 'Gravidade 4 ou mais' },
+  { min: 7, label: 'Gravidade 7 ou mais' },
+];
+// Protocolo de emergência resumido (ferramenta "Protocolo de emergência")
+const PROTOCOL = [
+  'Se houver risco de vida, liga 112.',
+  'Afasta-te do perigo imediato e ajuda quem estiver ferido sem te pores em risco.',
+  'Segue as indicações da Proteção Civil e ouve a rádio (Antena 1 e rádios locais).',
+  'Leva a mochila de emergência: água, comida, lanterna, rádio, medicamentos e documentos.',
+  'Avisa a família pelo contacto combinado e dirige-te ao ponto de encontro.',
+  'Não voltes à zona afetada até as autoridades dizerem que é seguro.',
+];
 
 export default function CatastropheTab() {
   const [articles, setArticles] = useState([]);
@@ -11,6 +30,31 @@ export default function CatastropheTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [minSeverity, setMinSeverity] = useState(0);
+  const [showProtocol, setShowProtocol] = useState(false);
+  const activeAlerts = articles.filter((a) => Number(a.severity) >= ALERT_MIN);
+  const shown = articles.filter((a) => Number(a.severity || 0) >= minSeverity);
+
+  // o menu ≡ mostra o ponto vermelho em "Alertas ativos" quando há eventos graves
+  useEffect(() => { setToolBadge('catastrofes', 'alertas', activeAlerts.length > 0); }, [activeAlerts.length]);
+
+  // Ferramentas do menu ≡ (src/tools/toolMenus.js → catastrofes)
+  useQuickTools('catastrofes', {
+    alertas: () => {
+      if (!activeAlerts.length) { setMinSeverity(0); showToolToast(t('Sem alertas ativos de gravidade {n} ou mais.', { n: ALERT_MIN })); return; }
+      setMinSeverity(ALERT_MIN);
+      showToolToast(t('{n} alerta(s) ativo(s).', { n: activeAlerts.length }));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    protocolo: () => { setShowProtocol(true); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+    gravidade: () => {
+      const i = SEVERITY_FILTERS.findIndex((f) => f.min === minSeverity);
+      const next = SEVERITY_FILTERS[(i + 1) % SEVERITY_FILTERS.length];
+      setMinSeverity(next.min);
+      showToolToast(t(next.label));
+    },
+    atualizar: () => { showToolToast(t('A atualizar…')); fetchData(true); },
+  });
 
   const fetchData = async (isRefresh = false) => {
     try {
@@ -139,6 +183,27 @@ export default function CatastropheTab() {
         </button>
       </div>
 
+      {/* Protocolo de emergência (ferramenta do menu ≡) */}
+      {showProtocol && (
+        <div className="mb-4 p-3 rounded-sm" style={{ background: '#ff000011', border: '1px solid #ff444466' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldAlert size={14} style={{ color: '#ff5555' }} />
+            <h3 className="flex-1 text-xs uppercase tracking-wider font-bold" style={{ color: '#ff7777' }}>{t('Protocolo de emergência')}</h3>
+            <button type="button" onClick={() => setShowProtocol(false)} aria-label={t('Fechar')} className="p-1"><X size={14} style={{ color: '#ff7777' }} /></button>
+          </div>
+          <ol className="list-decimal pl-5 flex flex-col gap-1 text-xs" style={{ color: 'rgb(var(--c) / 0.85)' }}>
+            {PROTOCOL.map((p) => <li key={p}>{t(p)}</li>)}
+          </ol>
+        </div>
+      )}
+
+      {minSeverity > 0 && articles.length > 0 && (
+        <div className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}>
+          <span>{t((SEVERITY_FILTERS.find((f) => f.min === minSeverity) || SEVERITY_FILTERS[0]).label)} · {shown.length}/{articles.length}</span>
+          <button type="button" onClick={() => setMinSeverity(0)} className="underline">{t('Mostrar todas')}</button>
+        </div>
+      )}
+
       {loading && articles.length === 0 ? (
         <div className="flex flex-col items-center py-12">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
@@ -167,9 +232,12 @@ export default function CatastropheTab() {
         </div>
       ) : (
         <div>
-          {articles.map((article, i) => (
+          {shown.map((article, i) => (
             <NewsCard key={i} article={article} index={i} />
           ))}
+          {articles.length > 0 && shown.length === 0 && (
+            <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.45)' }}>{t('Nenhum evento com esta gravidade.')}</p>
+          )}
           {articles.length === 0 && (
             <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.33)' }}>
               {t('Sem dados disponíveis')}

@@ -10,7 +10,11 @@ import PERGUNTAS from '@/data/mrsteel/perguntas.json';
 import INICIAR from '@/data/mrsteel/iniciar.json';
 import CONVERSA from '@/data/mrsteel/conversa.json';
 import PIADAS from '@/data/mrsteel/piadas.json';
+import EN from '@/data/mrsteel/en.json';
+import { isEn } from '../../i18n';
 const list = (f, fallback) => (Array.isArray(f?.frases) && f.frases.length ? f.frases : fallback);
+// Frases em inglês (app em English): mesmas funções, outra lista. As frases em português ficam nos .json da pasta.
+const en = (key, fallback) => (Array.isArray(EN?.[key]) && EN[key].length ? EN[key] : fallback);
 
 const LAST = new Map();
 export function pick(key, list) {
@@ -61,8 +65,10 @@ export const periodOf = (d = new Date()) => {
   return h < 6 ? 'madrugada' : h < 12 ? 'manha' : h < 20 ? 'tarde' : 'noite';
 };
 export function greeting(offline = false) {
-  return offline ? pick('g-off', GREETINGS.offline) : pick(`g-${periodOf()}`, GREETINGS[periodOf()]);
+  const G = isEn() ? (EN.greetings || GREETINGS) : GREETINGS;
+  return offline ? pick('g-off', G.offline) : pick(`g-${periodOf()}`, G[periodOf()]);
 }
+export const helpPrompt = () => (isEn() ? 'How can I help you?' : 'Em que te posso ser útil?');
 
 // ---------- Convites ao diálogo ----------
 export const STARTERS = [
@@ -87,7 +93,7 @@ export const STARTERS = [
   'O que gostavas de ter resolvido no fim desta conversa?',
   'A consola é tua. Em que estás a pensar?',
 ];
-export const starter = () => pick('start', list(INICIAR, STARTERS));
+export const starter = () => pick('start', isEn() ? en('iniciar', STARTERS) : list(INICIAR, STARTERS));
 
 // ---------- Bloco 1: abrir uma síntese em frase própria (a partir dos ficheiros) ----------
 export const SYNTH = [
@@ -152,10 +158,18 @@ export const QUESTIONS = [
   'Qual seria, para ti, o resultado ideal no fim desta conversa sobre o tema?',
   'Queres que continue com o resto do capítulo?',
 ];
-export const question = () => pick('q', list(PERGUNTAS, QUESTIONS));
+export const question = () => pick('q', isEn() ? en('perguntas', QUESTIONS) : list(PERGUNTAS, QUESTIONS));
 // abertura curta antes de uma resposta com fonte ("Fui ver ao Guia.")
 // guide=false: documento do utilizador -> sem aberturas que falam do "Guia"
-export const opener = (guide = true) => pick(guide ? 'open' : 'open-doc', list(RESPOSTAS, ['Fui ver.']).filter((f) => guide || !/\bguia\b/i.test(f))).replace(/:\s*$/, '.');
+// Só entram aberturas que são frases completas: as que acabam em ":" ("Pelo que consta nos teus documentos:",
+// "Sem rodeios:") anunciam o texto seguinte e, trocando ":" por ".", ficavam frases incompletas antes de
+// "Com base no ficheiro…" — era uma das origens das "frases sem palavras".
+export const isCompleteOpener = (f) => /[.!?]$/.test(String(f).trim()) && !/:\s*$/.test(String(f));
+export const opener = (guide = true) => {
+  const all = isEn() ? en('respostas', ['I checked.']) : list(RESPOSTAS, ['Fui ver.']);
+  const ok = all.filter(isCompleteOpener).filter((f) => guide || !/\b(guia|guide)\b/i.test(f));
+  return pick(`${isEn() ? 'en-' : ''}${guide ? 'open' : 'open-doc'}`, ok.length ? ok : [isEn() ? 'I checked.' : 'Fui ver.']);
+};
 // exemplos de estilo para a IA online (poucos, ao acaso, para não gastar tokens)
 export function styleSamples(n = 4) {
   const take = (arr) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
@@ -186,7 +200,9 @@ const REPHRASE_HINTS = [
   'Algo como "como fazer fogo com pederneira" ou "sinais de hipotermia" ajuda-me muito.',
   'Diz-me o tema e o que queres: explicar, resumir ou um passo a passo.',
 ];
-export const rephrase = () => `${pick('re', REPHRASE)}\n\n_${pick('re-h', REPHRASE_HINTS)}_`;
+export const rephrase = () => (isEn()
+  ? `${pick('re', en('rephrase', REPHRASE))}\n\n_${pick('re-h', en('rephraseHints', REPHRASE_HINTS))}_`
+  : `${pick('re', REPHRASE)}\n\n_${pick('re-h', REPHRASE_HINTS)}_`);
 
 // ---------- Bloco 2: quando o tema não está nos ficheiros (com transparência) ----------
 export const MISSING = [
@@ -205,10 +221,19 @@ const WHY = {
   offline: 'Como estamos **sem internet**, só consigo usar o que está guardado no telemóvel.',
   nokey: 'Com a **IA online ligada** (chave nas Definições) conseguiria raciocinar sobre isto além dos ficheiros.',
   error: 'A **IA online não respondeu** agora, por isso fiquei limitado aos ficheiros locais.',
+  mode: 'O modo **Base local** está ativo (Modo IA, no menu ≡), por isso só uso os ficheiros do telemóvel.',
 };
+// Lista "A, B ou C" sem partir títulos que tenham vírgulas
+const joinOr = (items, or) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} ${or} ${items[items.length - 1]}`);
 export function missing(topicsList = [], reason = 'offline') {
-  const t = topicsList.length ? topicsList.slice(0, 3).map((x) => `**${x}**`).join(', ').replace(/, ([^,]*)$/, ' ou $1') : 'os módulos do Guia';
-  return `${pick('miss', MISSING)} ${WHY[reason] || WHY.offline}\n\nPosso, no entanto, ajudar-te com ${t}. Se tiveres um documento sobre o tema, importa-o na aba **Ficheiros IA** e eu passo a consultá-lo. Queres que comecemos por algum destes?`;
+  const items = topicsList.slice(0, 3).map((x) => `**${x}**`);
+  if (isEn()) {
+    const W = EN.why || {};
+    const tt = items.length ? joinOr(items, 'or') : EN.missingDefault;
+    return `${pick('miss-en', en('missing', MISSING))} ${W[reason] || W.offline}\n\n${String(EN.missingTail).replace('{t}', tt)}`;
+  }
+  const tt = items.length ? joinOr(items, 'ou') : 'os módulos do Guia';
+  return `${pick('miss', MISSING)} ${WHY[reason] || WHY.offline}\n\nPosso, no entanto, ajudar-te com ${tt}. Se tiveres um documento sobre o tema, importa-o na aba **Ficheiros IA** e eu passo a consultá-lo. Queres que comecemos por algum destes?`;
 }
 
 // ---------- Agradecimentos ----------
@@ -218,7 +243,7 @@ export const THANKS = [
   'Às ordens! Há mais alguma coisa em que te possa ajudar?',
   'Ainda bem que ajudou. Diz-me se quiseres continuar.',
 ];
-export const thanks = () => pick('thx', THANKS);
+export const thanks = () => pick('thx', isEn() ? en('thanks', THANKS) : THANKS);
 // compatibilidade: fecho = uma pergunta sobre o tema
 export const closing = () => question();
 export const intro = () => synth();
@@ -228,7 +253,7 @@ export const IDENTITY = [
   'Sou o **Mr. Steel**, o assistente da SteelDeck. Consulto o Guia de Sobrevivência, os documentos que importares e os dados da app. Com internet e uma chave de IA, consigo também raciocinar sobre temas que não estão nos ficheiros.',
   'Chamo-me **Mr. Steel**. Cruzo o Guia, os teus ficheiros e os dados da app para te dar respostas com fonte, e mesmo sem rede continuo a funcionar com o que está guardado no telemóvel.',
 ];
-export const identity = () => pick('id', IDENTITY);
+export const identity = () => pick('id', isEn() ? en('identity', IDENTITY) : IDENTITY);
 
 // ---------- Limpeza de texto de PDF/OCR ----------
 // Tira números de página soltos, cabeçalhos e rodapés repetidos do eBook e espaços a mais.
@@ -252,11 +277,25 @@ export function cleanNoise(text) {
     i = j > i ? j : i + 1;
   }
   return lines.filter((_, i) => keep[i]).join('\n')
-    // erros típicos de OCR: "Cap i tulo" -> "Capítulo"/"Capitulo", "prote ção" -> "proteção", "infor- mação" -> "informação"
+    // erros típicos de OCR: "Cap i tulo" -> "Capítulo", "prote ção" -> "proteção", "infor- mação" -> "informação".
+    // Só sufixos que NUNCA são palavras soltas: antes também se colavam "mente", "dade" e "idade", e frases reais
+    // como "a sua idade" ou "na tua mente" passavam a "suaidade" / "tuamente" (gralhas criadas pela limpeza).
     .replace(/([A-Za-zÀ-ú]{2,}) ([bcdfghijklmnpqrstuvxzç]) ([a-zà-ú]{2,})/g, '$1$2$3')
-    .replace(/([a-zà-ú]{2,}) (ção|ções|sões|mente|ência|ância|dade|idade)\b/g, '$1$2')
-    .replace(/([a-zà-ú])- \n?([a-zà-ú])/g, '$1$2')
-    .replace(/([a-zà-ú0-9,;(\-])[ \t]*\n(?=[a-zà-ú(])/g, '$1 ') // junta linhas partidas a meio da frase (PDF)
+    .replace(/([a-zà-ú]{2,}) (ção|ções|sões|ência|ências|ância|âncias)(?![a-zà-ú])/g, '$1$2')
+    // hifenização no fim da linha: "purifi-\ncação" -> "purificação"; "faz-\nse" mantém o hífen ("faz-se")
+    .replace(/([a-zà-ú])-[ \t]*\n[ \t]*(se|me|te|lhe|lhes|nos|vos|o|a|os|as|lo|la|los|las|no|na)(?![a-zà-ú])/g, '$1-$2')
+    .replace(/([a-zà-ú])-[ \t]*\n[ \t]*([a-zà-ú])/g, '$1$2')
+    .replace(/([a-zà-ú])- ([a-zà-ú]{2,})/g, (m, a, b) => (/^(se|me|te|lhe|lhes|nos|vos|lo|la|los|las)$/.test(b) ? `${a}-${b}` : `${a}${b}`))
+    // junta linhas partidas a meio da frase (PDF): a linha anterior não acaba em pontuação final e a seguinte
+    // continua com minúscula, número ou parêntese ("…a menos de\n30 m de…" perdia o "30" mais à frente)
+    .replace(/([a-zà-ú0-9,;(—–\-])[ \t]*\n(?=[a-zà-ú(])/g, '$1 ')
+    // …e quando a linha seguinte começa por um número que continua a frase ("e\n3 minutos", "de\n30 m"),
+    // mas não por um passo numerado ("1 PARAR.", "2. Vento…")
+    .replace(/([a-zà-ú,;])[ \t]*\n(?=\d+(?:[.,]\d+)?(?:[–-]\d+(?:[.,]\d+)?)?\s*[a-zà-ú°%])/g, '$1 ')
+    // …e quando a linha acaba numa palavra que não pode terminar uma frase (artigo, preposição, conjunção) ou numa
+    // vírgula, mesmo que a seguinte comece por maiúscula: "os avisos da\nProteção Civil." ficava "os avisos da."
+    .replace(/(?<![\p{L}])(da|de|do|das|dos|na|no|nas|nos|num|numa|em|a|o|as|os|à|ao|aos|às|e|ou|com|sem|por|para|pela|pelo|pelas|pelos|um|uma|que|entre|sobre|até|como|the|of|and|to|in|an|for|with|from|by|or)[ \t]*\n(?![ \t]*(?:[■•☐▶>\-]|\d+[.)]\s))(?=[ \t]*\p{Lu})/gu, '$1 ')
+    .replace(/([,;])[ \t]*\n(?![ \t]*(?:[■•☐▶>\-]|\d+[.)]\s))(?=[ \t]*\p{Lu}\p{Ll})/gu, '$1 ')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -267,34 +306,36 @@ export function cleanNoise(text) {
 const nrm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 export function smallTalk(text) {
   const q = ` ${nrm(text)} `;
-  for (const t of CONVERSA?.temas || []) {
+  const temas = isEn() ? (EN.conversa || []) : (CONVERSA?.temas || []);
+  for (const t of temas) {
     if ((t.padroes || []).some((p) => q.includes(` ${nrm(p)} `)) && t.respostas?.length) return { tema: t.nome, text: pick(`chat-${t.nome}`, t.respostas) };
   }
   return null;
 }
 
 // ---------- Piadas (piadas.json) ----------
-const JOKE_RE = /\b(piadas?|anedotas?|faz me rir|fazer me rir|algo engracado|coisa engracada|conta outra|outra piada|anima me)\b/;
+const JOKE_RE = /\b(piadas?|anedotas?|faz me rir|fazer me rir|algo engracado|coisa engracada|conta outra|outra piada|anima me|jokes?|make me laugh|something funny|tell me another|another one)\b/;
 export const isJoke = (text) => JOKE_RE.test(` ${nrm(text)} `);
 const JOKE_INTRO = ['Aqui vai uma:', 'Lá vai:', 'Esta é das boas:', 'Prepara-te:', 'Uma para animar:', 'Tenho uma:'];
 const JOKE_END = ['Queres outra?', 'Pronto, já me podes avaliar.', 'Se te riste, conta como vitória minha.', 'Há mais de onde esta veio.', 'Não me julgues, sou um assistente de sobrevivência.'];
 export function joke() {
+  if (isEn()) return `${pick('joke-in-en', en('jokeIntro', JOKE_INTRO))} ${pick('joke-en', en('piadas', []))}\n\n${pick('joke-end-en', en('jokeEnd', JOKE_END))}`;
   const j = pick('joke', list(PIADAS, ['Porque é que a mochila nunca vai a festas? Porque já anda sempre carregada.']));
   return `${pick('joke-in', JOKE_INTRO)} ${j}\n\n${pick('joke-end', JOKE_END)}`;
 }
 
 // ---------- Intenções simples (antes da pesquisa) ----------
 const n = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[!?.,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-const GREET_RE = /^(ola|oi|ole|hey|hello|hi|bom dia|boa tarde|boa noite|boas|saudacoes|mr\.? ?steel|mister steel|steel|estas ai|esta ai|estas por ai|alguem ai)( (mr\.? ?steel|steel))?$/;
-const WHO_RE = /^(quem es( tu)?|o que es( tu)?|quem e o mr\.? ?steel|o que fazes|o que sabes fazer|como funcionas|apresenta te|ajuda|help|menu)$/;
-const THANKS_RE = /^(obrigad[oa]|muito obrigad[oa]|obg|valeu|thanks|obrigado mr\.? ?steel|perfeito|otimo|excelente|fixe|top)( mr\.? ?steel)?$/;
-const CONT_RE = /^(continua|continue|mais|e depois|e entao|segue|seguinte|prossegue|explica melhor|explica|desenvolve|aprofunda|mais detalhes|da exemplos|exemplos|resume|resume isso|resumo|em resumo|sintetiza|tl ?dr|o que mais)( isso| isto| por favor| pf)?$/;
+const GREET_RE = /^(ola|oi|ole|hey|hello|hi|hi there|hey there|good morning|good afternoon|good evening|bom dia|boa tarde|boa noite|boas|saudacoes|mr\.? ?steel|mister steel|steel|estas ai|esta ai|estas por ai|alguem ai|are you there|anyone there)( (mr\.? ?steel|steel))?$/;
+const WHO_RE = /^(quem es( tu)?|o que es( tu)?|quem e o mr\.? ?steel|o que fazes|o que sabes fazer|como funcionas|apresenta te|ajuda|help|menu|who are you|what are you|what can you do|what do you do|how do you work|introduce yourself)$/;
+const THANKS_RE = /^(obrigad[oa]|muito obrigad[oa]|obg|valeu|thanks|thank you|thanks a lot|thank you very much|thx|obrigado mr\.? ?steel|perfeito|perfect|otimo|great|excelente|excellent|fixe|top|awesome)( mr\.? ?steel)?$/;
+const CONT_RE = /^(continua|continue|go on|keep going|more|tell me more|next|mais|e depois|e entao|segue|seguinte|prossegue|explica melhor|explica|explain more|desenvolve|aprofunda|mais detalhes|more details|da exemplos|exemplos|examples|resume|resume isso|resumo|em resumo|sintetiza|summarize|summarise|summarize that|summarise that|summary|in short|tl ?dr|o que mais|what else)( isso| isto| that| this| por favor| pf| please)?$/;
 export function intentOf(question) {
   const q = n(question);
   if (!q) return null;
   if (GREET_RE.test(q)) return 'greet';
   if (WHO_RE.test(q)) return 'who';
   if (THANKS_RE.test(q)) return 'thanks';
-  if (CONT_RE.test(q)) return /resum|sintet|tl ?dr/.test(q) ? 'summary' : 'continue';
+  if (CONT_RE.test(q)) return /resum|sintet|tl ?dr|summar|in short/.test(q) ? 'summary' : 'continue';
   return null;
 }

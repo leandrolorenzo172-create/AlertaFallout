@@ -139,7 +139,8 @@ export async function streamChat(provider, cfg, { system, messages, onText, sign
   try {
     if (provider === 'anthropic') {
       const client = await anthropicClient(cfg);
-      const params = { model: cfg.model, max_tokens: 4096, system, output_config: { effort: 'medium' }, messages };
+      // max_tokens folgado: o raciocínio interno (effort) também gasta tokens e, com 4096, respostas longas ficavam cortadas
+      const params = { model: cfg.model, max_tokens: 16000, system, output_config: { effort: 'medium' }, messages };
       // Se o modelo recusar por política de segurança, a API tenta outro modelo na mesma chamada (o Haiku 5.5 não tem esta opção)
       if (cfg.model !== 'claude-haiku-5-5') Object.assign(params, { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
       const stream = client.beta.messages.stream(params, { signal });
@@ -147,8 +148,8 @@ export async function streamChat(provider, cfg, { system, messages, onText, sign
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') { raw += event.delta.text; onText(raw); }
       }
       const final = await stream.finalMessage();
-      if (final.stop_reason === 'refusal') return { text: raw, note: raw ? 'A resposta foi interrompida por razões de segurança.' : 'Não posso ajudar com esse pedido.' };
-      if (final.stop_reason === 'max_tokens') return { text: raw, note: 'A resposta ficou cortada por ser demasiado longa.' };
+      if (final.stop_reason === 'refusal') return { text: raw, note: raw ? tr('A resposta foi interrompida por razões de segurança.') : tr('Não posso ajudar com esse pedido.') };
+      if (final.stop_reason === 'max_tokens') return { text: raw, truncated: true, note: tr('A resposta ficou cortada por ser demasiado longa.') };
       return { text: raw };
     }
     if (provider === 'openai' || provider === 'custom') {
@@ -165,15 +166,15 @@ export async function streamChat(provider, cfg, { system, messages, onText, sign
         if (piece) { raw += piece; onText(raw); }
         if (choice?.finish_reason) finish = choice.finish_reason;
       }
-      if (finish === 'length') return { text: raw, note: 'A resposta ficou cortada por ser demasiado longa.' };
-      if (finish === 'content_filter') return { text: raw, note: 'A resposta foi interrompida pelo filtro de conteúdo do serviço.' };
+      if (finish === 'length') return { text: raw, truncated: true, note: tr('A resposta ficou cortada por ser demasiado longa.') };
+      if (finish === 'content_filter') return { text: raw, note: tr('A resposta foi interrompida pelo filtro de conteúdo do serviço.') };
       return { text: raw };
     }
     if (provider === 'gemini') {
       const ai = await geminiClient(cfg);
       const contents = messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
       const config = { systemInstruction: system, abortSignal: signal };
-      let lastErr;
+      let lastErr; let finishReason = null;
       for (const model of geminiCandidates(cfg)) {
         for (let attempt = 0; attempt < 2; attempt++) {
           if (signal?.aborted) throw new AiError('abort', 'cancelado');
@@ -185,14 +186,18 @@ export async function streamChat(provider, cfg, { system, messages, onText, sign
                 if (signal?.aborted) throw new AiError('abort', 'cancelado');
                 const piece = chunk.text;
                 if (piece) { raw += piece; onText(raw); }
+                const fr = chunk.candidates?.[0]?.finishReason;
+                if (fr) finishReason = fr;
               }
             } else {
               // 2.ª tentativa: pedido normal, sem streaming (às vezes passa quando o streaming falha)
               const r = await ai.models.generateContent({ model, contents, config });
               raw = r.text || ''; if (raw) onText(raw);
+              finishReason = r.candidates?.[0]?.finishReason || null;
             }
             if (!raw) throw new AiError('other', 'o Gemini devolveu uma resposta vazia');
-            return model === cfg.model ? { text: raw } : { text: raw, note: `O modelo ${cfg.model} estava indisponível; respondeu o ${model}.`, model };
+            const cut = finishReason === 'MAX_TOKENS' ? { truncated: true, note: tr('A resposta ficou cortada por ser demasiado longa.') } : {};
+            return model === cfg.model ? { text: raw, ...cut } : { text: raw, ...cut, note: [cut.note, tr('O modelo {a} estava indisponível; respondeu o {b}.', { a: cfg.model, b: model })].filter(Boolean).join(' '), model };
           } catch (e) {
             if (e instanceof AiError && e.kind === 'abort') throw e;
             if (signal?.aborted || e?.name === 'AbortError') throw new AiError('abort', 'cancelado');

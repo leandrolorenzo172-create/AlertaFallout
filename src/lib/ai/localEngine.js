@@ -8,9 +8,70 @@ import { listDocs, onKbChange } from '@/lib/kb';
 import { ensureGuide } from '@/lib/guide';
 import { DEFAULT_STATIONS } from '@/radio/defaultStations';
 import stationsPT from '@/data/stationsPT.json';
-import { locale } from '../../i18n';
-import { cleanNoise, intentOf, greeting, starter, identity, question, missing, rephrase, thanks, opener, smallTalk, isJoke, joke } from './steelPersonaOffline';
+import { locale, isEn } from '../../i18n';
+import { cleanNoise, intentOf, greeting, helpPrompt, starter, identity, question, missing, rephrase, thanks, opener, smallTalk, isJoke, joke } from './steelPersonaOffline';
 import RESUMOS from '@/data/mrsteel/resumos.json';
+import { truncateAtBoundary } from './textQuality';
+
+// ---------- Inglês ----------
+// A base de conhecimento (Guia, manual) está em português. Com a app em inglês:
+//  - a pergunta é traduzida para palavras-chave em português antes da pesquisa (EN_PT);
+//  - as frases do Mr. Steel saem em inglês e o conteúdo do documento é mostrado TAL COMO ESTÁ, em bloco de citação
+//    e com o aviso de que a fonte está em português (sem traduções automáticas com erros nem mistura a meio da frase).
+const EN_PT = [
+  ['first aid', 'primeiros socorros'], ['edible plants', 'plantas comestiveis'], ['bow drill', 'arco de fogo'], ['heat stroke', 'insolacao'],
+  ['forest fire', 'incendio florestal'], ['without a compass', 'sem bussola orientacao'], ['ferro rod', 'pederneira ferrocerio'],
+  ['high yield', 'alto rendimento'], ['high-yield', 'alto rendimento'], ['spring snare', 'armadilha laco de mola'], ['go bag', 'mochila'],
+  ['shelters', 'abrigo'], ['shelter', 'abrigo'], ['tactical', 'tatico'], ['purifying', 'purificar'], ['purify', 'purificar'], ['purification', 'purificacao'],
+  ['water', 'agua'], ['fire', 'fogo'], ['friction', 'friccao'], ['flint', 'pederneira'], ['tinder', 'acendalha'], ['traps', 'armadilhas'], ['trap', 'armadilha'],
+  ['snares', 'armadilhas lacos'], ['snare', 'armadilha laco'], ['rabbit', 'coelho'], ['fishing', 'pesca'], ['fish', 'peixe pesca'], ['bleeding', 'hemorragia'], ['bleed', 'hemorragia'],
+  ['hemorrhage', 'hemorragia'], ['tourniquet', 'torniquete'], ['wounds', 'feridas'], ['wound', 'ferida'], ['burns', 'queimaduras'], ['burn', 'queimadura'],
+  ['fracture', 'fratura'], ['hypothermia', 'hipotermia'], ['heatstroke', 'insolacao'], ['dehydration', 'desidratacao'], ['cpr', 'rcp'], ['snake', 'vibora cobra'],
+  ['viper', 'vibora'], ['food', 'alimentos comida'], ['foods', 'alimentos'], ['plants', 'plantas'], ['mushrooms', 'cogumelos'], ['compass', 'bussola'],
+  ['navigation', 'orientacao'], ['orientation', 'orientacao'], ['finding my way', 'orientacao'], ['north', 'norte'], ['knots', 'nos'], ['knot', 'nos'],
+  ['rope', 'corda'], ['backpack', 'mochila'], ['kit', 'kit mochila'], ['bleach', 'lixivia'], ['boil', 'ferver'], ['boiling', 'ferver'], ['rain', 'chuva'],
+  ['storm', 'tempestade'], ['thunderstorm', 'trovoada'], ['flood', 'cheia inundacao'], ['earthquake', 'sismo'], ['wildfire', 'incendio florestal'],
+  ['signal', 'sinalizacao'], ['signaling', 'sinalizacao'], ['hygiene', 'higiene'], ['emergency', 'emergencia'], ['cold', 'frio'], ['heat', 'calor'],
+  ['sea', 'mar maritimo'], ['drowning', 'afogamento'], ['radio', 'radio'], ['stations', 'emissoras'], ['build', 'construir'], ['make', 'fazer'],
+  ['weapons', 'armas'], ['hunting', 'caca'], ['trees', 'arvores'], ['tree', 'arvore'], ['night', 'noite'], ['region', 'regiao'],
+];
+const EN_PT_RE = EN_PT.map(([en, pt]) => [new RegExp(`\\b${en.replace(/[-]/g, '[- ]')}\\b`, 'gi'), pt]);
+export function toSearchQuery(q) {
+  if (!isEn()) return String(q || '');
+  let out = ` ${String(q || '').toLowerCase()} `;
+  for (const [re, pt] of EN_PT_RE) out = out.replace(re, pt);
+  return out.trim();
+}
+// Rótulos das sugestões de seguimento (o motor reconhece os dois idiomas)
+const MORE = () => (isEn() ? 'Learn more about: ' : 'Saber mais sobre: ');
+const ABOUT = () => (isEn() ? 'Tell me about: ' : 'Fala-me de: ');
+const CONT = () => (isEn() ? ['Continue', 'Summarize that'] : ['Continua', 'Resume isso']);
+const MORE_RE = /^(saber mais sobre|learn more about):?\s*(.+)$/i;
+const ABOUT_RE = /^(fala-me de|tell me about):?\s*/i;
+// "o ficheiro «X»" / "the file «X»"
+const docRef = (u) => (u.docName ? (isEn() ? `the file «${u.docName}»` : `o ficheiro «${u.docName}»`) : (isEn() ? 'your files' : 'os teus ficheiros'));
+const basedOn = (u) => (u.docName ? (isEn() ? `Based on the file «${u.docName}»` : `Com base no ficheiro «${u.docName}»`) : (isEn() ? 'Based on your files' : 'Com base nos teus ficheiros'));
+function whereOf(u, pages) {
+  const ps = [...new Set((pages || []).filter(Boolean))].sort((a, b) => a - b);
+  if (!ps.length) return '';
+  const pg = u.unit === 'pág.';
+  if (ps.length > 1) return `${isEn() ? (pg ? 'pages' : 'sections') : (pg ? 'páginas' : 'secções')} ${ps[0]}–${ps[ps.length - 1]}`;
+  return `${isEn() ? (pg ? 'page' : 'section') : (pg ? 'página' : 'secção')} ${ps[0]}`;
+}
+// Texto em português citado numa resposta em inglês: bloco "> " (cada parágrafo), sem tradução automática
+const quotePt = (body) => String(body).trim().split(/\n{2,}/).map((p) => p.split('\n').map((l) => `> ${l}`).join('\n')).join('\n>\n');
+const EN_SOURCE_NOTE = 'The source is written in Portuguese, so here is the original text:';
+/**
+ * Abertura + fonte + corpo, no idioma da app.
+ * pt: "Fui ver. Com base no ficheiro «…», páginas 7–11, <corpo>"
+ * en: "I checked. Based on the file «…», pages 7–11. The source is written in Portuguese…\n\n> <corpo>"
+ */
+function present({ u, pages, body, about, open = true, guide = false }) {
+  const where = whereOf(u, pages);
+  const op = open ? `${opener(guide)} ` : '';
+  if (isEn()) return `${op}${basedOn(u)}${where ? `, ${where}` : ''}${about ? `, about **${about}**` : ''}. ${EN_SOURCE_NOTE}\n\n${quotePt(body)}`;
+  return `${op}${basedOn(u)}${where ? `, ${where}` : ''}, ${about ? `sobre **${about}**: ` : ''}${lowerFirst(body)}`;
+}
 
 // ---------- Texto ----------
 const STOP = new Set(('a o os as um uma uns umas de do da dos das em no na nos nas num numa nuns numas dum duma ao aos por para pelo pela pelos pelas com sem sob sobre '
@@ -112,7 +173,8 @@ async function buildIndex() {
       }
       const nice = chapter === chapter.toUpperCase() ? `${chapter.charAt(0)}${chapter.slice(1).toLowerCase()}` : chapter;
       const title = chapter ? `${d.system ? 'Guia SteelDeck' : d.title} · ${nice}` : d.title;
-      for (const part of passages(p)) add({ source: 'kb', title, ref: `${d.name}, ${d.unit} ${i + 1}`, docId: d.id, page: i + 1, unit: d.unit, doc: `o ficheiro «${d.system ? 'Guia de Sobrevivência SteelDeck.pdf' : d.name}»`, text: part });
+      const docName = d.system ? 'Guia de Sobrevivência SteelDeck.pdf' : d.name;
+      for (const part of passages(p)) add({ source: 'kb', title, ref: `${d.name}, ${d.unit} ${i + 1}`, docId: d.id, page: i + 1, unit: d.unit, doc: `o ficheiro «${docName}»`, docName, text: part });
     });
   }
   // 2. Manual incluído
@@ -183,7 +245,8 @@ export async function search(query, limit = 6, { only } = {}) {
 // minScore: abaixo disto a passagem não é relevante (evita gastar tokens com "lixo" em perguntas gerais)
 export async function contextFor(query, limit = 6, { chars = 1500, minScore = 0 } = {}) {
   const { hits } = await search(query, limit);
-  return hits.filter((h) => h.score >= minScore).map((h) => ({ ref: h.u.ref, source: h.u.source, title: h.u.title, score: h.score, text: (h.u.source === 'kb' ? cleanNoise(h.u.text) : h.u.text).slice(0, chars), docId: h.u.docId, page: h.u.page, route: h.u.route }));
+  // excerto cortado no fim de uma frase (nunca a meio de uma palavra) para a IA online não copiar palavras partidas
+  return hits.filter((h) => h.score >= minScore).map((h) => ({ ref: h.u.ref, source: h.u.source, title: h.u.title, score: h.score, text: truncateAtBoundary(h.u.source === 'kb' ? cleanNoise(h.u.text) : h.u.text, chars), docId: h.u.docId, page: h.u.page, route: h.u.route }));
 }
 
 const refOfUnit = (u, used) => ({ label: u.ref, source: u.source, docId: u.docId, page: u.page, route: u.route, ...(used ? { keys: used.map((x) => x.key) } : {}) });
@@ -217,7 +280,9 @@ function candidates(u) {
     if (letters.length >= 4 && (raw.match(/[A-ZÁÉÍÓÚÂÊÔÃÕÇ]/g) || []).length > letters.length * 0.7) { heading = inHeading ? `${heading} ${raw}` : raw; inHeading = true; continue; }
     if (letters.length) inHeading = false; // listas de verificação ("Sei fazer…") não são explicações
     const step = /^\s*(\d+[.)]|[■•\-▶])\s+/.test(raw);
-    const line = raw.replace(/^[\s>*#\-•■▶☐\d.)]+/, '').trim();
+    // tira só marcadores de lista ("- ", "■ ", "1. ", "2) ", "1 PARAR"). Antes tirava QUALQUER número no início
+    // da linha e "30 m de distância…" ficava "M de distância…" (palavras/números em falta)
+    const line = raw.replace(/^\s*(?:[>*#•■▶☐\-]+\s*)*(?:\d{1,2}[.)]\s+|\d{1,2}\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ]))?/, '').trim();
     const parts = step ? [line] : line.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/);
     for (let p of parts) {
       p = p.trim();
@@ -320,11 +385,9 @@ async function formulaAnswer(q, hits) {
   const used = [...new Set(blocks.flat().map((c) => c.u))];
   const pages = [...new Set(blocks.flat().map((c) => c.u.page).filter(Boolean))].sort((a, b) => a - b);
   const u0 = used[0];
-  const where = pages.length > 1 ? `${u0.unit === 'pág.' ? 'páginas' : 'secções'} ${pages[0]}–${pages[pages.length - 1]}` : pages.length ? `${pageWord(u0)} ${pages[0]}` : '';
   const paras = blocks.map((b) => b.map((c) => esc(c.text)).join(' '));
-  paras[0] = `${opener(/guia/i.test(u0.doc || ''))} Com base ${u0.doc ? `n${u0.doc}` : 'nos teus ficheiros'}${where ? `, ${where}` : ''}, ${lowerFirst(paras[0])}`;
   return {
-    text: `${paras.join('\n\n')}\n\n${question()}`,
+    text: `${present({ u: u0, pages, body: paras.join('\n\n'), guide: /guia/i.test(u0.doc || '') })}\n\n${question()}`,
     refs: [refOfUnit(u0, used)],
     followups: await followupsFor(hits[0].u.title, hits),
     found: true,
@@ -333,7 +396,7 @@ async function formulaAnswer(q, hits) {
 
 // Citação explícita da fonte: "Segundo o Guia de Sobrevivência SteelDeck, página 31, …"
 const lowerFirst = (t) => (/^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]([a-zà-ú]|\s[a-zà-ú])/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t);
-const pageWord = (u) => (u.unit === 'pág.' ? 'página' : 'secção');
+const pageWord = (u) => (isEn() ? (u.unit === 'pág.' ? 'page' : 'section') : (u.unit === 'pág.' ? 'página' : 'secção'));
 // "como fazer fogo?" -> "para fazer fogo"
 function purposeOf(q) {
   const m = norm(q).match(/^(como|de que forma|qual a melhor forma de|o que (e preciso|preciso) para)\s+(.{3,60}?)\??$/);
@@ -345,6 +408,16 @@ function cited(sents, q, first = true) {
   for (const s of sents) {
     const g = groups[groups.length - 1];
     if (g && g.u.docId === s.u.docId && g.u.page === s.u.page) g.list.push(s); else groups.push({ u: s.u, list: [s] });
+  }
+  if (isEn()) {
+    // em inglês: uma frase de fonte em inglês e o texto original em português citado (com a página de cada grupo)
+    const head = `${basedOn(groups[0].u)}${groups[0].u.page ? `, ${pageWord(groups[0].u)} ${groups[0].u.page}` : ''}. ${EN_SOURCE_NOTE}`;
+    const body = groups.map((g, gi) => {
+      const label = gi === 0 ? (first || !g.u.page ? '' : `(${pageWord(g.u)} ${g.u.page}) `) : `(${g.u.docId === groups[0].u.docId ? `${pageWord(g.u)} ${g.u.page}` : `${docRef(g.u)}${g.u.page ? `, ${pageWord(g.u)} ${g.u.page}` : ''}`}) `;
+      const steps = g.list.filter((x) => x.step).length >= 3;
+      return steps ? `${label}\n${g.list.map((x, k) => `${k + 1}. ${esc(x.text)}`).join('\n')}` : `${label}${g.list.map((x) => esc(x.text)).join(' ')}`;
+    }).join('\n\n');
+    return first ? `${head}\n\n${quotePt(body)}` : quotePt(body);
   }
   const purpose = first ? purposeOf(q) : '';
   return groups.map((g, gi) => {
@@ -363,7 +436,7 @@ const esc = (t) => plain(t).replace(/\\\./g, '.');
 async function followupsFor(title, hits = []) {
   const seen = new Set([norm(title)]);
   const related = hits.map((h) => h.u.title).filter((t) => { const k = norm(t); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 2);
-  return [`Saber mais sobre: ${title}`, ...related.map((t) => `Fala-me de: ${t}`)].slice(0, 3);
+  return [`${MORE()}${title}`, ...related.map((t) => `${ABOUT()}${t}`)].slice(0, 3);
 }
 
 // Passagens usadas na última resposta (guardadas nas referências) e as do mesmo documento
@@ -417,12 +490,12 @@ async function summaryAnswer(qIn) {
   const hit = terms.length ? chapter.filter((u) => terms.some((t) => norm(u.text).includes(t))) : [];
   const units = hit.length ? hit : chapter;
   const pages = [...new Set(units.map((u) => u.page))].sort((a, b) => a - b);
-  const where = pages.length > 1 ? `páginas ${pages[0]}–${pages[pages.length - 1]}` : `página ${pages[0]}`;
   const u0 = units[0];
-  const related = (RESUMOS?.palavras || []).filter((x) => x.capitulo === e.capitulo && x !== e).map((x) => `Fala-me de: ${x.tema}`);
-  const followups = [`Saber mais sobre: ${chapter[0].title}`, ...related.sort(() => Math.random() - 0.5)].slice(0, 3);
+  const related = (RESUMOS?.palavras || []).filter((x) => x.capitulo === e.capitulo && x !== e).map((x) => `${ABOUT()}${x.tema}`);
+  const followups = [`${MORE()}${chapter[0].title}`, ...related.sort(() => Math.random() - 0.5)].slice(0, 3);
+  const body = isEn() ? e.texto : lowerLead(e.texto);
   return {
-    text: `${opener()} Com base n${u0.doc}, ${where}, ${lowerLead(e.texto)}\n\n${question()}`,
+    text: `${isEn() ? present({ u: u0, pages, body, guide: true }) : `${opener()} ${basedOn(u0)}, ${whereOf(u0, pages)}, ${body}`}\n\n${question()}`,
     refs: [refOfUnit(u0, units.slice(0, 8))],
     followups,
     found: true,
@@ -439,10 +512,10 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
   // 1. Conversa: saudações, quem sou, agradecimentos (Fórmula C)
   if (intent === 'greet' || intent === 'who' || intent === 'thanks') {
     const t = await topics(3);
-    const text = intent === 'greet' ? `${greeting(offline)} Em que te posso ser útil?`
+    const text = intent === 'greet' ? `${greeting(offline)} ${helpPrompt()}`
       : intent === 'who' ? `${identity()}\n\n${starter()}`
         : thanks();
-    return { text, refs: [], followups: intent === 'greet' ? [] : t.map((x) => `Fala-me de: ${x}`), found: true }; // na saudação, espera pelo utilizador
+    return { text, refs: [], followups: intent === 'greet' ? [] : t.map((x) => `${ABOUT()}${x}`), found: true }; // na saudação, espera pelo utilizador
   }
 
   // 2. Continuação / resumo do tema anterior
@@ -452,7 +525,10 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
       const { used, sameDoc } = ctx; const main = used[0];
       if (intent === 'summary') {
         const pts = keySentences(used, '', 5);
-        if (pts.length) return { text: `Em resumo, segundo ${main.doc || 'os teus ficheiros'}${main.page ? ` (${pageWord(main)} ${main.page})` : ''}:\n\n${pts.map((p) => `- ${esc(p.text)}`).join('\n')}\n\n${question()}`, refs: [refOfUnit(main, used)], followups: await followupsFor(main.title), found: true };
+        const src = `${docRef(main)}${main.page ? ` (${pageWord(main)} ${main.page})` : ''}`;
+        const head = isEn() ? `In short, according to ${src}. ${EN_SOURCE_NOTE}` : `Em resumo, segundo ${src}:`;
+        const list = pts.map((p) => `- ${esc(p.text)}`).join('\n');
+        if (pts.length) return { text: `${head}\n\n${isEn() ? quotePt(list) : list}\n\n${question()}`, refs: [refOfUnit(main, used)], followups: await followupsFor(main.title), found: true };
       } else {
         const lastPos = Math.max(...used.map((u) => sameDoc.indexOf(u)));
         const after = sameDoc.slice(lastPos + 1);
@@ -460,9 +536,9 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
         const next = (sameTopic.length ? sameTopic : after).slice(0, 2);
         const sents = keySentences(next, '', 4);
         if (next.length && sents.length) {
-          return { text: `${cited(sents, '', false)}\n\n${question()}`, refs: [refOfUnit(next[0], next)], followups: ['Continua', 'Resume isso', `Saber mais sobre: ${next[0].title}`], found: true };
+          return { text: `${cited(sents, '', false)}\n\n${question()}`, refs: [refOfUnit(next[0], next)], followups: [...CONT(), `${MORE()}${next[0].title}`], found: true };
         }
-        return { text: `Já cobrimos o essencial de **${main.title}**. Queres passar a outro tema ou ver o capítulo completo no Manual?`, refs: [refOfUnit(main, used)], followups: await followupsFor(main.title), found: true };
+        return { text: isEn() ? `We have already covered the essentials of **${main.title}**. Would you like to move on to another topic or read the full chapter in the Manual?` : `Já cobrimos o essencial de **${main.title}**. Queres passar a outro tema ou ver o capítulo completo no Manual?`, refs: [refOfUnit(main, used)], followups: await followupsFor(main.title), found: true };
       }
     }
     const prevQ = [...(history || [])].reverse().find((m) => m.role === 'user' && !intentOf(m.text) && !/^\(Contexto/.test(m.text));
@@ -471,41 +547,46 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
   }
 
   // 2a. Piadas (piadas.json)
-  if (isJoke(qtext)) return { text: joke(), refs: [], followups: ['Conta outra piada'], found: true };
+  if (isJoke(qtext)) return { text: joke(), refs: [], followups: [isEn() ? 'Tell me another joke' : 'Conta outra piada'], found: true };
 
   // 2b. Conversa de café ("estou cansado", "que frio", "conta uma piada"): mensagens curtas respondem logo
   const chat = smallTalk(qtext);
   const nWords = norm(qtext).split(/\s+/).filter(Boolean).length;
   // ...a não ser que seja uma pergunta técnica com resposta nos ficheiros ("o que comer numa emergência")
-  const technical = /\b(como|o que|qual|quais|quanto|quantos|onde|porque|emergencia|sobreviv\w*|guia|manual)\b/.test(norm(qtext));
+  const technical = /\b(como|o que|qual|quais|quanto|quantos|onde|porque|emergencia|sobreviv\w*|guia|manual|how|what|which|where|why|when|survival|guide|emergency)\b/.test(norm(qtext));
   if (chat && nWords <= 6 && !technical) return { text: chat.text, refs: [], followups: [], found: true };
 
   // 3. "Saber mais sobre: X" -> os pontos-chave do tema (organizados, nunca o texto cru)
-  const more = String(qtext).match(/^saber mais sobre:?\s*(.+)$/i);
+  const more = String(qtext).match(MORE_RE);
   if (more) {
     const idx = await getIndex();
-    const parts = idx.units.filter((u) => u.title === more[1].trim());
+    const topic = more[2].trim();
+    const parts = idx.units.filter((u) => u.title === topic);
     if (parts.length) {
       const u0 = parts[0];
-      const blocks = formulaSentences(parts.slice(0, 14), more[1]);
+      const blocks = formulaSentences(parts.slice(0, 14), topic);
       if (blocks.flat().length >= 4) {
         const used = [...new Set(blocks.flat().map((c) => c.u))];
-        const pg = [...new Set(blocks.flat().map((c) => c.u.page).filter(Boolean))].sort((a, b) => a - b);
+        const pg = blocks.flat().map((c) => c.u.page);
         const paras = blocks.map((b) => b.map((c) => esc(c.text)).join(' '));
-        paras[0] = `Com base ${u0.doc ? `n${u0.doc}` : 'nos teus ficheiros'}${pg.length > 1 ? `, ${u0.unit === 'pág.' ? 'páginas' : 'secções'} ${pg[0]}–${pg[pg.length - 1]}` : pg.length ? `, ${pageWord(u0)} ${pg[0]}` : ''}, sobre **${u0.title}**: ${lowerFirst(paras[0])}`;
-        return { text: `${paras.join('\n\n')}\n\n${question()}`, refs: [refOfUnit(used[0], used)], followups: ['Continua', 'Resume isso'], found: true };
+        return { text: `${present({ u: u0, pages: pg, body: paras.join('\n\n'), about: u0.title, open: false })}\n\n${question()}`, refs: [refOfUnit(used[0], used)], followups: CONT(), found: true };
       }
       const pts = keySentences(parts.slice(0, 6), '', 8);
-      return { text: `Segundo ${u0.doc || 'os teus ficheiros'}${u0.page ? `, a partir da ${pageWord(u0)} ${u0.page}` : ''}, estes são os pontos-chave de **${u0.title}**:\n\n${pts.map((p) => `- ${esc(p.text)}`).join('\n')}\n\n_Para ler o texto completo, toca na referência e abre o documento no Manual._\n\n${question()}`, refs: [refOfUnit(u0, parts.slice(0, 6))], followups: ['Continua', 'Resume isso'], found: true };
+      const list = pts.map((p) => `- ${esc(p.text)}`).join('\n');
+      const text = isEn()
+        ? `According to ${docRef(u0)}${u0.page ? `, starting on ${pageWord(u0)} ${u0.page}` : ''}, these are the key points of **${u0.title}**. ${EN_SOURCE_NOTE}\n\n${quotePt(list)}\n\n_To read the full text, tap the reference and open the document in the Manual._`
+        : `Segundo ${docRef(u0)}${u0.page ? `, a partir da ${pageWord(u0)} ${u0.page}` : ''}, estes são os pontos-chave de **${u0.title}**:\n\n${list}\n\n_Para ler o texto completo, toca na referência e abre o documento no Manual._`;
+      return { text: `${text}\n\n${question()}`, refs: [refOfUnit(u0, parts.slice(0, 6))], followups: CONT(), found: true };
     }
   }
 
   // 3b. Tema ou palavra-chave do Guia -> resumo em prosa (resumos.json)
-  const sum = await summaryAnswer(String(qtext).replace(/^fala-me de:?\s*/i, ''));
+  // em inglês, a pergunta passa a palavras-chave em português (a base de conhecimento está em português)
+  const q = toSearchQuery(String(qtext).replace(ABOUT_RE, ''));
+  const sum = await summaryAnswer(q);
   if (sum) return sum;
 
   // 4. Pesquisa e composição em prosa (Fórmula A)
-  const q = String(qtext).replace(/^fala-me de:?\s*/i, '');
   const { hits, coverage, terms } = await search(q, 20, { only: 'kb' }); // só a informação dos PDFs/documentos
   const best = hits[0];
   const enough = best && best.score >= 1.4 && coverage >= 0.25;
@@ -517,7 +598,7 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
     if (chat) return { text: chat.text, refs: [], followups: [], found: true }; // era conversa, não pergunta técnica
     if (!terms || (VAGUE.test(norm(q)) && words <= 7)) return { text: rephrase(), refs: [], followups: [], found: false };
     const t = await topics(3);
-    return { text: missing(t, reason), refs: [], followups: t.map((x) => `Fala-me de: ${x}`), found: false };
+    return { text: missing(t, reason), refs: [], followups: t.map((x) => `${ABOUT()}${x}`), found: false };
   }
   // Fórmula de resumo (10–15 linhas) para qualquer documento da Base de Conhecimento
   const fa = await formulaAnswer(q, hits).catch(() => null);
@@ -534,7 +615,7 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
   if (!sents.length) sents = keySentences(mainUnits, q, 3);
   if (!sents.length) { // só tabelas/listas sem frases: mostra os pontos limpos
     const t = await topics(3);
-    return { text: missing(t, reason), refs: [], followups: t.map((x) => `Fala-me de: ${x}`), found: false };
+    return { text: missing(t, reason), refs: [], followups: t.map((x) => `${ABOUT()}${x}`), found: false };
   }
   let text = `${opener(/guia/i.test(sents[0]?.u?.doc || ''))} ${cited(sents, q)}`;
   const other = hits.slice(1).find((h) => h.u.title !== main.title && h.score > best.score * 0.5);
@@ -543,7 +624,12 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
   const refs = [refOfUnit(usedUnits[0] || main, usedUnits.length ? usedUnits : mainUnits)];
   if (other) {
     const extra = keySentences([other.u], q, 1, true); // a segunda fonte só entra se falar mesmo do tema
-    if (extra.length && !sents.some((x) => x.text === extra[0].text)) { text += `\n\n${cited(extra, '', false).replace(/^Segundo /, 'Também segundo ')}`; refs.push(refOfUnit(other.u, [other.u])); }
+    if (extra.length && !sents.some((x) => x.text === extra[0].text)) {
+      const more = isEn()
+        ? `Also, according to ${docRef(other.u)}${other.u.page ? `, ${pageWord(other.u)} ${other.u.page}` : ''}:\n\n${quotePt(extra.map((x) => esc(x.text)).join(' '))}`
+        : cited(extra, '', true).replace(/^Com base n/, 'Também com base n');
+      text += `\n\n${more}`; refs.push(refOfUnit(other.u, [other.u]));
+    }
   }
   text += `\n\n${question()}`;
   return { text, refs, followups: await followupsFor(main.title, hits), found: true };

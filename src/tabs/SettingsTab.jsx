@@ -1,11 +1,52 @@
 import React from 'react';
-import { Settings, Languages, MapPin, LocateFixed, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell } from 'lucide-react';
+import { Settings, Languages, MapPin, LocateFixed, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell, Info, X } from 'lucide-react';
 import { THEMES, useSettings, setSettings, resetSettings, orderTabs } from '../theme';
 import { TABS } from '../HotBar';
 import NotificationsTab from './NotificationsTab';
 import AiSettings from '../pipboy/AiSettings';
 import { t, LANGS, useLang } from '@/i18n';
 import { LOCATIONS, useLoc, locMode, setLocManual, detectLocation } from '@/location';
+import { useQuickTools, showToolToast } from '../tools/quickTools';
+import { onlineProvider, providerName } from '@/lib/ai/aiService';
+import { getAiMode, AI_MODE_LABEL } from '@/lib/ai/mode';
+import { getNetwork } from '@/lib/ai/net';
+
+const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+// "Sobre o sistema" (ferramenta do menu ≡): estado da app neste dispositivo
+function AboutPanel({ onClose }) {
+  const [storage, setStorage] = React.useState(null);
+  React.useEffect(() => {
+    navigator.storage?.estimate?.().then((e) => setStorage(e)).catch(() => {});
+  }, []);
+  const mb = (b) => `${(b / 1048576).toFixed(1)} MB`;
+  const prov = onlineProvider();
+  const rows = [
+    [t('Aplicação'), 'SteelDeck · Pip-Boy Terminal'],
+    [t('Idioma'), LANGS.find((l) => l.id === useLang())?.label || ''],
+    [t('Rede'), getNetwork() === 'online' ? t('Online') : t('Offline')],
+    [t('IA online'), prov ? providerName(prov) : t('não configurada')],
+    [t('Modo IA'), t(AI_MODE_LABEL[getAiMode()])],
+    [t('Modo instalado (PWA)'), window.matchMedia?.('(display-mode: standalone)').matches ? t('sim') : t('não')],
+    [t('Armazenamento usado'), storage ? `${mb(storage.usage || 0)} / ${mb(storage.quota || 0)}` : '—'],
+  ];
+  return (
+    <section id="set-about" className="p-3 rounded-sm mb-4" style={{ ...box, scrollMarginTop: 90 }}>
+      <div className="flex items-center justify-between">
+        <Title icon={Info}>{t('Sobre o sistema')}</Title>
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="p-1 -mt-3"><X size={14} /></button>
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
+        {rows.map(([k, v]) => (
+          <React.Fragment key={k}>
+            <dt style={{ color: 'rgb(var(--c) / 0.55)' }}>{k}</dt>
+            <dd className="min-w-0" style={{ color: 'rgb(var(--c))', overflowWrap: 'anywhere' }}>{v}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+    </section>
+  );
+}
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c))' };
@@ -57,6 +98,19 @@ export default function SettingsTab() {
   const s = useSettings();
   const lang = useLang();
   const tabs = orderTabs(TABS, s.order);
+  const [about, setAbout] = React.useState(false);
+
+  // Ferramentas do menu ≡ (src/tools/toolMenus.js → definicoes)
+  useQuickTools('definicoes', {
+    chave: () => scrollToId('set-ai'),
+    audio: () => scrollToId('set-notif'),
+    repor: () => {
+      if (!window.confirm(t('Repor o tema, a ordem e a visibilidade dos separadores? O idioma, a chave de IA e os teus dados ficam iguais.'))) return;
+      resetSettings();
+      showToolToast(t('Predefinições repostas.'));
+    },
+    sobre: () => { setAbout(true); setTimeout(() => scrollToId('set-about'), 50); },
+  });
 
   const move = (id, dir) => {
     const ids = tabs.map((x) => x.id);
@@ -76,6 +130,8 @@ export default function SettingsTab() {
         <Settings size={16} style={{ color: 'rgb(var(--c))' }} />
         <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>{t('Definições')}</h2>
       </div>
+
+      {about && <AboutPanel onClose={() => setAbout(false)} />}
 
       {/* Idioma da app */}
       <section className="p-3 rounded-sm mb-4" style={box}>
@@ -119,7 +175,7 @@ export default function SettingsTab() {
       <section className="p-3 rounded-sm mb-4" style={box}>
         <Title icon={LayoutGrid}>{t('Barra de navegação')}</Title>
         <p className="text-[10px] mb-3" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          {t('Usa as setas para mudar a ordem e o olho para esconder separadores que não usas. Vale para a barra de baixo e para o menu rápido.')}
+          {t('Usa as setas para mudar a ordem e o olho para esconder separadores que não usas. O botão ≡ mostra as ferramentas do separador aberto.')}
         </p>
         <ul className="flex flex-col gap-1.5">
           {tabs.map((tb, i) => {
@@ -147,10 +203,10 @@ export default function SettingsTab() {
         </button>
       </section>
 
-      <AiSettings />
+      <div id="set-ai" style={{ scrollMarginTop: 90 }}><AiSettings /></div>
 
       {/* Notificações (antigo separador Alertas) */}
-      <section className="rounded-sm" style={box}>
+      <section id="set-notif" className="rounded-sm" style={{ ...box, scrollMarginTop: 90 }}>
         <div className="px-3 pt-3"><Title icon={Bell}>{t('Notificações')}</Title></div>
         <NotificationsTab />
       </section>

@@ -5,6 +5,17 @@ import { ACCEPT, importFile, listDocs, updateDoc, deleteDoc, searchDocs, request
 import { manualSections } from '@/data/survivalManual';
 import { DEFAULT_INSTRUCTIONS, getState, getCustomText, parseInstructionFile, findRisks, diffLines, applyVersion, activate } from '@/lib/aiInstructions';
 import { t, locale } from '@/i18n';
+import { useQuickTools, showToolToast } from '../tools/quickTools';
+
+// Filtro por tipo (ferramenta "Filtrar por tipo" do menu ≡)
+const TYPE_FILTERS = [
+  { id: 'todos', label: 'Todos', test: () => true },
+  { id: 'pdf', label: 'PDF', test: (d) => d.type === 'pdf' },
+  { id: 'docx', label: 'DOCX', test: (d) => d.type === 'docx' },
+  { id: 'texto', label: 'Texto', test: (d) => ['txt', 'md'].includes(d.type) },
+  { id: 'dados', label: 'Dados', test: (d) => ['json', 'csv', 'xml'].includes(d.type) },
+  { id: 'imagens', label: 'Imagens', test: (d) => ['png', 'jpg', 'jpeg', 'webp'].includes(d.type) },
+];
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.35)', color: 'rgb(var(--c))' };
@@ -22,6 +33,10 @@ export default function KnowledgeFilesTab() {
   const [proposal, setProposal] = useState(null); // { name, text, diff, risks }
   const [ai, setAi] = useState(getState());
   const fileRef = useRef(null); const folderRef = useRef(null); const promptRef = useRef(null);
+  const [typeFilter, setTypeFilter] = useState('todos');
+  const [newest, setNewest] = useState(false); // false = ordem da estante; true = mais recentes primeiro
+  const [note, setNote] = useState(null); // { title, body } — nova nota de texto
+  const listRef = useRef(null);
 
   const load = useCallback(() => listDocs().then(setDocs).catch(() => setStatus({ type: 'error', text: t('Não foi possível abrir o armazenamento local.') })), []);
   useEffect(() => {
@@ -74,6 +89,39 @@ export default function KnowledgeFilesTab() {
     if (promptRef.current) promptRef.current.value = '';
   };
   const activeCount = docs.filter((d) => d.enabled !== false).length;
+  const filter = TYPE_FILTERS.find((f) => f.id === typeFilter) || TYPE_FILTERS[0];
+  const shownDocs = docs.filter(filter.test).sort((a, b) => (newest ? new Date(b.created_date) - new Date(a.created_date) : 0));
+
+  // Guarda a nota como ficheiro .md na base de conhecimento (fica pesquisável pela IA, como qualquer documento)
+  const saveNote = async () => {
+    const title = (note?.title || '').trim() || t('Nota {d}', { d: new Date().toLocaleString(locale()) });
+    const body = (note?.body || '').trim();
+    if (!body) return;
+    const safe = title.replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
+    const file = new File([`# ${title}\n\n${body}\n`], `${safe}.md`, { type: 'text/markdown', lastModified: Date.now() });
+    setBusy(true);
+    const r = await importFile(file).catch(() => ({ status: 'erro' }));
+    setBusy(false);
+    if (r.status === 'ok') { setNote(null); setStatus({ type: 'ok', text: t('Nota guardada: {x}', { x: title }) }); } else setStatus({ type: 'error', text: t('Não foi possível guardar a nota.') });
+  };
+
+  // Ferramentas do menu ≡ (src/tools/toolMenus.js → conhecimento)
+  useQuickTools('conhecimento', {
+    nota: () => { setNote({ title: '', body: '' }); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+    importar: () => fileRef.current?.click(),
+    filtrar: () => {
+      const next = TYPE_FILTERS[(TYPE_FILTERS.findIndex((f) => f.id === typeFilter) + 1) % TYPE_FILTERS.length];
+      setTypeFilter(next.id);
+      showToolToast(t('Filtro: {x}', { x: t(next.label) }));
+      setTimeout(() => listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    },
+    ordenar: () => {
+      const v = !newest;
+      setNewest(v);
+      showToolToast(v ? t('Ordenado: mais recentes primeiro') : t('Ordenado: ordem da estante'));
+      setTimeout(() => listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    },
+  });
   const statusColor = status?.type === 'error' ? '#ff6600' : status?.type === 'ok' ? 'rgb(var(--c))' : '#ffaa00';
 
   return (
@@ -91,6 +139,20 @@ export default function KnowledgeFilesTab() {
         <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-2 py-3 rounded-sm text-xs uppercase tracking-wider disabled:opacity-50" style={btn}><FilePlus size={14} />{' '}{t('Ficheiros')}</button>
         <button type="button" disabled={busy} onClick={() => folderRef.current?.click()} className="flex items-center justify-center gap-2 py-3 rounded-sm text-xs uppercase tracking-wider disabled:opacity-50" style={btn}><FolderPlus size={14} />{' '}{t('Pasta')}</button>
       </div>
+      {/* Nova nota (ferramenta do menu ≡) */}
+      {note && (
+        <div className="p-3 rounded-sm mb-3" style={box}>
+          <p className="text-xs uppercase tracking-wider font-bold mb-2">{t('Nova nota')}</p>
+          <input id="kb-note-title" value={note.title} onChange={(e) => setNote({ ...note, title: e.target.value })} placeholder={t('Título (opcional)')}
+            className="w-full p-2 mb-2 rounded-sm text-xs bg-transparent" style={{ border: '1px solid rgb(var(--c) / 0.25)', color: 'rgb(var(--c))', outline: 'none' }} />
+          <textarea id="kb-note-body" value={note.body} onChange={(e) => setNote({ ...note, body: e.target.value })} rows={5} autoFocus placeholder={t('Escreve a nota. Fica guardada como ficheiro e o Mr. Steel passa a consultá-la.')}
+            className="w-full p-2 mb-2 rounded-sm text-xs bg-transparent resize-y" style={{ border: '1px solid rgb(var(--c) / 0.25)', color: 'rgb(var(--c))', outline: 'none' }} />
+          <div className="flex gap-2">
+            <button type="button" disabled={busy || !note.body.trim()} onClick={saveNote} className="px-3 py-2 rounded-sm text-xs uppercase tracking-wider disabled:opacity-40" style={btn}>{t('Guardar nota')}</button>
+            <button type="button" onClick={() => setNote(null)} className="px-3 py-2 rounded-sm text-xs uppercase tracking-wider" style={btn}>{t('Cancelar')}</button>
+          </div>
+        </div>
+      )}
       <input id="kb-files" ref={fileRef} type="file" multiple accept={ACCEPT} hidden onChange={(e) => handleUpload(e.target.files)} />
       <input id="kb-folder" ref={folderRef} type="file" multiple hidden onChange={(e) => handleUpload(e.target.files)} />
       <p className="text-xs mb-3" role="status" style={{ color: statusColor, minHeight: '1.2em' }}>{status?.text}</p>
@@ -127,9 +189,17 @@ export default function KnowledgeFilesTab() {
       )}
 
       {/* Documentos */}
-      <div className="flex flex-col gap-1.5 mb-6">
+      <div ref={listRef} className="flex flex-col gap-1.5 mb-6" style={{ scrollMarginTop: 90 }}>
+        {(typeFilter !== 'todos' || newest) && (
+          <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}>
+            {typeFilter !== 'todos' && <span className="px-2 py-1 rounded-sm" style={btn}>{t('Tipo')}: {t(filter.label)}</span>}
+            {newest && <span className="px-2 py-1 rounded-sm" style={btn}>{t('Mais recentes primeiro')}</span>}
+            <button type="button" onClick={() => { setTypeFilter('todos'); setNewest(false); }} className="underline">{t('Limpar filtros')}</button>
+          </div>
+        )}
         {docs.length === 0 && <p className="text-center text-xs py-6 rounded-sm" style={{ ...box, color: 'rgb(var(--c) / 0.5)' }}>{t('> Sem documentos importados_')}</p>}
-        {docs.map((d) => (
+        {docs.length > 0 && shownDocs.length === 0 && <p className="text-center text-xs py-4" style={{ color: 'rgb(var(--c) / 0.5)' }}>{t('Nenhum documento deste tipo.')}</p>}
+        {shownDocs.map((d) => (
           <div key={d.id} className="p-2.5 rounded-sm" style={{ ...box, opacity: d.enabled === false ? 0.55 : 1 }}>
             <div className="flex items-center gap-2">
               <FileText size={15} className="shrink-0" />

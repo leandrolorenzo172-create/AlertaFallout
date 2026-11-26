@@ -9,14 +9,21 @@ import { renderMarkdown } from '@/lib/ai/markdown';
 import { requestOpen } from '@/lib/kb';
 import { aiSuggestions } from '@/data/survivalKnowledge';
 import Mascot from '../pipboy/Mascot';
-import { t, locale } from '@/i18n';
+import { t, locale, isEn } from '@/i18n';
+import EN_PHRASES from '@/data/mrsteel/en.json';
+import { truncateAtBoundary } from '@/lib/ai/textQuality';
+import { useAiMode, cycleAiMode, AI_MODE_LABEL } from '@/lib/ai/mode';
+import { useQuickTools, showToolToast } from '../tools/quickTools';
+
+// Sugestões iniciais no idioma da app (as frases em inglês estão em src/data/mrsteel/en.json)
+const suggestions = () => (isEn() && EN_PHRASES.suggestions?.length ? EN_PHRASES.suggestions : aiSuggestions);
 
 // As últimas 10 conversas ficam guardadas no dispositivo, para consulta mesmo sem rede
 const STORE = 'pb_ai_convs_v1';
 const OLD_STORE = 'pb_ai_chat_v2'; // versão antiga: uma só conversa
 const MAX_CONVS = 10;
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-const titleOf = (msgs) => { const q = msgs.find((m) => m.role === 'user')?.text || ''; return q.length > 48 ? `${q.slice(0, 48)}…` : q; };
+const titleOf = (msgs) => truncateAtBoundary(msgs.find((m) => m.role === 'user')?.text || '', 48);
 function loadConvs() {
   try {
     const v = JSON.parse(localStorage.getItem(STORE));
@@ -36,7 +43,8 @@ function memoryOf(convs, activeId) {
   const lines = others.slice(0, 5).map((c) => {
     const u = [...c.messages].reverse().find((m) => m.role === 'user')?.text || '';
     const a = [...c.messages].reverse().find((m) => m.role === 'assistant')?.text || '';
-    return `- "${titleOf(c.messages)}": utilizador — ${u.slice(0, 140)} | Mr. Steel — ${a.replace(/\s+/g, ' ').slice(0, 180)}`;
+    // cortado no fim de uma frase/palavra: excertos com palavras partidas levavam a IA a escrever palavras partidas
+    return `- "${titleOf(c.messages)}": utilizador — ${truncateAtBoundary(u, 140)} | Mr. Steel — ${truncateAtBoundary(a.replace(/\s+/g, ' '), 180)}`;
   });
   return [{ role: 'user', text: `(Contexto: resumo das conversas anteriores na aba IA, só para continuidade)\n${lines.join('\n')}` }, { role: 'assistant', text: 'Entendido.' }];
 }
@@ -47,10 +55,13 @@ const SOURCE_PILL = {
   offline: { label: t('Offline · base local'), color: '#ffaa00' },
 };
 
-function StatusBadge({ net, provider }) {
+function StatusBadge({ net, provider, mode }) {
   const navigate = useNavigate();
   let dot = '#22cc55'; let text = t('Online (IA Completa · {p})', { p: providerName(provider) }); let action = null;
-  if (net !== 'online') { dot = '#ff9900'; text = t('Offline (Base de Conhecimento Local)'); } else if (!provider) {
+  if (mode === 'tatico') text = t('Online (Modo tático · {p})', { p: providerName(provider) });
+  if (net !== 'online') { dot = '#ff9900'; text = t('Offline (Base de Conhecimento Local)'); } else if (mode === 'local') {
+    dot = '#ffaa00'; text = t('Base local (escolhida no Modo IA)');
+  } else if (!provider) {
     dot = '#e6c200'; text = t('Online · IA não configurada (respostas locais)');
     action = <button type="button" onClick={() => navigate('/definicoes')} className="underline ml-1" style={{ color: 'rgb(var(--c))' }}>{t('Configurar')}</button>;
   }
@@ -113,6 +124,7 @@ export default function SurvivalAITab() {
   const navigate = useNavigate();
   const net = useNetwork();
   const cfg = useAiConfig(); // volta a desenhar quando a chave muda
+  const mode = useAiMode();
   const provider = useMemo(() => onlineProvider(), [cfg]); // eslint-disable-line react-hooks/exhaustive-deps
   const [convs, setConvs] = useState(loadConvs);
   const [activeId, setActiveId] = useState(() => convs[0]?.id || uid());
@@ -134,14 +146,16 @@ export default function SurvivalAITab() {
   // Sugestões iniciais: documentos da aba Conhecimento primeiro, depois temas do núcleo do assistente
   useEffect(() => {
     let alive = true;
-    topics(6, true).then((t) => {
+    // (antes a variável do .then chamava-se "t" e tapava a função de tradução t(): dava erro e as sugestões dos
+    //  documentos nunca apareciam; "Resume:" também não era traduzido)
+    topics(6, true).then((list) => {
       if (!alive) return;
-      const fromDocs = t.slice(0, 2).map((x) => (x.source === 'kb'
-        ? { q: t('O que diz "{x}"?', { x: x.title }), sub: t('Da tua base de conhecimento') }
-        : { q: `Resume: ${x.title}`, sub: t('Do manual incluído') }));
-      const fixed = aiSuggestions.slice(0, 4 - Math.min(2, fromDocs.length)).map((q) => ({ q, sub: t('Sobrevivência') }));
+      const fromDocs = list.slice(0, 2).map((x) => (x.source === 'kb'
+        ? { q: t('Fala-me de: {x}', { x: x.title }), sub: t('Da tua base de conhecimento') }
+        : { q: t('Fala-me de: {x}', { x: x.title }), sub: t('Do manual incluído') }));
+      const fixed = suggestions().slice(0, 4 - Math.min(2, fromDocs.length)).map((q) => ({ q, sub: t('Sobrevivência') }));
       setStarters([...fromDocs, ...fixed].slice(0, 4));
-    }).catch(() => setStarters(aiSuggestions.slice(0, 4).map((q) => ({ q, sub: t('Sobrevivência') }))));
+    }).catch(() => setStarters(suggestions().slice(0, 4).map((q) => ({ q, sub: t('Sobrevivência') }))));
     return () => { alive = false; };
   }, []);
 
@@ -169,7 +183,7 @@ export default function SurvivalAITab() {
     const history = messages.length < 4 ? [...memoryOf(convs, activeId), ...messages] : messages;
     const userMsg = { id: uid(), role: 'user', text: q, ts: Date.now() };
     const aiId = uid();
-    const willBeOnline = net === 'online' && !!provider;
+    const willBeOnline = net === 'online' && !!provider && mode !== 'local';
     scrollToMsg.current = userMsg.id;
     setMessages((prev) => [...prev, userMsg, { id: aiId, role: 'assistant', text: '', source: willBeOnline ? 'online' : (net === 'online' ? 'local' : 'offline'), ts: Date.now() }]);
     setInput('');
@@ -183,7 +197,7 @@ export default function SurvivalAITab() {
       patch(aiId, { text: r.text, followups: r.followups || [], refs: r.refs || [], source: r.source, notice: r.notice, provider: r.provider });
     } catch (e) {
       if (!ctrl.signal.aborted) console.error('Mr. Steel:', e); // eslint-disable-line no-console
-      setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: m.text ? `${m.text}\n\n_Interrompido._` : '_Interrompido._', followups: [] } : m)));
+      setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: m.text ? `${m.text}\n\n_${t('Interrompido.')}_` : `_${t('Interrompido.')}_`, followups: [] } : m)));
     } finally {
       setBusyId(null);
       ctrlRef.current = null;
@@ -197,6 +211,20 @@ export default function SurvivalAITab() {
   const newChat = () => { setActiveId(uid()); setShowList(false); setTimeout(() => taRef.current?.focus(), 50); };
   const openConv = (id) => { setActiveId(id); setShowList(false); };
   const delConv = (id) => { setConvs((prev) => prev.filter((x) => x.id !== id)); if (id === activeId) setActiveId(uid()); };
+
+  // Ferramentas do menu ≡ (src/tools/toolMenus.js → assistente)
+  useQuickTools('assistente', {
+    novo: () => { if (busyId) ctrlRef.current?.abort(); newChat(); },
+    historico: () => setShowList(true), // no computador a lista já está visível; no telemóvel abre a gaveta
+    modo: () => { const m = cycleAiMode(); showToolToast(t('Modo IA: {m}', { m: t(AI_MODE_LABEL[m]) })); },
+    limpar: () => {
+      if (empty) { showToolToast(t('A conversa já está vazia.')); return; }
+      if (!window.confirm(t('Limpar esta conversa? As mensagens são apagadas deste dispositivo.'))) return;
+      if (busyId) ctrlRef.current?.abort();
+      delConv(activeId);
+      showToolToast(t('Conversa limpa.'));
+    },
+  });
 
   return (
     <div className="ai-layout">
@@ -231,7 +259,7 @@ export default function SurvivalAITab() {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <h2 className="text-sm uppercase tracking-wider font-bold">{t('Mr. Steel')}</h2>
-          <StatusBadge net={net} provider={provider} />
+          <StatusBadge net={net} provider={provider} mode={mode} />
         </div>
         <div className="flex items-center gap-3 md:hidden">
           <button type="button" onClick={() => setShowList(true)} aria-expanded={showList} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.7)' }}>
@@ -252,6 +280,7 @@ export default function SurvivalAITab() {
             <p className="text-lg mt-2">{t('Em que estamos a trabalhar hoje?')}</p>
             <p className="text-[11px] mt-1 mb-4" style={{ color: 'rgb(var(--c) / 0.6)' }}>
               {net !== 'online' ? t('Sem internet: respondo com o manual, os dados da app e os documentos da aba Conhecimento.')
+                : mode === 'local' ? t('Modo base local ativo: respondo com o manual, os dados da app e os teus documentos.')
                 : provider ? t('Pergunta o que quiseres. Uso também os teus documentos e os dados da app.')
                   : t('Sem chave de IA configurada respondo com a base local. Podes ligar a IA completa nas Definições.')}
             </p>

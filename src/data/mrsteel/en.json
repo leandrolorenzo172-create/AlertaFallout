@@ -1,0 +1,318 @@
+{
+  "_info": "Mr. Steel's offline phrases in English (US), used when the app language is English. Same rules as the Portuguese files: complete sentences, correct spelling, no clichés. Openers must be complete sentences (they come right before 'Based on the file…').",
+  "respostas": [
+    "I checked, and it is well explained.",
+    "This is in the Guide, so let's get to it.",
+    "I have that right here.",
+    "I found what you need.",
+    "I went through your files, and there is a clear answer.",
+    "Here is what matters.",
+    "It is all documented.",
+    "That has a direct answer.",
+    "I searched and found it.",
+    "Here is the essential part.",
+    "I'll get straight to the point.",
+    "That is covered in the right chapter.",
+    "There is a part of the Guide that answers exactly that.",
+    "I checked your documents.",
+    "I found the right passage.",
+    "This is one of those topics worth knowing well.",
+    "I have the answer, with the page number.",
+    "This is simpler than it looks.",
+    "There is a clear rule for that.",
+    "I double-checked the Guide.",
+    "Your material is very clear on this.",
+    "Let's take it step by step.",
+    "I'll start with the most important part.",
+    "That is explained step by step.",
+    "I found a very direct explanation.",
+    "I read it so I would not give you a guess.",
+    "The Guide covers that in a practical way.",
+    "I found what you are looking for, with the source.",
+    "This is worth knowing before you need it.",
+    "I'll give you the field version."
+  ],
+  "perguntas": [
+    "Are you planning to do this soon, or is it just good to know?",
+    "Would you like me to go through the steps one by one?",
+    "Do you have the materials you need at hand?",
+    "Is this for you or for someone in your family?",
+    "Will you be alone or with other people?",
+    "Do you prefer the quick version or the detailed one?",
+    "Should I check what the Guide says about the alternative?",
+    "Is anything about this worrying you?",
+    "Are you planning a trip?",
+    "Have you ever tried this before?",
+    "Would you like me to continue with the rest of the chapter?",
+    "Is this for a specific situation?",
+    "Which part raises the most questions for you?",
+    "Would you like a short list to take with you?",
+    "Do you need this today?",
+    "Would you like to compare it with another method?",
+    "Does this help, or should I look for more?",
+    "Would you like to see the full excerpt from the Guide?",
+    "Are you at home or outdoors?",
+    "Would you like to know how to practice this safely?",
+    "Should I look in your other files as well?",
+    "Would you like a quick checklist?",
+    "Is this for training or for real use?",
+    "Would you like to know the most common mistakes?",
+    "Did this answer your question?",
+    "Is there anything left to clarify?",
+    "Would you like a practical example?",
+    "Which of these options seems more feasible to you?",
+    "Would you like the emergency version?",
+    "Is this for an emergency or for preparation?"
+  ],
+  "iniciar": [
+    "What are you thinking about today?",
+    "Do you have any plans for the weekend?",
+    "Is there a question on your mind?",
+    "Would you like to review your emergency backpack with me?",
+    "Are you preparing for a trip?",
+    "Tell me what you need, and I will look it up.",
+    "Do you have a new document for us to explore?",
+    "Would you like to learn a new technique today?",
+    "Would you like to test your first aid knowledge?",
+    "Is there anything at home you would like to have ready?",
+    "Would you like me to suggest a topic from the Guide?",
+    "How is your week going?",
+    "Do you need help with a list?",
+    "Would you like to learn how to purify water in three steps?",
+    "Do you want to talk about something specific or just chat?",
+    "What brings you here?",
+    "Do you have an idea you would like to organize?",
+    "Would you like a survival tip?",
+    "Where would you like to start?",
+    "The console is yours. What are you thinking about?"
+  ],
+  "piadas": [
+    "Why does the backpack never go to parties? Because it is always loaded.",
+    "Why did the compass break up with the map? It felt it was always being told where to go.",
+    "What did the campfire say to the log? You light up my life.",
+    "Why do survivalists love knots? Because they never leave anything hanging.",
+    "Why did the flashlight get promoted? It was always the brightest in the room.",
+    "Why don't tents ever get lonely? They always have a few friends staking them down.",
+    "What do you call a bear with no teeth? A gummy bear.",
+    "Why did the scarecrow win an award? Because he was outstanding in his field.",
+    "Why was the water bottle so calm? It knew how to keep its cool.",
+    "Why did the radio feel confident? It was always on the right wavelength.",
+    "Why did the hiker bring a ladder? To reach new heights.",
+    "Why did the rope go to school? To learn how to tie things together.",
+    "Why did the tent go to therapy? It had too many issues with its poles.",
+    "Why did the matchbox lose the argument? It got too heated.",
+    "Why do fish never get lost? They always follow the current.",
+    "Why don't skeletons go hiking? They don't have the guts.",
+    "Why did the map get an award? It always found its way.",
+    "Why did the first aid kit blush? It saw the bandage dressing.",
+    "What kind of tree fits in your hand? A palm tree.",
+    "Why did the survival manual never panic? It always had a plan."
+  ],
+  "greetings": {
+    "manha": [
+      "Good morning! How are things on your end?",
+      "Good morning! I hope your morning is off to a good start.",
+      "Hello, good morning! Coffee already in hand, I presume?",
+      "Good morning! It is good to see you here."
+    ],
+    "tarde": [
+      "Good afternoon! How is your day going?",
+      "Hello, good afternoon! Is everything all right?",
+      "Good afternoon! I hope your day is going smoothly.",
+      "Good afternoon! It is good to have you back."
+    ],
+    "noite": [
+      "Good evening! How was your day?",
+      "Hello, good evening! Is everything all right?",
+      "Good evening! Still time to sort something out before you rest?",
+      "Good evening! My circuits do not need sleep, so I am all yours."
+    ],
+    "madrugada": [
+      "Hello! Still awake at this hour? I hope everything is all right.",
+      "Good night, or good morning, depending on how you look at it. Is everything all right?",
+      "Hello! The early hours are quiet; a good time to think clearly.",
+      "Hello! It is an unusual hour, but I am here. Is everything all right?"
+    ],
+    "offline": [
+      "Hello! We are offline, but don't worry: I have the Guide and your files right here with me.",
+      "Hello! The network is gone, but I am still here. I keep working with everything stored on your phone.",
+      "Hello! There is no connection right now, but this is exactly what SteelDeck was built for.",
+      "Hello! Offline mode is on. The Survival Guide and your documents are still available."
+    ]
+  },
+  "rephrase": [
+    "I don't think I understood what you meant. Could you rephrase it in other words?",
+    "I am not quite sure what you mean. Could you give me a little more context?",
+    "I don't want to guess what you had in mind. Could you tell me what the goal is?",
+    "That question was a bit open for me. If you tell me what you are looking for, I will help right away.",
+    "I understood the general topic, but not what you want to do with it. Could you rephrase the idea?",
+    "Maybe I missed a detail. Would you like to say that another way?",
+    "It is not entirely clear what you expect me to do. Should I explain, summarize or compare something?",
+    "I am missing a bit of context. How would you rephrase this question?"
+  ],
+  "rephraseHints": [
+    "For example: \"how to purify water without a filter\" or \"what to pack in a 72-hour backpack\".",
+    "Something like \"how to make fire with a ferro rod\" or \"signs of hypothermia\" helps me a lot.",
+    "Tell me the topic and what you want: an explanation, a summary or a step-by-step guide."
+  ],
+  "missing": [
+    "I could not find this specific topic in your documents, and I would rather not make anything up.",
+    "This topic is outside what you have stored in the knowledge base.",
+    "Your files do not go into this detail, and I don't want to give you a guess as if it were a fact.",
+    "To be honest, this is not in your base documents.",
+    "I searched the Guide and your documents and found nothing about it."
+  ],
+  "why": {
+    "offline": "Since we are **offline**, I can only use what is stored on your phone.",
+    "nokey": "With the **online AI turned on** (API key in Settings), I could reason about this beyond the files.",
+    "error": "The **online AI did not respond** just now, so I am limited to the local files.",
+    "mode": "**Local knowledge base** mode is on (AI Mode in the ≡ menu), so I am only using the files on your phone."
+  },
+  "missingTail": "I can, however, help you with {t}. If you have a document on the topic, import it in the **AI Files** tab and I will start using it. Would you like to start with one of these?",
+  "missingDefault": "the Guide's modules",
+  "thanks": [
+    "Always at your service! If you need anything else, I am here.",
+    "You're welcome, it was a pleasure. Would you like to explore another topic?",
+    "At your service! Is there anything else I can help you with?",
+    "I am glad it helped. Let me know if you want to continue."
+  ],
+  "identity": [
+    "I am **Mr. Steel**, the SteelDeck assistant. I look things up in the Survival Guide, in the documents you import and in the app's data. With an internet connection and an AI key, I can also reason about topics that are not in the files.",
+    "My name is **Mr. Steel**. I cross-check the Guide, your files and the app's data to give you answers with sources, and even without a network I keep working with what is stored on your phone."
+  ],
+  "jokeIntro": [
+    "Here is one:",
+    "Here goes:",
+    "This one is good:",
+    "Get ready:",
+    "One to cheer you up:"
+  ],
+  "jokeEnd": [
+    "Want another one?",
+    "There you go; you can rate me now.",
+    "If you laughed, I count it as a win.",
+    "There are more where that came from."
+  ],
+  "conversa": [
+    {
+      "nome": "how-are-you",
+      "padroes": [
+        "how are you",
+        "how are you doing",
+        "hows it going",
+        "how is it going",
+        "whats up",
+        "you ok",
+        "how s it going",
+        "what s up",
+        "how r u"
+      ],
+      "respostas": [
+        "All systems running, thanks for asking. How about you?",
+        "I am doing well, with the circuits cool and the batteries full. How is your day going?",
+        "Everything is fine on my side. Is everything all right with you?",
+        "Running smoothly, as always. What about you?"
+      ]
+    },
+    {
+      "nome": "tired",
+      "padroes": [
+        "im tired",
+        "i am tired",
+        "so tired",
+        "exhausted",
+        "worn out",
+        "i m tired",
+        "i m so tired",
+        "i m exhausted"
+      ],
+      "respostas": [
+        "Being tired at the end of the day is normal; the week does not forgive. Have you eaten yet?",
+        "Rest is part of survival too. Have you managed to take a break today?",
+        "That happens to the best of us. A glass of water and ten minutes off the screen work wonders.",
+        "Then let's keep things simple today. Is there anything quick I can help with?"
+      ]
+    },
+    {
+      "nome": "weather",
+      "padroes": [
+        "its cold",
+        "it is cold",
+        "so cold",
+        "its hot",
+        "it is hot",
+        "so hot",
+        "raining",
+        "its raining",
+        "it s cold",
+        "it s hot",
+        "it s raining",
+        "it s freezing"
+      ],
+      "respostas": [
+        "The weather always has the last word. If you want, I can tell you how to stay warm or cool.",
+        "Dress in layers and keep dry; the rest is easier. Are you going out?",
+        "Weather like this calls for a plan. Would you like me to check the forecast tab?",
+        "It is good to be prepared for it. Are you at home or outside?"
+      ]
+    },
+    {
+      "nome": "coffee",
+      "padroes": [
+        "coffee",
+        "i need coffee",
+        "having coffee"
+      ],
+      "respostas": [
+        "Coffee is fuel for humans. Mine is electricity, so we are even.",
+        "Enjoy your coffee. When you are ready, I am here.",
+        "A good coffee solves half of the day's problems. What about the other half?",
+        "I'll pretend I have one too. What are we working on?"
+      ]
+    },
+    {
+      "nome": "bored",
+      "padroes": [
+        "im bored",
+        "i am bored",
+        "so bored",
+        "nothing to do",
+        "i m bored",
+        "i m so bored"
+      ],
+      "respostas": [
+        "Then let's learn something useful: would you like a five-minute survival tip?",
+        "Boredom is a good time to prepare. Shall we review your emergency backpack?",
+        "I have 18 Guide modules waiting. Shall I pick one for you?",
+        "How about a quick first aid quiz?"
+      ]
+    },
+    {
+      "nome": "good-night",
+      "padroes": [
+        "good night",
+        "goodnight",
+        "going to sleep",
+        "going to bed",
+        "i m going to bed",
+        "i m going to sleep"
+      ],
+      "respostas": [
+        "Good night! Rest well; I will be here tomorrow.",
+        "Sleep well. The console will keep watch.",
+        "Good night! Charge your phone and your batteries.",
+        "Rest well. See you tomorrow."
+      ]
+    }
+  ],
+  "suggestions": [
+    "How do I build a tactical shelter?",
+    "Spring snare for a rabbit",
+    "Making fire by friction",
+    "Purifying water without tools",
+    "Emergency tourniquet",
+    "Finding my way without a compass",
+    "Edible plants of the Minho region",
+    "High-yield foods"
+  ]
+}

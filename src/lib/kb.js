@@ -42,12 +42,26 @@ export const onKbChange = (fn) => { listeners.add(fn); return () => listeners.de
 const changed = () => listeners.forEach((l) => l());
 
 const norm = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-const chunk = (text, size = 1800) => {
+// Ponto de corte seguro até `max`: fim de frase, senão fim de linha, senão espaço — nunca a meio de uma palavra
+// (antes cortava a cada 1800 caracteres certos e as secções começavam/acabavam com palavras partidas)
+export function safeCut(text, max) {
+  if (text.length <= max) return text.length;
+  const win = text.slice(0, max);
+  const min = Math.floor(max * 0.5);
+  let i = -1;
+  const re = /[.!?…](?=\s)/g; let m;
+  while ((m = re.exec(win))) if (m.index >= min) i = m.index + 1;
+  if (i > 0) return i;
+  const nl = win.lastIndexOf('\n'); if (nl >= min) return nl + 1;
+  const sp = win.lastIndexOf(' '); if (sp >= min) return sp + 1;
+  return max; // uma "palavra" gigante (ex.: um endereço): não há outra hipótese
+}
+export const chunk = (text, size = 1800) => {
   const out = []; const paras = text.split(/\n{2,}/); let cur = '';
   for (const p of paras) {
     if (cur && cur.length + p.length > size) { out.push(cur.trim()); cur = ''; }
     cur += `${p}\n\n`;
-    while (cur.length > size * 1.5) { out.push(cur.slice(0, size)); cur = cur.slice(size); }
+    while (cur.length > size * 1.5) { const k = safeCut(cur, size); out.push(cur.slice(0, k).trim()); cur = cur.slice(k).replace(/^\s+/, ''); }
   }
   if (cur.trim()) out.push(cur.trim());
   return out;
@@ -127,8 +141,12 @@ const words = (q) => norm(q).split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 function excerptAt(text, ws) {
   const n = norm(text); let pos = -1;
   for (const w of ws) { const p = n.indexOf(w); if (p >= 0 && (pos < 0 || p < pos)) pos = p; }
-  const start = Math.max(0, pos - 100);
-  return (start ? '…' : '') + text.slice(start, start + 320).replace(/\s+/g, ' ').trim() + '…';
+  // pré-visualização alinhada a palavras inteiras (sem palavras cortadas nas pontas)
+  let start = Math.max(0, pos - 100);
+  if (start > 0) { const sp = text.indexOf(' ', start); if (sp > 0 && sp - start < 30) start = sp + 1; }
+  let end = Math.min(text.length, start + 320);
+  if (end < text.length) { const sp = text.lastIndexOf(' ', end); if (sp > start + 200) end = sp; }
+  return (start ? '…' : '') + text.slice(start, end).replace(/\s+/g, ' ').trim() + (end < text.length ? '…' : '');
 }
 // Pesquisa nos documentos ativos. Devolve as páginas/secções mais relevantes, com referência.
 export async function searchDocs(query, { limit = 8, onlyEnabled = true } = {}) {
