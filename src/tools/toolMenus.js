@@ -10,7 +10,7 @@ import {
   Activity, CalendarRange, Share2,
   Siren, ShieldAlert, SlidersHorizontal, RefreshCw,
   KeyRound, Volume2, RotateCcw, Info,
-  ArrowUpToLine, Settings,
+  ArrowUpToLine, Settings, LayoutGrid,
 } from 'lucide-react';
 
 export const TOOL_MENUS = {
@@ -54,12 +54,14 @@ export const TOOL_MENUS = {
   ],
 };
 
-// Conjunto por omissão (Painel, Guerra, Meteo, Rádio, Música, Manual…): útil em qualquer vista.
+// Conjunto por omissão (Guerra, Economia, Greves, Meteo, Rádio, Música, Mini Jogo, Manual): útil em qualquer vista.
+// O Painel (aba principal) não usa ferramentas: o ≡ mostra a lista de abas (ver HotBar.jsx, MAIN_TAB).
 export const DEFAULT_TOOLS = [
   { id: 'atualizar', label: 'Atualizar vista', icon: RefreshCw },
   { id: 'topo', label: 'Voltar ao topo', icon: ArrowUpToLine },
   { id: 'partilhar', label: 'Partilhar ligação', icon: Share2 },
   { id: 'definicoes', label: 'Definições', icon: Settings },
+  { id: 'painel', label: 'Ir para o Painel', icon: LayoutGrid }, // no Painel, o ≡ abre a navegação entre abas
 ];
 
 export const toolsFor = (tabId) => TOOL_MENUS[tabId] || DEFAULT_TOOLS;

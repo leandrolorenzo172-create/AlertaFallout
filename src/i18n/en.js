@@ -909,4 +909,7 @@ export default {
   "Leva a mochila de emergência: água, comida, lanterna, rádio, medicamentos e documentos.": "Take your emergency backpack: water, food, flashlight, radio, medicine and documents.",
   "Avisa a família pelo contacto combinado e dirige-te ao ponto de encontro.": "Let your family know through the agreed contact and go to the meeting point.",
   "Não voltes à zona afetada até as autoridades dizerem que é seguro.": "Do not return to the affected area until the authorities say it is safe.",
+  "Ir para": "Go to",
+  "Ir para o Painel": "Go to Dashboard",
+  "Fechar menu": "Close menu",
 };

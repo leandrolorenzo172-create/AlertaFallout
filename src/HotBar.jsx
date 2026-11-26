@@ -14,6 +14,9 @@ export function useVisibleTabs() {
   return orderTabs(TABS, s.order).filter((t) => !s.hidden.includes(t.id));
 }
 
+// Aba principal: aqui o ≡ mantém a lista de abas para navegar
+export const MAIN_TAB = 'dashboard';
+
 export const TABS = [
   { id: 'dashboard', path: '/dashboard', label: 'Painel', icon: Shield, alert: true },
   { id: 'guerra', path: '/guerra', label: 'Guerra', icon: Skull, alert: true },
@@ -46,6 +49,7 @@ const DEFAULT_ACTIONS = {
     } catch { /* partilha cancelada pelo utilizador */ }
   },
   definicoes: ({ navigate }) => navigate('/definicoes'),
+  painel: ({ navigate }) => navigate('/dashboard'),
 };
 
 export default function HotBar() {
@@ -58,8 +62,13 @@ export default function HotBar() {
 
   const activeTab = TABS.find((tab) => location.pathname === tab.path)?.id || 'dashboard';
   const activeLabel = TABS.find((tab) => tab.id === activeTab)?.label || '';
-  // As ferramentas dependem SEMPRE da aba ativa: ao mudar de aba (com o menu aberto ou não) a lista atualiza logo.
-  const tools = toolsFor(activeTab);
+  // Aba principal (Painel): o ≡ continua a ser o menu de navegação para as outras abas.
+  // Em todas as outras abas: ferramentas da aba ativa (toolMenus.js). Ao mudar de aba, a lista atualiza logo.
+  const isMain = activeTab === MAIN_TAB;
+  const navTabs = useVisibleTabs().filter((tab) => tab.id !== MAIN_TAB);
+  const tools = isMain
+    ? navTabs.map((tab) => ({ id: `nav:${tab.id}`, label: tab.label, icon: tab.icon, nav: tab, navAlert: tab.alert }))
+    : toolsFor(activeTab);
 
   // Fecha com a tecla Esc (teclado / comando)
   useEffect(() => {
@@ -77,6 +86,7 @@ export default function HotBar() {
   const handleSelect = (tool) => {
     playSelectSound();
     setOpen(false);
+    if (tool.nav) { navigate(tool.nav.path); return; } // Painel: navegação entre abas
     // 1.º o separador ativo (useQuickTools); 2.º o comportamento por omissão; 3.º aviso de que ainda não está ligada
     const handled = runTool(activeTab, tool.id);
     if (handled) return;
@@ -108,7 +118,7 @@ export default function HotBar() {
           <motion.div
             key="tools"
             role="menu"
-            aria-label={t('Ferramentas de {x}', { x: t(activeLabel) })}
+            aria-label={isMain ? t('Menu de navegação rápida') : t('Ferramentas de {x}', { x: t(activeLabel) })}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -122,12 +132,12 @@ export default function HotBar() {
             }}
           >
             <div className="px-3 pb-0.5 text-[10px] uppercase tracking-[0.2em] text-right" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-              {t('Ferramentas')} · {t(activeLabel)}
+              {isMain ? t('Ir para') : `${t('Ferramentas')} · ${t(activeLabel)}`}
             </div>
             {/* key = aba ativa: ao mudar de aba os itens voltam a entrar com a animação */}
             {tools.map((tool, index) => {
               const Icon = tool.icon;
-              const alert = tool.badge && hasToolBadge(badges, activeTab, tool.id);
+              const alert = tool.navAlert || (tool.badge && hasToolBadge(badges, activeTab, tool.id));
               return (
                 <motion.button
                   key={`${activeTab}-${tool.id}`}
@@ -186,7 +196,7 @@ export default function HotBar() {
       <motion.button
         onClick={handleToggle}
         whileTap={{ scale: 0.9 }}
-        aria-label={open ? t('Fechar ferramentas') : t('Ferramentas rápidas')}
+        aria-label={open ? t('Fechar menu') : isMain ? t('Menu de navegação rápida') : t('Ferramentas rápidas')}
         aria-expanded={open}
         aria-haspopup="menu"
         className="fixed z-50 flex items-center justify-center"

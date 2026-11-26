@@ -118,7 +118,7 @@ for (const lang of ['pt', 'en']) {
 console.log('# 4. Motor offline (Guia real, pt e en)');
 const eng = await load('/src/lib/ai/localEngine.js');
 // frase que acaba numa palavra que não pode terminar frase ("…os avisos da.") = palavras cortadas/em falta
-const DANGLING = /(?<![\p{L}])(da|de|do|das|dos|na|no|nas|nos|em|ao|aos|à|às|com|para|pela|pelo|por|sem|entre|um|uma|the|of|and|to|with|for|from)\.(\s|$)/iu;
+const DANGLING = /(?<![\p{L}])(da|de|do|das|dos|na|no|nas|nos|em|ao|aos|à|às|com|para|pela|pelo|por|sem|entre|um|uma|the|of|and|an)\.(\s|$)/iu;
 const Q = {
   pt: ['olá', 'quem és tu?', 'obrigado', 'conta uma piada', 'estou cansado', 'Como construir abrigo tático?', 'Armadilha de mola para coelho', 'Fazer fogo por fricção', 'Purificar água sem ferramentas', 'Torniquete de emergência',
     'Orientar-me em Braga sem bússola', 'Plantas comestíveis do Minho', 'Alimentos de alto rendimento', 'como faço sinais de socorro com um espelho de dia', 'o que devo saber sobre comunicação de emergência e o rádio',
