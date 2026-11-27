@@ -136,9 +136,9 @@ export default function SurvivalAITab() {
   // Sugestões iniciais: documentos da aba Conhecimento primeiro, depois temas do núcleo do assistente
   useEffect(() => {
     let alive = true;
-    topics(6, true).then((t) => {
+    topics(6, true).then((list) => {
       if (!alive) return;
-      const fromDocs = t.slice(0, 2).map((x) => (x.source === 'kb'
+      const fromDocs = list.slice(0, 2).map((x) => (x.source === 'kb'
         ? { q: t('O que diz "{x}"?', { x: x.title }), sub: t('Da tua base de conhecimento') }
         : { q: `Resume: ${x.title}`, sub: t('Do manual incluído') }));
       const fixed = aiSuggestions.slice(0, 4 - Math.min(2, fromDocs.length)).map((q) => ({ q, sub: t('Sobrevivência') }));

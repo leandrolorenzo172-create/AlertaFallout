@@ -1324,4 +1324,10 @@ export default {
   "Backup p/ dispositivo": "Backup to device",
   "Backup por email": "Backup by email",
   "Importar perfil": "Import profile",
+  "Sem rota pelos caminhos: estes pontos estão fora das áreas guardadas. Distância em linha reta (tracejado).": "No path route: these points are outside your saved areas. Straight-line distance (dashed).",
+  "Esta área foi guardada sem as rotas offline: abre Mapas offline e toca em «+ Rotas» (com rede). Distância em linha reta (tracejado).": "This area was saved without offline routes: open Offline maps and tap “+ Routes” (online). Straight-line distance (dashed).",
+  "+ Rotas": "+ Routes",
+  "Esta área não tem rotas offline: descarregar agora": "This area has no offline routes: download now",
+  "✔ Rotas offline prontas em «{n}» ({k} pontos de caminho).": "✔ Offline routes ready in “{n}” ({k} path points).",
+  "Área não encontrada.": "Area not found.",
 };

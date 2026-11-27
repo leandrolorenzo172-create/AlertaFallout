@@ -9,6 +9,7 @@ import { walkRoute } from '@/map/walkRoute';
 import OfflineTileLayer from '@/map/offline/OfflineTileLayer';
 import OfflineMapsPanel from '@/map/offline/OfflineMapsPanel';
 import { routeOffline } from '@/map/offline/offlineRouting';
+import { hasOfflineData } from '@/map/offline/offlineMapManager';
 import { elevationProfile, naismithMinutes, getElevation } from '@/map/offline/elevation';
 import { useTracker, clearTrail } from '@/map/offline/tracker';
 import 'leaflet/dist/leaflet.css';
@@ -107,13 +108,16 @@ export default function BragaMapTab() {
   const [routePts, setRoutePts] = useState([]);
   const [route, setRoute] = useState(null);   // { path, meters, minutes, online }
   const [routing, setRouting] = useState(false);
+  // há mapa guardado (área ou pacote)? Com mapa guardado a rota faz-se sempre no mapa real; o esquemático é só para quem não guardou nada
+  const [hasOffline, setHasOffline] = useState(false);
+  useEffect(() => { if (!tools.offlinePanel) hasOfflineData().then(setHasOffline); }, [tools.offlinePanel]);
   // 1.º malha offline guardada (A*); 2.º serviço online (OSRM a pé); 3.º linha reta. Depois: perfil de altitude e Naismith.
   const calcRoute = React.useCallback(async (pts) => {
     if (pts.length < 2) { setRoute(null); return; }
     setRouting(true);
     let r; const off = await routeOffline(pts[0], pts[1]).catch(() => ({ error: 'erro' }));
     if (off.path) r = { path: off.path, meters: off.meters, source: 'offline', online: true };
-    else { const w = await walkRoute(pts[0], pts[1]); r = { ...w, source: w.online ? 'osrm' : 'straight' }; }
+    else { const w = await walkRoute(pts[0], pts[1]); r = { ...w, source: w.online ? 'osrm' : 'straight', offErr: off.error }; }
     const profile = await elevationProfile(r.path, { online: navigator.onLine !== false }).catch(() => null);
     setRouting(false); setRoute({ ...r, profile, minutes: naismithMinutes(r.meters, profile) });
   }, []);
@@ -322,7 +326,7 @@ export default function BragaMapTab() {
             )}
             {route && (
               <p className="mt-1 text-[10px]" style={{ color: route.source === 'straight' ? '#ef4444' : 'rgb(var(--c) / 0.55)' }}>
-                {route.source === 'offline' ? t('Rota offline pelos caminhos guardados (OpenStreetMap)') : route.source === 'osrm' ? t('Rota online pelas ruas do OpenStreetMap (OSRM)') : t('Sem rota pelos caminhos (zona não guardada e sem rede): distância em linha reta (tracejado).')}
+                {route.source === 'offline' ? t('Rota offline pelos caminhos guardados (OpenStreetMap)') : route.source === 'osrm' ? t('Rota online pelas ruas do OpenStreetMap (OSRM)') : (route.offErr === 'nograph' ? t('Esta área foi guardada sem as rotas offline: abre Mapas offline e toca em «+ Rotas» (com rede). Distância em linha reta (tracejado).') : hasOffline ? t('Sem rota pelos caminhos: estes pontos estão fora das áreas guardadas. Distância em linha reta (tracejado).') : t('Sem rota pelos caminhos (zona não guardada e sem rede): distância em linha reta (tracejado).'))}
                 {' · '}{route.profile ? t('tempo pela regra de Naismith (com desnível)') : t('tempo a 5 km/h (sem dados de relevo)')}
               </p>
             )}
@@ -330,7 +334,7 @@ export default function BragaMapTab() {
               <button type="button" disabled={!routePts.length} onClick={() => { const n = routePts.slice(0, -1); setRoutePts(n); calcRoute(n); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Undo2 size={11} />{t('Desfazer')}</button>
               <button type="button" disabled={!routePts.length} onClick={() => { setRoutePts([]); setRoute(null); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Trash2 size={11} />{t('Limpar')}</button>
               <button type="button" disabled={!tracker.pos} onClick={() => { const p = { lat: tracker.pos.lat, lng: tracker.pos.lng }; const n = routePts.length >= 1 ? [p, routePts[routePts.length - 1]] : [p]; setRoutePts(n); calcRoute(n); }} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}>{t('Partir do GPS')}</button>
-              <button type="button" onClick={() => openRoute(true)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Esquemático')}</button>
+              {!hasOffline && <button type="button" onClick={() => openRoute(true)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Esquemático')}</button>}
               <button type="button" onClick={() => setMode(null)} className="ml-auto px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
             </div>
           </div>

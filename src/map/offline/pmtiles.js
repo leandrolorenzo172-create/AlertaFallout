@@ -30,7 +30,7 @@ export function zxyToTileId(z, x, y) {
   for (let s = n / 2; s >= 1; s /= 2) {
     const rx = (tx & s) > 0 ? 1 : 0; const ry = (ty & s) > 0 ? 1 : 0;
     acc += s * s * ((3 * rx) ^ ry);
-    if (ry === 0) { if (rx === 1) { tx = n - 1 - tx; ty = n - 1 - ty; } const t = tx; tx = ty; ty = t; }
+    if (ry === 0) { if (rx === 1) { tx = n - 1 - tx; ty = n - 1 - ty; } const sw = tx; tx = ty; ty = sw; }
   }
   return acc;
 }

@@ -2,7 +2,8 @@
 // áreas guardadas, espaço ocupado e pacote PMTiles de Portugal.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Download, Trash2, MapPinned, HardDrive, Package, ShieldCheck, Mountain, Route, Eye } from 'lucide-react';
-import { OFFLINE_LAYERS, PRESET_AREAS, MAX_TILES, estimateArea, saveArea, deleteArea, storageReport, importPack, deletePack, requestPersist } from './offlineMapManager';
+import { OFFLINE_LAYERS, PRESET_AREAS, MAX_TILES, MAX_GRAPH_KM2, estimateArea, saveArea, deleteArea, addGraphToArea, storageReport, importPack, deletePack, requestPersist } from './offlineMapManager';
+import { bboxKm2 } from './tileMath';
 import { t } from '@/i18n';
 
 const MB = (b) => `${(b / 1048576).toFixed(b > 1048576 * 100 ? 0 : 1)} MB`;
@@ -37,6 +38,16 @@ export default function OfflineMapsPanel({ getViewBbox, defaultLayer = 'road', o
     } catch (e) {
       setMsg(e.name === 'AbortError' ? t('Download cancelado. O que já foi descarregado ficou guardado.') : e.message);
     } finally { setProg(null); ctrl.current = null; refresh(); }
+  };
+  // área guardada sem rotas: descarrega só a malha de caminhos
+  const addRoutes = async (a) => {
+    if (prog) return;
+    if (navigator.onLine === false) { setMsg(t('Para guardar uma área é preciso rede. Depois funciona sem ela.')); return; }
+    ctrl.current = new AbortController(); setMsg('');
+    setProg({ phase: 'rotas', done: 0, total: 0, msg: t('Rotas: a descarregar caminhos e estradas…') });
+    try { const r = await addGraphToArea(a.id, (p) => setProg((o) => ({ ...o, ...p })), ctrl.current.signal); setMsg(t('✔ Rotas offline prontas em «{n}» ({k} pontos de caminho).', { n: r.name, k: r.graphNodes })); }
+    catch (e) { setMsg(e.name === 'AbortError' ? t('Download cancelado. O que já foi descarregado ficou guardado.') : t('Malha de rotas não descarregada ({e}).', { e: e.message })); }
+    finally { setProg(null); ctrl.current = null; refresh(); }
   };
   const pct = prog?.total ? Math.round((prog.done / prog.total) * 100) : 0;
 
@@ -122,6 +133,9 @@ export default function OfflineMapsPanel({ getViewBbox, defaultLayer = 'road', o
                   <b className="block truncate">{a.name}{a.done ? '' : ` (${t('incompleta')})`}</b>
                   <span className="opacity-70">{t(OFFLINE_LAYERS[a.layer]?.label || a.layer)} · z{a.minZoom}–{a.maxZoom} · {MB(a.bytes || 0)}{a.dem ? ` · ${t('relevo')}` : ''}{a.graph ? ` · ${t('rotas')}` : ''} · {new Date(a.created).toLocaleDateString('pt-PT')}</span>
                 </span>
+                {!a.graph && bboxKm2(a.bbox) <= MAX_GRAPH_KM2 && (
+                  <button type="button" disabled={!!prog} onClick={() => addRoutes(a)} className="px-2 py-1.5 rounded-sm text-[9px] uppercase tracking-wider disabled:opacity-30" style={{ border: '1px solid #ffaa00aa', color: '#ffaa00' }} title={t('Esta área não tem rotas offline: descarregar agora')}>{t('+ Rotas')}</button>
+                )}
                 <button type="button" onClick={() => onFly?.(a.bbox)} aria-label={t('Ver {n}', { n: a.name })} className="p-1.5 rounded-sm" style={btn(false)}><Eye size={13} /></button>
                 <button type="button" disabled={!!prog} onClick={async () => { await deleteArea(a.id); refresh(); }} aria-label={t('Apagar {n}', { n: a.name })} className="p-1.5 rounded-sm disabled:opacity-30" style={{ border: '1px solid #ef444488', color: '#ef4444' }}><Trash2 size={13} /></button>
               </li>

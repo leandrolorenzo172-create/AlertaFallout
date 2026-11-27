@@ -111,7 +111,7 @@ export async function createBackup({ includeMaps = false, onProgress } = {}) {
   const manifest = {
     format: BACKUP_FORMAT, version: BACKUP_VERSION, app: 'SteelDeck', appVersion: (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : document.querySelector('meta[name="sd-version"]')?.content) || 'web',
     userId, created: created.toISOString(), includeMaps, databases: dbs, blobs: blobs.length,
-    counts: { localStorage: Object.keys(ls).length, records: dbs.reduce((s, d) => s + d.stores.reduce((t, st) => t + (JSON.parse(strFromU8(files[`idb/${d.name}/${st.name}.json`])).length), 0), 0) },
+    counts: { localStorage: Object.keys(ls).length, records: dbs.reduce((s, d) => s + d.stores.reduce((acc, st) => acc + (JSON.parse(strFromU8(files[`idb/${d.name}/${st.name}.json`])).length), 0), 0) },
   };
   files['manifest.json'] = strToU8(JSON.stringify(manifest, null, 2));
   onProgress?.(t('A comprimir…'));

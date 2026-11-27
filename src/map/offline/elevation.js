@@ -11,11 +11,11 @@ const decoded = new Map(); // "z/x/y" -> Float32Array(256*256) (cache em memóri
 export async function saveDemForArea(bbox, onProgress = () => {}, signal) {
   const list = [...tilesIn(bbox, DEM_ZOOM, DEM_ZOOM)];
   let bytes = 0; let done = 0;
-  for (const t of list) {
+  for (const tile of list) { // nunca chamar 't' a variáveis: é a função de tradução
     if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError');
-    const key = `${t.z}/${t.x}/${t.y}`;
+    const key = `${tile.z}/${tile.x}/${tile.y}`;
     if (!(await get('dem', key))) {
-      const r = await fetch(DEM_URL(t.z, t.x, t.y), { signal });
+      const r = await fetch(DEM_URL(tile.z, tile.x, tile.y), { signal });
       if (r.ok) { const b = await r.blob(); await put('dem', key, b); bytes += b.size; }
     }
     done++; onProgress({ done, total: list.length, bytes, msg: t('Relevo: {a}/{b}', { a: done, b: list.length }) });
@@ -52,10 +52,10 @@ export async function getElevation(lat, lng, { online = true } = {}) {
   const r = (lat * Math.PI) / 180;
   const fy = ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n;
   const x = Math.floor(fx); const y = Math.floor(fy);
-  const t = await demTile(z, x, y, online);
-  if (!t) return null;
+  const dem = await demTile(z, x, y, online);
+  if (!dem) return null;
   const px = Math.min(255, Math.max(0, Math.floor((fx - x) * 256))); const py = Math.min(255, Math.max(0, Math.floor((fy - y) * 256)));
-  return t[py * 256 + px];
+  return dem[py * 256 + px];
 }
 
 // Perfil de um percurso [[lat,lng],…]: amostra a cada ~25 m. Devolve { up, down, max, min, start, end, samples, segments }
@@ -77,7 +77,7 @@ export async function elevationProfile(path, { online = true, step = 25 } = {}) 
   }
   if (samples.length < 2) return null;
   // suaviza o ruído do relevo (média móvel de 5) antes de somar subidas e descidas
-  const sm = samples.map((s, i) => { const w = samples.slice(Math.max(0, i - 2), i + 3); return { d: s.d, h: w.reduce((t, x) => t + x.h, 0) / w.length }; });
+  const sm = samples.map((s, i) => { const w = samples.slice(Math.max(0, i - 2), i + 3); return { d: s.d, h: w.reduce((acc, x) => acc + x.h, 0) / w.length }; });
   let up = 0; let down = 0; const segments = [];
   for (let i = 1; i < sm.length; i++) {
     const dh = sm[i].h - sm[i - 1].h; const dd = sm[i].d - sm[i - 1].d;

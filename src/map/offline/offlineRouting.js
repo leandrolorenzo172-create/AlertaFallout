@@ -5,7 +5,7 @@ import { inBbox, haversine } from './tileMath';
 import { t } from '@/i18n';
 
 // Servidores Overpass públicos e gratuitos (tenta por ordem)
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 // tudo o que se pode percorrer a pé (exclui autoestradas, vias rápidas e caminhos privados/proibidos a peões)
 const QUERY = (b) => `[out:json][timeout:120];way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s},${b.w},${b.n},${b.e});(._;>;);out skel qt;`;
 
@@ -85,15 +85,18 @@ class Heap {
 // Rota a pé offline entre a e b ({lat,lng}). Devolve { path:[[lat,lng]…], meters, snapA, snapB } ou { error }
 export async function routeOffline(a, b) {
   const g = await graphFor(a, b);
-  if (!g) return { error: 'noarea' };
-  const s = nearest(g, a.lat, a.lng); const t = nearest(g, b.lat, b.lng);
-  if (!s || !t) return { error: 'far' };
+  if (!g) {
+    const covered = (await getAll('areas')).some((x) => inBbox(x.bbox, a.lat, a.lng) && inBbox(x.bbox, b.lat, b.lng));
+    return { error: covered ? 'nograph' : 'noarea' };
+  }
+  const s = nearest(g, a.lat, a.lng); const dst = nearest(g, b.lat, b.lng);
+  if (!s || !dst) return { error: 'far' };
   const dist = new Float64Array(g.n).fill(Infinity); const prev = new Int32Array(g.n).fill(-1); const closed = new Uint8Array(g.n);
-  const h = (i) => haversine(g.lat[i], g.lng[i], g.lat[t.i], g.lng[t.i]);
+  const h = (i) => haversine(g.lat[i], g.lng[i], g.lat[dst.i], g.lng[dst.i]);
   const heap = new Heap(); dist[s.i] = 0; heap.push(s.i, h(s.i));
   while (heap.size) {
     const u = heap.pop();
-    if (u === t.i) break;
+    if (u === dst.i) break;
     if (closed[u]) continue; closed[u] = 1;
     for (let j = g.off[u]; j < g.off[u + 1]; j++) {
       const v = g.to[j]; if (closed[v]) continue;
@@ -101,8 +104,8 @@ export async function routeOffline(a, b) {
       if (nd < dist[v]) { dist[v] = nd; prev[v] = u; heap.push(v, nd + h(v)); }
     }
   }
-  if (!Number.isFinite(dist[t.i])) return { error: 'nopath' };
-  const path = []; for (let i = t.i; i !== -1; i = prev[i]) path.push([g.lat[i], g.lng[i]]);
+  if (!Number.isFinite(dist[dst.i])) return { error: 'nopath' };
+  const path = []; for (let i = dst.i; i !== -1; i = prev[i]) path.push([g.lat[i], g.lng[i]]);
   path.reverse();
-  return { path: [[a.lat, a.lng], ...path, [b.lat, b.lng]], meters: dist[t.i] + s.m + t.m, snapA: s.m, snapB: t.m };
+  return { path: [[a.lat, a.lng], ...path, [b.lat, b.lng]], meters: dist[dst.i] + s.m + dst.m, snapA: s.m, snapB: dst.m };
 }

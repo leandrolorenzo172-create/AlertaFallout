@@ -58,10 +58,10 @@ export async function saveArea({ name, bbox, layer = 'road', minZoom = 10, maxZo
   const worker = async () => {
     while (i < list.length) {
       if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError');
-      const t = list[i++]; const key = `${layer}/${t.z}/${t.x}/${t.y}`;
+      const tile = list[i++]; const key = `${layer}/${tile.z}/${tile.x}/${tile.y}`; // 't' é a função de tradução
       const existing = await get('tiles', key);
       if (!existing) {
-        const blob = await fetchBlob(L.url(t.z, t.x, t.y), signal);
+        const blob = await fetchBlob(L.url(tile.z, tile.x, tile.y), signal);
         if (blob) { await put('tiles', key, { blob, area: id }); bytes += blob.size; }
       }
       done++;
@@ -82,6 +82,24 @@ export async function saveArea({ name, bbox, layer = 'road', minZoom = 10, maxZo
   }
   area.done = true; await put('areas', id, area);
   return area;
+}
+
+// Há mapa guardado para usar sem rede? (área com mosaicos ou pacote PMTiles)
+export async function hasOfflineData() {
+  const areas = await listAreas().catch(() => []);
+  if (areas.some((a) => a.tiles > 0 && a.bytes > 0)) return true;
+  return !!(await packInfo().catch(() => null));
+}
+
+// Descarrega só a malha de rotas de uma área já guardada (ex.: o servidor não respondeu da primeira vez)
+export async function addGraphToArea(id, onProgress = () => {}, signal) {
+  const area = await get('areas', id);
+  if (!area) throw new Error(t('Área não encontrada.'));
+  if (bboxKm2(area.bbox) > MAX_GRAPH_KM2) throw new Error(t('Área grande demais para a malha de rotas (máx. 900 km²): o mapa e o relevo guardam-se na mesma.'));
+  const g = await buildGraphForArea(id, area.bbox, onProgress, signal);
+  const next = { ...area, graph: true, graphNodes: g.nodes, bytes: (area.bytes || 0) + g.bytes, warnings: (area.warnings || []).filter((w) => w !== 'rotas') };
+  await put('areas', id, next);
+  return next;
 }
 
 export const listAreas = () => getAll('areas').then((a) => a.sort((x, y) => y.created - x.created));
@@ -114,8 +132,8 @@ export async function deletePack() { await del('packs', 'pack'); packReader = nu
 
 // Mosaico local: 1.º o guardado para esta camada, 2.º o pacote PMTiles. null = não existe offline.
 export async function getLocalTile(layer, z, x, y) {
-  const t = await get('tiles', `${layer}/${z}/${x}/${y}`).catch(() => null);
-  if (t?.blob) return t.blob;
+  const saved = await get('tiles', `${layer}/${z}/${x}/${y}`).catch(() => null);
+  if (saved?.blob) return saved.blob;
   const pack = await getPack();
   if (pack) { try { return await pack.getTile(z, x, y); } catch { return null; } }
   return null;
