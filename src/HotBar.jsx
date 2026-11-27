@@ -4,6 +4,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2, TrendingDown, Megaphone, ShieldAlert, Info, Languages, BellRing, Send, RotateCcw, LocateFixed, Layers, Ruler, Footprints, RefreshCw, ArrowUpToLine, Filter, ArrowDownUp, StickyNote, FilePlus, Trash2, Play, Pause, SkipForward, SkipBack, SlidersHorizontal, AudioLines, Shuffle, RotateCw, Volume2, VolumeX, Maximize, Trophy, HelpCircle, ChevronsDown, Anchor, CalendarDays, ChevronRight, Check, Siren, Tag, Search, LineChart, BarChart3, PlusCircle, Globe, Calculator } from 'lucide-react';
 import { useRadioRemote, onToggleRadio, onNextStation, onPrevStation, onToggleRecordMp3, requestRadioState } from './audio/radioRemote';
 import { Power, Circle } from 'lucide-react';
+import { useAiTools, onNewChat, onToggleHistory, onToggleAiMode, onClearConversation, toggleAiSub, selectedModel, loadAvailableModels, onSelectAiModel } from './lib/ai/aiTools';
+import { useAiConfig } from './lib/ai/config';
+import { IS_ARTIFACT } from './api/base44Client';
+import { SquarePen, History, BrainCog, Eraser, Cpu, Database } from 'lucide-react';
 import { usePizzaTools, onRefreshPizzaIndex, onTogglePizzaAlert, PIZZA_PEAK, PIZZA_SOURCES_ID } from './pizza/pizzaTools';
 import { Newspaper } from 'lucide-react';
 import { useCatTools, toggleActiveOnly, openProtocol, cycleCatFilter, openCatSearch, onRefreshCat, CAT_FILTERS } from './catastrophe/catTools';
@@ -184,6 +188,16 @@ export const PIZZA_TOOLS = [
   { id: 'alert', label: 'Alerta', icon: Siren },
 ];
 
+// Na aba IA (MR. STEEL), o menu ≡ gere a conversa, o modo e o modelo de IA (src/lib/ai/aiTools.js)
+export const AI_TOOLS = [
+  { id: 'new', label: 'Novo chat', icon: SquarePen },
+  { id: 'history', label: 'Histórico', icon: History },
+  { id: 'mode', label: 'Modo IA', icon: BrainCog },
+  { id: 'kb', label: 'Base de conhecimento', icon: Database },
+  { id: 'clear', label: 'Limpar conversa', icon: Eraser },
+  { id: 'model', label: 'Modelo IA', icon: Cpu, sub: true },
+];
+
 export default function HotBar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -217,6 +231,25 @@ export default function HotBar() {
   const inCat = activeTab === 'catastrofes';
   const inRadio = activeTab === 'radio';
   const inPizza = activeTab === 'pizza';
+  const inAi = activeTab === 'assistente';
+  const aiTools = useAiTools();
+  useAiConfig(); // volta a desenhar quando a chave ou o modelo mudam
+  const model = selectedModel();
+  // onOpenKnowledgeBase: abre a aba FICHEIROS (documentos que a IA consulta)
+  const onOpenKnowledgeBase = () => navigate('/conhecimento');
+  const runAiTool = (tool) => {
+    playSelectSound();
+    if (tool.id === 'mode') { onToggleAiMode(); return; }                  // fica aberto: mostra o modo novo
+    if (tool.id === 'model') {                                              // abre a lista real de modelos da API
+      if (!aiTools.sub) loadAvailableModels();
+      toggleAiSub('model'); return;
+    }
+    setOpen(false);
+    if (tool.id === 'new') onNewChat();
+    else if (tool.id === 'history') onToggleHistory();
+    else if (tool.id === 'kb') onOpenKnowledgeBase();
+    else if (tool.id === 'clear') onClearConversation();
+  };
   const pizza = usePizzaTools();
   const pizzaPeak = (pizza.level || 0) >= PIZZA_PEAK;
   // onShowCalculationSources: vai até "Indicadores Atuais" e destaca as contagens e manchetes que pesam no índice
@@ -391,11 +424,71 @@ export default function HotBar() {
             className="fixed z-50 right-4 flex flex-col gap-1.5 no-scrollbar"
             style={{ bottom: '136px', maxHeight: '62vh', overflowY: 'auto' }}
           >
-            {(inPizza || inRadio || inCat || inCyber || inWar || inEco || inStrikes || inMeteo || inGame || inMusic || inFiles || inManual || inMap || inSettings) && (
+            {(inAi || inPizza || inRadio || inCat || inCyber || inWar || inEco || inStrikes || inMeteo || inGame || inMusic || inFiles || inManual || inMap || inSettings) && (
               <p className="px-1 text-[10px] uppercase tracking-widest text-right" style={{ color: 'rgb(var(--c) / 0.6)' }}>
                 {t('Ferramentas')} · {t(TABS.find((x) => x.id === activeTab)?.label || '')}
               </p>
             )}
+            {inAi && AI_TOOLS.map((tool, index) => {
+              const modelLabel = IS_ARTIFACT ? 'CLAUDE.AI' : model ? model.label.toUpperCase() : t('BASE LOCAL');
+              const info = {
+                mode: aiTools.aiMode === 'local' ? t('BASE LOCAL') : t('IA COMPLETA'),
+                model: modelLabel, new: '', history: '', kb: '', clear: '',
+              }[tool.id];
+              const open2 = tool.sub && aiTools.sub === tool.id;
+              const active = open2 || (tool.id === 'mode' && aiTools.aiMode === 'full');
+              const Icon = tool.icon;
+              return (
+                <React.Fragment key={tool.id}>
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    onClick={() => runAiTool(tool)}
+                    aria-expanded={tool.sub ? open2 : undefined}
+                    aria-pressed={tool.id === 'mode' ? aiTools.aiMode === 'full' : undefined}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded whitespace-nowrap transition-all"
+                    style={{
+                      background: active ? 'rgb(var(--c) / 0.16)' : 'rgb(var(--cd) / 0.95)',
+                      border: `1px solid ${active ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.3)'}`,
+                      color: active ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.85)',
+                      backdropFilter: 'blur(10px)', boxShadow: active ? '0 0 12px rgb(var(--c) / 0.45)' : '0 0 8px rgb(var(--c) / 0.12)', minWidth: '240px',
+                    }}
+                  >
+                    <Icon size={16} />
+                    <span className="text-xs uppercase tracking-wider flex-1 text-left">{t(tool.label)}</span>
+                    {info && <span className="text-[10px] uppercase tracking-wider truncate max-w-[120px]" style={{ opacity: active ? 1 : 0.65 }}>{info}</span>}
+                    {tool.sub && <ChevronRight size={13} style={{ transform: open2 ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />}
+                  </motion.button>
+                  {open2 && tool.id === 'model' && (
+                    <div className="ml-6 flex flex-col gap-1 max-w-[280px] max-h-[40vh] overflow-y-auto no-scrollbar">
+                      {IS_ARTIFACT ? (
+                        <p className="px-3 py-2 rounded text-[10px]" style={{ background: 'rgb(var(--cd) / 0.95)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c) / 0.75)' }}>{t('Dentro do claude.ai a IA usada é a do próprio claude.ai.')}</p>
+                      ) : !model ? (
+                        <button type="button" onClick={() => { setOpen(false); toggleAiSub('model'); navigate('/definicoes'); setTimeout(() => focusCard('ai-key') || document.getElementById('ai-key')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400); }}
+                          className="px-3 py-2 rounded text-[10px] uppercase tracking-wider text-left" style={{ background: 'rgb(var(--cd) / 0.95)', border: '1px solid #ffaa0088', color: '#ffaa00' }}>
+                          {t('Sem chave de IA: configura-a nas Definições →')}
+                        </button>
+                      ) : aiTools.modelsLoading ? (
+                        <p className="px-3 py-2 rounded text-[10px] uppercase tracking-wider" style={{ background: 'rgb(var(--cd) / 0.95)', border: '1px solid rgb(var(--c) / 0.2)', color: 'rgb(var(--c) / 0.7)' }}>{t('A consultar os modelos da API…')}</p>
+                      ) : (
+                        <>
+                          {aiTools.modelsError && aiTools.modelsError !== 'fallback' && <p className="px-2 text-[9px]" style={{ color: '#ffaa00' }}>{t('Não consegui ler a lista da API: mostro os modelos conhecidos.')}</p>}
+                          {aiTools.availableModels.map((m) => (
+                            <button key={m.id} type="button" onClick={() => { playSelectSound(); onSelectAiModel(m.id); }} aria-pressed={model.model === m.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] text-left"
+                              style={{ background: model.model === m.id ? 'rgb(var(--c) / 0.16)' : 'rgb(var(--cd) / 0.95)', border: `1px solid rgb(var(--c) / ${model.model === m.id ? 0.9 : 0.2})`, color: 'rgb(var(--c))' }}>
+                              {model.model === m.id ? <Check size={11} className="shrink-0" /> : <span className="w-[11px] shrink-0" />}<span className="truncate">{m.label}</span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
             {inPizza && PIZZA_TOOLS.map((tool, index) => {
               const delta = pizza.delta == null ? '' : `${pizza.delta > 0 ? '+' : ''}${pizza.delta.toFixed(1)}`;
               const info = {
@@ -952,7 +1045,7 @@ export default function HotBar() {
                 {tool.id === 'idioma' && <span className="text-[10px] opacity-70">{isEn() ? 'US → PT' : 'PT → US'}</span>}
               </motion.button>
             ))}
-            {!inSettings && !inMap && !inManual && !inFiles && !inMusic && !inGame && !inMeteo && !inStrikes && !inEco && !inWar && !inCyber && !inCat && !inRadio && !inPizza && tabs.map((tab, index) => (
+            {!inSettings && !inMap && !inManual && !inFiles && !inMusic && !inGame && !inMeteo && !inStrikes && !inEco && !inWar && !inCyber && !inCat && !inRadio && !inPizza && !inAi && tabs.map((tab, index) => (
               <motion.button
                 key={tab.id}
                 initial={{ opacity: 0, x: 20 }}
@@ -983,7 +1076,7 @@ export default function HotBar() {
       <motion.button
         onClick={handleToggle}
         whileTap={{ scale: 0.9 }}
-        aria-label={inSettings ? t('Ferramentas rápidas das definições') : inMap ? t('Ferramentas do mapa') : inManual ? t('Ferramentas do manual') : inFiles ? t('Ferramentas da base de conhecimento') : inMusic ? t('Controlo de música') : inGame ? t('Ferramentas do jogo') : inMeteo ? t('Ferramentas da meteorologia') : inStrikes ? t('Ferramentas das greves') : inEco ? t('Ferramentas da economia') : inWar ? t('Ferramentas da guerra') : inCyber ? t('Ferramentas de ciberataques') : inCat ? t('Ferramentas das catástrofes') : inRadio ? t('Ferramentas do rádio') : inPizza ? t('Ferramentas do Índice Pizza') : t('Menu de navegação rápida')}
+        aria-label={inSettings ? t('Ferramentas rápidas das definições') : inMap ? t('Ferramentas do mapa') : inManual ? t('Ferramentas do manual') : inFiles ? t('Ferramentas da base de conhecimento') : inMusic ? t('Controlo de música') : inGame ? t('Ferramentas do jogo') : inMeteo ? t('Ferramentas da meteorologia') : inStrikes ? t('Ferramentas das greves') : inEco ? t('Ferramentas da economia') : inWar ? t('Ferramentas da guerra') : inCyber ? t('Ferramentas de ciberataques') : inCat ? t('Ferramentas das catástrofes') : inRadio ? t('Ferramentas do rádio') : inPizza ? t('Ferramentas do Índice Pizza') : inAi ? t('Ferramentas da IA') : t('Menu de navegação rápida')}
         className="fixed z-50 flex items-center justify-center"
         style={{
           right: '16px',

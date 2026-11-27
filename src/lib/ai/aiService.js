@@ -10,6 +10,7 @@ import { getNetwork, checkNow } from './net';
 import { contextFor, answerLocally, summaryEntry } from './localEngine';
 import { intentOf, styleSamples, isJoke, joke } from './steelPersonaOffline';
 import FORMULA from '@/data/mrsteel/formula.md?raw';
+import { getAiMode } from './aiTools';
 import FORMULA_RESUMO from '@/data/mrsteel/formula-resumo.md?raw';
 import { locale } from '../../i18n';
 
@@ -137,7 +138,8 @@ function describeError(e) {
  * @returns {Promise<{text, followups, refs, source: 'online'|'offline'|'local', notice?}>}
  */
 export async function ask({ question, history = [], onText = () => {}, signal }) {
-  const provider = onlineProvider();
+  // modo "Base local" (menu ≡ > MODO IA): responde sempre com os ficheiros do dispositivo
+  const provider = getAiMode() === 'local' ? null : onlineProvider();
   const net = getNetwork();
   if (net === 'online' && provider) {
     try {
@@ -157,5 +159,6 @@ export async function ask({ question, history = [], onText = () => {}, signal })
     }
   }
   const local = await answerLocally(question, { reason: net !== 'online' ? 'offline' : 'nokey', history });
+  if (getAiMode() === 'local') return { ...local, source: 'local' };
   return { ...local, source: net === 'online' ? 'local' : 'offline' };
 }

@@ -6,7 +6,7 @@ import { fetchWeather } from '@/api/liveData';
 import { useLoc } from '@/location';
 import { t, locale } from '@/i18n';
 import { useSettings } from '@/theme';
-import { useNowPlaying } from '@/audio/useNowPlaying';
+import { useNowPlaying, toggleNowPlaying } from '@/audio/useNowPlaying';
 
 const levelColor = (v) => (v >= 8 ? '#ff0000' : v >= 6 ? '#ff6600' : v >= 4 ? '#ffaa00' : 'rgb(var(--c))');
 
@@ -119,9 +119,15 @@ export default function PipBoyHero({ data }) {
   const mode = test === 'auto' ? auto : test;
   const playingNow = useNowPlaying();
   // formato pedido: "Aba Radio a tocar - [Estação] - [Música]" / "Aba Musica - [Música]"
-  const playingText = !playingNow ? '' : playingNow.kind === 'radio'
-    ? [t('Aba Radio a tocar'), playingNow.station, playingNow.track].filter(Boolean).join(' - ')
-    : [t('Aba Musica'), playingNow.track].filter(Boolean).join(' - ');
+  // formato compacto: "musica on - [faixa]" / "radio on - [estação] - [música]" (ou "pause" em vez de "on")
+  // 2 linhas (como as horas e a data): em cima o estado ("radio on" / "musica pause"),
+  // em baixo "[estação] - [música]" (rádio) ou "[faixa]" (música), numa linha cortada com "…"
+  const onOff = playingNow?.paused ? 'pause' : 'on';
+  const playingState = !playingNow ? '' : `${playingNow.kind === 'radio' ? t('radio') : t('musica')} ${onOff}`;
+  const playingDetail = !playingNow ? '' : playingNow.kind === 'radio'
+    ? [playingNow.station, playingNow.paused ? '' : playingNow.track].filter(Boolean).join(' - ')
+    : playingNow.track || '';
+  const playingText = playingNow ? [playingState, playingDetail].filter(Boolean).join(' - ') : '';
   const date = now.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
 
   return (
@@ -138,10 +144,18 @@ export default function PipBoyHero({ data }) {
         {playingText && (
           <>
             <span aria-hidden="true" className="self-stretch shrink-0" style={{ width: 2, background: '#ffaa00', boxShadow: '0 0 6px #ffaa00, 0 0 12px #ffaa0066', borderRadius: 1 }} />
-            <p className="flex-1 min-w-0 text-right text-xs sm:text-sm tracking-wide leading-snug" aria-live="polite" title={playingText}
-              style={{ color: '#ffaa00', textShadow: '0 0 6px #ffaa0088', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>
-              <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle animate-pulse" style={{ background: '#ffaa00' }} />{playingText}
-            </p>
+            {/* toque = Play / Pause da fonte ativa (Música ou Rádio); 2 linhas alinhadas à direita */}
+            <button type="button" onClick={() => toggleNowPlaying(playingNow)} title={playingText}
+              aria-label={`${playingText}. ${playingNow.paused ? t('Tocar') : t('Pausar')}`}
+              className="flex-1 min-w-0 self-stretch flex flex-col justify-center items-end gap-0.5 text-right cursor-pointer"
+              style={{ color: '#ffaa00', textShadow: '0 0 10px #ffaa0066' }}> {/* mesma cor e brilho do "Nível de ameaça global" */}
+              <span className="flex items-center gap-1.5 max-w-full text-base sm:text-xl font-bold tracking-wider leading-none" aria-live="polite"
+>
+                <span className={`shrink-0 w-2 h-2 rounded-full ${playingNow.paused ? '' : 'animate-pulse'}`} style={{ background: playingNow.paused ? '#ffaa0040' : '#ffaa00', boxShadow: playingNow.paused ? 'none' : '0 0 6px #ffaa00' }} />
+                <span className="truncate">{playingState}</span>
+              </span>
+              {playingDetail && <span className="block max-w-full truncate text-[11px] sm:text-sm tracking-wider">{playingDetail}</span>}
+            </button>
           </>
         )}
       </div>

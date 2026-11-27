@@ -260,7 +260,11 @@ export function mountVinylPlayer(root) {
     reportMusic({ isPlaying: playing(), track: tracks[current]?.name || null, hasTracks: tracks.length > 0 });
     // painel principal: "Aba Musica - [Nome da Música]" enquanto toca
     const key = playing() ? tracks[current]?.name || '' : '';
-    if (key !== lastAnn) { lastAnn = key; window.dispatchEvent(new CustomEvent('pb-now-playing', { detail: { kind: 'music', playing: !!key, track: key } })); }
+    if (key !== lastAnn) {
+      lastAnn = key;
+      // a tocar -> faixa; em pausa -> o Painel mostra "musica pause"; sem faixas -> limpa o widget
+      window.dispatchEvent(new CustomEvent('pb-now-playing', { detail: { kind: 'music', playing: !!key, track: key || tracks[current]?.name || '', clear: !tracks.length } }));
+    }
   };
 
   async function addFiles(fileList) {

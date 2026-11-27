@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { onAiTool, useAiTools } from '@/lib/ai/aiTools';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUp, Square, Trash2, Copy, Check, FileText, BookOpen, LayoutGrid, Settings, Plus, SquarePen, X, MessageSquare } from 'lucide-react';
 import { ask, onlineProvider, providerName } from '@/lib/ai/aiService';
@@ -113,7 +114,8 @@ export default function SurvivalAITab() {
   const navigate = useNavigate();
   const net = useNetwork();
   const cfg = useAiConfig(); // volta a desenhar quando a chave muda
-  const provider = useMemo(() => onlineProvider(), [cfg]); // eslint-disable-line react-hooks/exhaustive-deps
+  const aiTools = useAiTools(); // modo Base local / IA completa (menu ≡)
+  const provider = useMemo(() => (aiTools.aiMode === 'local' ? null : onlineProvider()), [cfg, aiTools.aiMode]); // eslint-disable-line react-hooks/exhaustive-deps
   const [convs, setConvs] = useState(loadConvs);
   const [activeId, setActiveId] = useState(() => convs[0]?.id || uid());
   const [showList, setShowList] = useState(false);
@@ -196,6 +198,15 @@ export default function SurvivalAITab() {
   const history = convs.filter((c) => c.messages.length);
   const newChat = () => { setActiveId(uid()); setShowList(false); setTimeout(() => taRef.current?.focus(), 50); };
   const openConv = (id) => { setActiveId(id); setShowList(false); };
+  // Menu ≡ da aba IA: novo chat, histórico (gaveta no telemóvel / foco na barra lateral) e limpar a conversa atual
+  const toolRef = useRef(null);
+  toolRef.current = (id) => {
+    if (busyId && id !== 'history') return;
+    if (id === 'new') newChat();
+    else if (id === 'history') { setShowList((v) => !v); document.querySelector('.ai-side')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    else if (id === 'clear') { setMessages([]); setTimeout(() => taRef.current?.focus(), 50); }
+  };
+  useEffect(() => onAiTool((id) => toolRef.current(id)), []);
   const delConv = (id) => { setConvs((prev) => prev.filter((x) => x.id !== id)); if (id === activeId) setActiveId(uid()); };
 
   return (
