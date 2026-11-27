@@ -196,15 +196,28 @@ export default function SurvivalAITab() {
   const empty = messages.length === 0;
 
   const history = convs.filter((c) => c.messages.length);
-  const newChat = () => { setActiveId(uid()); setShowList(false); setTimeout(() => taRef.current?.focus(), 50); };
+  // Novo chat: cria sempre uma conversa nova (mesmo a meio de uma resposta, que é interrompida e fica guardada
+  // na conversa anterior), limpa a caixa de texto, volta ao topo e confirma com um aviso curto.
+  const [notice, setNotice] = useState('');
+  const noticeTimer = useRef(null);
+  const newChat = () => {
+    ctrlRef.current?.abort();
+    setActiveId(uid());
+    setInput('');
+    setShowList(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setNotice(t('✔ Novo chat criado'));
+    clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(''), 2500);
+    setTimeout(() => taRef.current?.focus(), 50);
+  };
+  useEffect(() => () => clearTimeout(noticeTimer.current), []);
   const openConv = (id) => { setActiveId(id); setShowList(false); };
-  // Menu ≡ da aba IA: novo chat, histórico (gaveta no telemóvel / foco na barra lateral) e limpar a conversa atual
+  // Menu ≡ da aba IA: novo chat e histórico (gaveta no telemóvel / foco na barra lateral)
   const toolRef = useRef(null);
   toolRef.current = (id) => {
-    if (busyId && id !== 'history') return;
     if (id === 'new') newChat();
     else if (id === 'history') { setShowList((v) => !v); document.querySelector('.ai-side')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-    else if (id === 'clear') { setMessages([]); setTimeout(() => taRef.current?.focus(), 50); }
   };
   useEffect(() => onAiTool((id) => toolRef.current(id)), []);
   const delConv = (id) => { setConvs((prev) => prev.filter((x) => x.id !== id)); if (id === activeId) setActiveId(uid()); };
@@ -219,7 +232,7 @@ export default function SurvivalAITab() {
           <span className="text-[11px] uppercase tracking-wider font-bold">{t('Conversas')}</span>
           <button type="button" onClick={() => setShowList(false)} aria-label={t('Fechar')} className="p-1"><X size={16} /></button>
         </div>
-        <button type="button" disabled={!!busyId} onClick={newChat} className={`ai-side-new ${empty ? 'active' : ''}`}>
+        <button type="button" onClick={newChat} className={`ai-side-new ${empty ? 'active' : ''}`}>
           <SquarePen size={16} />{' '}{t('Novo chat')}
         </button>
         <p className="ai-side-label">{t('Recentes')}</p>
@@ -249,13 +262,18 @@ export default function SurvivalAITab() {
             <MessageSquare size={12} />{' '}{t('Conversas')}
           </button>
           {!empty && (
-            <button type="button" disabled={!!busyId} onClick={newChat} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider disabled:opacity-40" style={{ color: 'rgb(var(--c) / 0.7)' }}>
+            <button type="button" onClick={newChat} className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider disabled:opacity-40" style={{ color: 'rgb(var(--c) / 0.7)' }}>
               <Plus size={12} />{' '}{t('Novo chat')}
             </button>
           )}
         </div>
       </div>
 
+      {notice && (
+        <div role="status" className="mb-3 px-3 py-2 rounded-sm text-[11px] uppercase tracking-wider" style={{ border: '1px solid rgb(var(--c) / 0.5)', background: 'rgb(var(--c) / 0.08)', color: 'rgb(var(--c))' }}>
+          {notice}
+        </div>
+      )}
       <div className="ai-thread flex-1">
         {empty ? (
           <div className="ai-empty">

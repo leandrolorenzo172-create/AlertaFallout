@@ -57,10 +57,9 @@ export function onSelectAiModel(id) {
   set({ sub: null });
 }
 
-// Ações na aba (a aba ouve estes eventos): novo chat, histórico, limpar conversa
+// Ações na aba (a aba ouve estes eventos): novo chat e histórico
 const EVT = 'steeldeck:ai-tool';
 const send = (id) => window.dispatchEvent(new CustomEvent(EVT, { detail: id }));
 export const onNewChat = () => send('new');
 export const onToggleHistory = () => send('history');
-export const onClearConversation = () => send('clear');
 export function onAiTool(handler) { const fn = (e) => handler(e.detail); window.addEventListener(EVT, fn); return () => window.removeEventListener(EVT, fn); }

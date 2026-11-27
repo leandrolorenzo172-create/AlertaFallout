@@ -10,6 +10,7 @@ export default {
   "Lido até {u} {p}": "Read up to {u} {p}",
   "Por ler": "Unread",
   "Novo chat": "New chat",
+  "✔ Novo chat criado": "✔ New chat created",
   "Recentes": "Recent",
   "Fechar conversas": "Close conversations",
   "Fechar": "Close",

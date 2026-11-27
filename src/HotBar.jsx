@@ -4,10 +4,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2, TrendingDown, Megaphone, ShieldAlert, Info, Languages, BellRing, Send, RotateCcw, LocateFixed, Layers, Ruler, Footprints, RefreshCw, ArrowUpToLine, Filter, ArrowDownUp, StickyNote, FilePlus, Trash2, Play, Pause, SkipForward, SkipBack, SlidersHorizontal, AudioLines, Shuffle, RotateCw, Volume2, VolumeX, Maximize, Trophy, HelpCircle, ChevronsDown, Anchor, CalendarDays, ChevronRight, Check, Siren, Tag, Search, LineChart, BarChart3, PlusCircle, Globe, Calculator } from 'lucide-react';
 import { useRadioRemote, onToggleRadio, onNextStation, onPrevStation, onToggleRecordMp3, requestRadioState } from './audio/radioRemote';
 import { Power, Circle } from 'lucide-react';
-import { useAiTools, onNewChat, onToggleHistory, onToggleAiMode, onClearConversation, toggleAiSub, selectedModel, loadAvailableModels, onSelectAiModel } from './lib/ai/aiTools';
+import { useAiTools, onNewChat, onToggleHistory, onToggleAiMode, toggleAiSub, selectedModel, loadAvailableModels, onSelectAiModel } from './lib/ai/aiTools';
 import { useAiConfig } from './lib/ai/config';
 import { IS_ARTIFACT } from './api/base44Client';
-import { SquarePen, History, BrainCog, Eraser, Cpu, Database } from 'lucide-react';
+import { SquarePen, History, BrainCog, Cpu } from 'lucide-react';
 import { usePizzaTools, onRefreshPizzaIndex, onTogglePizzaAlert, PIZZA_PEAK, PIZZA_SOURCES_ID } from './pizza/pizzaTools';
 import { Newspaper } from 'lucide-react';
 import { useCatTools, toggleActiveOnly, openProtocol, cycleCatFilter, openCatSearch, onRefreshCat, CAT_FILTERS } from './catastrophe/catTools';
@@ -188,13 +188,11 @@ export const PIZZA_TOOLS = [
   { id: 'alert', label: 'Alerta', icon: Siren },
 ];
 
-// Na aba IA (MR. STEEL), o menu ≡ gere a conversa, o modo e o modelo de IA (src/lib/ai/aiTools.js)
+// Na aba IA (MR. STEEL), o menu ≡ cria um chat novo, abre o histórico e muda o modo e o modelo de IA (src/lib/ai/aiTools.js)
 export const AI_TOOLS = [
   { id: 'new', label: 'Novo chat', icon: SquarePen },
   { id: 'history', label: 'Histórico', icon: History },
   { id: 'mode', label: 'Modo IA', icon: BrainCog },
-  { id: 'kb', label: 'Base de conhecimento', icon: Database },
-  { id: 'clear', label: 'Limpar conversa', icon: Eraser },
   { id: 'model', label: 'Modelo IA', icon: Cpu, sub: true },
 ];
 
@@ -235,8 +233,6 @@ export default function HotBar() {
   const aiTools = useAiTools();
   useAiConfig(); // volta a desenhar quando a chave ou o modelo mudam
   const model = selectedModel();
-  // onOpenKnowledgeBase: abre a aba FICHEIROS (documentos que a IA consulta)
-  const onOpenKnowledgeBase = () => navigate('/conhecimento');
   const runAiTool = (tool) => {
     playSelectSound();
     if (tool.id === 'mode') { onToggleAiMode(); return; }                  // fica aberto: mostra o modo novo
@@ -247,8 +243,6 @@ export default function HotBar() {
     setOpen(false);
     if (tool.id === 'new') onNewChat();
     else if (tool.id === 'history') onToggleHistory();
-    else if (tool.id === 'kb') onOpenKnowledgeBase();
-    else if (tool.id === 'clear') onClearConversation();
   };
   const pizza = usePizzaTools();
   const pizzaPeak = (pizza.level || 0) >= PIZZA_PEAK;
