@@ -23,6 +23,7 @@ import KnowledgeFilesTab from './tabs/KnowledgeFilesTab';
 import SurvivalManualTab from './tabs/SurvivalManualTab';
 import BragaMapTab from './tabs/BragaMapTab';
 import SettingsTab from './tabs/SettingsTab';
+import IduTab from './tabs/IduTab';
 import { t, useLang } from '@/i18n';
 
 // Separadores cujos dados vêm da IA sem acesso à internet (não são dados reais)
@@ -64,6 +65,7 @@ export default function App() {
     conhecimento: <KnowledgeFilesTab />,
     manual: <SurvivalManualTab />,
     mapa: <BragaMapTab />,
+    idu: <IduTab />,
     definicoes: <SettingsTab />,
   };
 

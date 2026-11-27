@@ -4,6 +4,7 @@ import { THEMES, useSettings, setSettings, resetSettings, orderTabs } from '../t
 import { TABS } from '../HotBar';
 import NotificationsTab from './NotificationsTab';
 import AiSettings from '../pipboy/AiSettings';
+import BackupSection from '../backup/BackupSection';
 import { t, LANGS, useLang } from '@/i18n';
 import { LOCATIONS, useLoc, locMode, setLocManual, detectLocation } from '@/location';
 import { useNetwork } from '@/lib/ai/net';
@@ -250,6 +251,9 @@ export default function SettingsTab() {
       </section>
 
       <AiSettings />
+
+      {/* Cópia de segurança: exportar / enviar por email / importar tudo */}
+      <BackupSection />
 
       {/* Notificações (antigo separador Alertas) */}
       <section id={CARD_IDS.notificacoes} className="rounded-sm" style={box}>

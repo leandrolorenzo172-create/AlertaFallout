@@ -10,7 +10,8 @@ const KEY = 'sd_map_layer';
 let state = {
   mode: null, // null | 'pin' | 'measure' | 'route' (rota a pé no mapa online)
   layer: (() => { try { const v = localStorage.getItem(KEY); return LAYERS.includes(v) ? v : 'road'; } catch { return 'road'; } })(),
-  route: false, // painel da rota a pé offline aberto
+  route: false, // painel da rota a pé offline (mapa esquemático) aberto
+  offlinePanel: false, // painel "Mapas offline" (guardar áreas, pacote PMTiles, espaço)
 };
 const listeners = new Set();
 const emit = () => listeners.forEach((l) => l());
@@ -27,6 +28,7 @@ export function nextLayer() {
   try { localStorage.setItem(KEY, layer); } catch { /* sem armazenamento */ }
   set({ layer });
 }
+export const openOfflinePanel = (open = true) => set({ offlinePanel: open });
 export function openRoute(open = true) { set({ route: open, mode: open ? null : state.mode }); }
 
 // Ações pontuais (centrar posição): o mapa ouve este evento dentro do MapContainer

@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Polyline, CircleMarker, Circle } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Trash2, X, Palette, Save, Crosshair, Ruler, Undo2, Footprints, Layers } from 'lucide-react';
-import { useMapTools, setMode, openRoute, onMapAction, LAYER_LABEL } from '@/map/mapTools';
+import { useMapTools, setMode, openRoute, openOfflinePanel, onMapAction, LAYER_LABEL } from '@/map/mapTools';
 import { useNetwork } from '@/lib/ai/net';
 import ROTA_HTML from '@/map/rota-offline.html?raw';
 import { walkRoute } from '@/map/walkRoute';
+import OfflineTileLayer from '@/map/offline/OfflineTileLayer';
+import OfflineMapsPanel from '@/map/offline/OfflineMapsPanel';
+import { routeOffline } from '@/map/offline/offlineRouting';
+import { elevationProfile, naismithMinutes, getElevation } from '@/map/offline/elevation';
+import { useTracker, clearTrail } from '@/map/offline/tracker';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { alpha } from '../theme';
@@ -41,6 +46,15 @@ const TILES = {
 };
 
 // Cliques no mapa: só fazem alguma coisa no modo ativo (pinos ou medição), para não haver conflitos
+// Dá ao separador acesso ao mapa (área visível para "Guardar esta área", voar para zonas, seguir o GPS)
+function MapBridge({ mapRef }) { const map = useMap(); useEffect(() => { mapRef.current = map; }, [map, mapRef]); return null; }
+// Marcador da posição atual: ponto verde com seta da direção (bússola / movimento)
+const headingIcon = (deg) => L.divIcon({
+  className: 'sd-gps',
+  html: `<div style="position:relative;width:26px;height:26px">${deg != null ? `<div style="position:absolute;left:8px;top:-6px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid #22c55e;transform-origin:5px 19px;transform:rotate(${deg}deg);filter:drop-shadow(0 0 3px #22c55e)"></div>` : ''}<div style="position:absolute;left:6px;top:6px;width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid #0d0b08;box-shadow:0 0 8px #22c55e"></div></div>`,
+  iconSize: [26, 26], iconAnchor: [13, 13],
+});
+
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
     click(e) {
@@ -93,12 +107,29 @@ export default function BragaMapTab() {
   const [routePts, setRoutePts] = useState([]);
   const [route, setRoute] = useState(null);   // { path, meters, minutes, online }
   const [routing, setRouting] = useState(false);
+  // 1.º malha offline guardada (A*); 2.º serviço online (OSRM a pé); 3.º linha reta. Depois: perfil de altitude e Naismith.
   const calcRoute = React.useCallback(async (pts) => {
     if (pts.length < 2) { setRoute(null); return; }
     setRouting(true);
-    const r = await walkRoute(pts[0], pts[1]);
-    setRouting(false); setRoute(r);
+    let r; const off = await routeOffline(pts[0], pts[1]).catch(() => ({ error: 'erro' }));
+    if (off.path) r = { path: off.path, meters: off.meters, source: 'offline', online: true };
+    else { const w = await walkRoute(pts[0], pts[1]); r = { ...w, source: w.online ? 'osrm' : 'straight' }; }
+    const profile = await elevationProfile(r.path, { online: navigator.onLine !== false }).catch(() => null);
+    setRouting(false); setRoute({ ...r, profile, minutes: naismithMinutes(r.meters, profile) });
   }, []);
+  // altitude no ponto atual (GPS; se o GPS não der altitude, usa o relevo guardado)
+  const tracker = useTracker();
+  const [demAlt, setDemAlt] = useState(null);
+  useEffect(() => { if (tracker.pos && tracker.pos.alt == null) getElevation(tracker.pos.lat, tracker.pos.lng, { online: navigator.onLine !== false }).then(setDemAlt).catch(() => {}); }, [tracker.pos?.lat, tracker.pos?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const curAlt = tracker.pos?.alt != null ? Math.round(tracker.pos.alt) : demAlt != null ? Math.round(demAlt) : null;
+  const mapRef = React.useRef(null);
+  const followed = React.useRef(false);
+  useEffect(() => {
+    if (!tracker.tracking) { followed.current = false; return; }
+    if (tracker.pos && mapRef.current && !followed.current) { followed.current = true; mapRef.current.flyTo([tracker.pos.lat, tracker.pos.lng], Math.max(mapRef.current.getZoom(), 16)); }
+  }, [tracker.tracking, tracker.pos]);
+  const viewBbox = () => { const b = mapRef.current?.getBounds(); return b ? { s: b.getSouth(), w: b.getWest(), n: b.getNorth(), e: b.getEast() } : { s: 41.52, w: -8.47, n: 41.58, e: -8.37 }; };
+  const flyTo = (b) => mapRef.current?.flyToBounds([[b.s, b.w], [b.n, b.e]], { duration: 0.8 });
   const [userPos, setUserPos] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = React.useRef(null);
@@ -111,7 +142,7 @@ export default function BragaMapTab() {
     if (tools.mode !== 'route') { setRoutePts([]); setRoute(null); }
   }, [tools.mode]);
   // sair do separador desliga os modos
-  useEffect(() => () => { setMode(null); openRoute(false); }, []);
+  useEffect(() => () => { setMode(null); openRoute(false); openOfflinePanel(false); }, []);
   const measured = measure.reduce((sum, p, i) => (i ? sum + L.latLng(measure[i - 1]).distanceTo(L.latLng(p)) : 0), 0);
 
   useEffect(() => {
@@ -199,7 +230,14 @@ export default function BragaMapTab() {
           style={{ height: '100%', width: '100%', cursor: tools.mode ? 'crosshair' : undefined }}
           zoomControl={false}
         >
-          <TileLayer key={tools.layer} url={TILES[tools.layer].url} maxZoom={TILES[tools.layer].max} attribution={TILES[tools.layer].attribution} />
+          {tools.layer === 'sat'
+            ? <TileLayer key="sat" url={TILES.sat.url} maxZoom={TILES.sat.max} attribution={TILES.sat.attribution} />
+            : <OfflineTileLayer key={tools.layer} offlineLayer={tools.layer} url={tools.layer === 'road' ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' : TILES.terrain.url} maxZoom={TILES[tools.layer].max} attribution={TILES[tools.layer].attribution} />}
+          <MapBridge mapRef={mapRef} />
+          {/* rasto GPS e posição atual com direção e precisão */}
+          {tracker.trail.length > 1 && <Polyline positions={tracker.trail.map((p) => [p[0], p[1]])} pathOptions={{ color: '#22c55e', weight: 4, opacity: 0.85 }} />}
+          {tracker.pos && <Circle center={[tracker.pos.lat, tracker.pos.lng]} radius={tracker.pos.acc} pathOptions={{ color: '#22c55e', weight: 1, fillOpacity: 0.08 }} />}
+          {tracker.pos && <Marker position={[tracker.pos.lat, tracker.pos.lng]} icon={headingIcon(tracker.heading)} interactive={false} />}
           <MapClickHandler onMapClick={handleMapClick} />
           <LocateControl onPos={setUserPos} onMsg={onMsg} />
           {userPos && (
@@ -253,6 +291,20 @@ export default function BragaMapTab() {
             <button type="button" onClick={() => setMode(null)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
           </div>
         )}
+        {tracker.tracking && tools.mode !== 'route' && tools.mode !== 'measure' && tools.mode !== 'pin' && (
+          <div className="absolute left-2 right-2 top-2 z-[1050] px-3 py-2 rounded-sm text-[11px]" style={hud}>
+            <p className="font-bold tabular-nums">
+              {tracker.pos ? `📍 ±${Math.round(tracker.pos.acc)} m${curAlt != null ? ` · ${t('alt.')} ${curAlt} m` : ''}${tracker.heading != null ? ` · ${tracker.heading}°` : ''}${tracker.pos.speed > 0.3 ? ` · ${(tracker.pos.speed * 3.6).toFixed(1)} km/h` : ''}` : t('A procurar sinal GPS…')}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: tracker.error ? '#ef4444' : 'rgb(var(--c) / 0.6)' }}>
+              {tracker.error || t('Rasto: {d} · {n} pontos · funciona em modo avião', { d: tracker.distance >= 1000 ? `${(tracker.distance / 1000).toFixed(2)} km` : `${Math.round(tracker.distance)} m`, n: tracker.trail.length })}
+            </p>
+            <div className="flex gap-2 mt-1.5">
+              <button type="button" disabled={!tracker.pos} onClick={() => mapRef.current?.flyTo([tracker.pos.lat, tracker.pos.lng], Math.max(mapRef.current.getZoom(), 16))} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}>{t('Centrar')}</button>
+              <button type="button" disabled={!tracker.trail.length} onClick={clearTrail} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}>{t('Apagar rasto')}</button>
+            </div>
+          </div>
+        )}
         {tools.mode === 'route' && (
           <div className="absolute left-2 right-2 top-2 z-[1050] px-3 py-2 rounded-sm text-[11px]" style={hud}>
             <div className="flex items-center gap-2">
@@ -263,12 +315,22 @@ export default function BragaMapTab() {
                     : routePts.length === 1 ? t('ROTA: toca no ponto B.') : t('ROTA: toca no ponto A e depois no B.')}
               </span>
             </div>
-            {route && !route.online && <p className="mt-1 text-[10px]" style={{ color: '#ef4444' }}>{t('Sem ligação ao serviço de rotas: distância em linha reta (tracejado). Para rotas sem rede usa a Rota offline.')}</p>}
-            {route && route.online && <p className="mt-1 text-[10px]" style={{ color: 'rgb(var(--c) / 0.55)' }}>{t('Caminho a pé pelas ruas do OpenStreetMap (OSRM) · tempo a 4,8 km/h')}</p>}
+            {route?.profile && (
+              <p className="mt-1 text-[11px] font-bold tabular-nums">
+                ▲ D+ {Math.round(route.profile.up)} m · ▼ D− {Math.round(route.profile.down)} m · {t('máx.')} {Math.round(route.profile.max)} m{curAlt != null ? ` · ${t('atual')} ${curAlt} m` : ''}
+              </p>
+            )}
+            {route && (
+              <p className="mt-1 text-[10px]" style={{ color: route.source === 'straight' ? '#ef4444' : 'rgb(var(--c) / 0.55)' }}>
+                {route.source === 'offline' ? t('Rota offline pelos caminhos guardados (OpenStreetMap)') : route.source === 'osrm' ? t('Rota online pelas ruas do OpenStreetMap (OSRM)') : t('Sem rota pelos caminhos (zona não guardada e sem rede): distância em linha reta (tracejado).')}
+                {' · '}{route.profile ? t('tempo pela regra de Naismith (com desnível)') : t('tempo a 5 km/h (sem dados de relevo)')}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2 mt-2">
               <button type="button" disabled={!routePts.length} onClick={() => { const n = routePts.slice(0, -1); setRoutePts(n); calcRoute(n); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Undo2 size={11} />{t('Desfazer')}</button>
               <button type="button" disabled={!routePts.length} onClick={() => { setRoutePts([]); setRoute(null); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Trash2 size={11} />{t('Limpar')}</button>
-              <button type="button" onClick={() => openRoute(true)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Rota offline')}</button>
+              <button type="button" disabled={!tracker.pos} onClick={() => { const p = { lat: tracker.pos.lat, lng: tracker.pos.lng }; const n = routePts.length >= 1 ? [p, routePts[routePts.length - 1]] : [p]; setRoutePts(n); calcRoute(n); }} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}>{t('Partir do GPS')}</button>
+              <button type="button" onClick={() => openRoute(true)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Esquemático')}</button>
               <button type="button" onClick={() => setMode(null)} className="ml-auto px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
             </div>
           </div>
@@ -422,6 +484,7 @@ export default function BragaMapTab() {
         </div>
       )}
 
+      {tools.offlinePanel && <OfflineMapsPanel getViewBbox={viewBbox} defaultLayer={tools.layer} onFly={flyTo} onClose={() => openOfflinePanel(false)} />}
       {/* ROTA: aplicação de rota a pé 100% offline (ficheiro único src/map/rota-offline.html, em iframe isolado) */}
       <AnimatePresence>
         {tools.route && (
