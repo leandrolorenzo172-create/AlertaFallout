@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus, FilePlus, Trash2, Power, FileText, BrainCircuit, Search, BookOpen, Bot, ScrollText, RotateCcw } from 'lucide-react';
-import { ACCEPT, importFile, listDocs, updateDoc, deleteDoc, searchDocs, requestOpen, refOf, onKbChange } from '@/lib/kb';
+import { ACCEPT, importFile, listDocs, updateDoc, deleteDoc, searchDocs, requestOpen, refOf, onKbChange, getFile } from '@/lib/kb';
 import { manualSections } from '@/data/survivalManual';
 import { DEFAULT_INSTRUCTIONS, getState, getCustomText, parseInstructionFile, findRisks, diffLines, applyVersion, activate } from '@/lib/aiInstructions';
 import { t, locale } from '@/i18n';
@@ -13,6 +13,14 @@ const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c
 const btn = { background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.35)', color: 'rgb(var(--c))' };
 const norm = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const sizeLabel = (kb) => (kb < 1024 ? `${Math.round(kb)} KB` : `${(kb / 1024).toFixed(1)} MB`);
+
+// Gravações (aba RÁDIO > REC): leitor de áudio que só carrega o ficheiro quando se toca em ▶
+function AudioDoc({ id }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  if (!url) return <button type="button" onClick={async () => { const f = await getFile(id); if (f) setUrl(URL.createObjectURL(f)); }} className="mt-2 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={btn}>▶ {t('Ouvir gravação')}</button>;
+  return <audio src={url} controls autoPlay className="w-full mt-2" style={{ height: 32 }} />;
+}
 
 export default function KnowledgeFilesTab() {
   const navigate = useNavigate();
@@ -166,6 +174,7 @@ export default function KnowledgeFilesTab() {
               <button type="button" onClick={() => updateDoc(d.id, { enabled: d.enabled === false })} aria-pressed={d.enabled !== false} aria-label={`${d.enabled === false ? t('Ativar') : t('Desativar')} ${d.title}`} className="p-1.5 rounded-sm" style={btn}><Power size={13} /></button>
               <button type="button" onClick={() => setConfirmDel(d.id)} aria-label={`Remover ${d.title}`} className="p-1.5 rounded-sm" style={{ ...btn, color: '#ff6666', borderColor: '#ff666666' }}><Trash2 size={13} /></button>
             </div>
+            {d.category === 'Áudio' && <AudioDoc id={d.id} />}
             {confirmDel === d.id && (
               <div className="mt-2 p-2 rounded-sm text-[11px]" style={{ background: '#ff000011', border: '1px solid #ff666666', color: '#ff8888' }}>
                 {t('Remover apaga o ficheiro, o índice de pesquisa, os marcadores e o histórico de leitura deste documento.')}

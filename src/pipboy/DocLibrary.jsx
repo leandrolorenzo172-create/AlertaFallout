@@ -492,7 +492,7 @@ export default function DocLibrary() {
 
   const load = useCallback(async () => {
     const list = await listDocs().catch(() => []);
-    setDocs(shelfOrder(list));
+    setDocs(shelfOrder(list.filter((d) => d.category !== 'Áudio'))); // gravações não são livros: ficam só em FICHEIROS
   }, []);
   useEffect(() => {
     ensureSample().then(load); ensureGuide().then(load);

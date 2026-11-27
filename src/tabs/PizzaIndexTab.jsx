@@ -5,6 +5,8 @@ import { Loader2, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-reac
 import ThreatGauge from '../pipboy/ThreatGauge';
 import { alpha } from '../theme';
 import { t } from '@/i18n';
+import { invalidateNews } from '@/api/liveData';
+import { usePizzaTools, reportPizza, onPizzaRefresh, PIZZA_PEAK, PIZZA_SOURCES_ID } from '@/pizza/pizzaTools';
 
 const CACHE_KEY = 'pipboy_pizza_index_v1';
 const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
@@ -30,6 +32,8 @@ export default function PizzaIndexTab() {
 
     setLoading(true);
     setError(null);
+    if (force) invalidateNews(); // ATUALIZAR ÍNDICE: lê as notícias mais recentes, sem a cópia em memória
+    reportPizza({ loading: true });
 
     try {
       const result = await base44.integrations.Core.InvokeLLM({
@@ -68,7 +72,12 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       }
     });
     
-      setData(result);
+      setData((prev) => {
+        // variação face à leitura anterior (para o menu ≡)
+        const before = prev?.current_level;
+        reportPizza({ level: result.current_level, delta: before != null && result.current_level != null ? Math.round((result.current_level - before) * 10) / 10 : null, lastSync: Date.now() });
+        return result;
+      });
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result }));
       } catch (err) {
@@ -90,10 +99,21 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
       }
     } finally {
       setLoading(false);
+      reportPizza({ loading: false });
     }
   };
 
   useEffect(() => { fetchData(); }, []);
+  const refreshRef = React.useRef(fetchData); refreshRef.current = fetchData;
+  useEffect(() => onPizzaRefresh(() => refreshRef.current(true)), []); // menu ≡ > ATUALIZAR ÍNDICE
+  const tools = usePizzaTools();
+  useEffect(() => { if (data?.current_level != null) reportPizza({ level: data.current_level }); }, [data]);
+  // alerta de pico: com o modo ativo e o índice no limiar, notifica uma vez por leitura (se as notificações estiverem autorizadas)
+  const peak = (data?.current_level || 0) >= PIZZA_PEAK;
+  useEffect(() => {
+    if (!tools.isPizzaAlertActive || !peak || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    try { new Notification(t('🍕 Alerta de pico do Índice Pizza'), { body: t('O índice está em {v}/10 (limiar {l}).', { v: data.current_level.toFixed(1), l: PIZZA_PEAK }) }); } catch { /* sem notificações */ }
+  }, [tools.isPizzaAlertActive, peak, data?.current_level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getTrendIcon = () => {
     if (!data?.trend) return Minus;
@@ -102,7 +122,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
     return Minus;
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex flex-col items-center py-12">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
@@ -153,10 +173,17 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
             {t('Índice Pizza')}
           </h2>
         </div>
-        <button onClick={() => fetchData(true)} className="p-2 rounded-sm hover:bg-white/5" style={{ color: 'rgb(var(--c) / 0.53)' }}>
-          <RefreshCw size={14} />
+        <button onClick={() => fetchData(true)} aria-label={t('Atualizar índice')} className="p-2 rounded-sm hover:bg-white/5" style={{ color: 'rgb(var(--c) / 0.53)' }}>
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
+
+      {/* Alerta de pico (menu ≡ > ALERTA): só com o modo ativo e o índice no limiar */}
+      {tools.isPizzaAlertActive && (
+        <div role="status" className={`p-2.5 rounded-sm mb-3 text-[11px] ${peak ? 'animate-pulse' : ''}`} style={{ background: peak ? '#ff000018' : 'rgb(var(--cd) / 0.3)', border: `1px solid ${peak ? '#ff0000aa' : 'rgb(var(--c) / 0.25)'}`, color: peak ? '#ff6666' : 'rgb(var(--c) / 0.7)' }}>
+          {peak ? t('🚨 ALERTA DE PICO: índice em {v}/10, acima do limiar de {l}.', { v: (data?.current_level || 0).toFixed(1), l: PIZZA_PEAK }) : t('Alerta de pico ativo: avisa quando o índice chegar a {l}/10.', { l: PIZZA_PEAK })}
+        </div>
+      )}
 
       {error && (
         <div className="p-2.5 rounded-sm mb-3" style={{ background: '#ffaa0011', border: '1px solid #ffaa0033' }}>
@@ -195,7 +222,7 @@ Fornece uma análise atualizada com data ${new Date().toISOString().split('T')[0
 
       {/* Current indicators */}
       {data?.current_indicators?.length > 0 && (
-        <div className="mb-4">
+        <div id={PIZZA_SOURCES_ID} className="mb-4 rounded-sm scroll-mt-20">
           <h3 className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c) / 0.53)' }}>
             {t('Indicadores Atuais')}
           </h3>

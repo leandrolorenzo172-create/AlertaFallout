@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Loader2, Search, X } from 'lucide-react';
+import { invalidateNews } from '@/api/liveData';
+import { plainText } from '@/lib/plainText';
+import { useCatTools, reportCat, onCatRefresh, ACTIVE_SEV, CAT_FILTERS, setCatQuery, openCatSearch, catFiltered, clearCatFilters } from '@/catastrophe/catTools';
+import EmergencyProtocol from '@/catastrophe/EmergencyProtocol';
 import NewsCard from '../pipboy/NewsCard';
 import { t, locale } from '@/i18n';
 
@@ -24,9 +28,10 @@ export default function CatastropheTab() {
         return;
       }
 
-      if (isRefresh) setRefreshing(true);
+      if (isRefresh) { setRefreshing(true); invalidateNews(); }
       else setLoading(true);
       setError(null);
+      reportCat({ loading: true });
       
       const data = await base44.integrations.Core.InvokeLLM({
       prompt: `Fornece as 8 catástrofes naturais e desastres mais recentes a nível global. Data atual: ${new Date().toISOString().split('T')[0]}. Inclui terramotos, tsunamis, erupções vulcânicas, furacões, inundações, incêndios florestais, etc. Para cada dá severidade de 1-10.`,
@@ -64,6 +69,7 @@ export default function CatastropheTab() {
       setLoading(false);
       setRefreshing(false);
       setIsOffline(false);
+      reportCat({ loading: false, lastSync: Date.now() });
     } catch (err) {
       // Try to load from cache on error
       const cached = localStorage.getItem('catastrophe_cache');
@@ -76,6 +82,7 @@ export default function CatastropheTab() {
       }
       setLoading(false);
       setRefreshing(false);
+      reportCat({ loading: false });
     }
   };
 
@@ -106,8 +113,28 @@ export default function CatastropheTab() {
     };
   }, [error]);
 
+  // ---------- Menu ≡: alertas ativos, gravidade/tipo, pesquisa e protocolo ----------
+  const tools = useCatTools();
+  const refreshRef = useRef(fetchData); refreshRef.current = fetchData;
+  useEffect(() => onCatRefresh(() => refreshRef.current(true)), []);
+  const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // texto limpo (sem <p>, <br>…) antes de mostrar ou filtrar
+  const clean = useMemo(() => articles.map((a) => {
+    const title = plainText(a.title); const summary = plainText(a.summary);
+    return { ...a, title, summary, sev: Math.round(Number(a.severity) || 0), txt: norm(`${title} ${summary} ${a.region || ''} ${a.source || ''}`) };
+  }), [articles]);
+  useEffect(() => { reportCat({ activeCount: clean.filter((a) => a.sev >= ACTIVE_SEV).length }); }, [clean]);
+  const shown = useMemo(() => {
+    const f = CAT_FILTERS.find((x) => x.id === tools.filter);
+    const words = norm(tools.query).split(/\s+/).filter(Boolean);
+    return clean.filter((a) => (!tools.activeOnly || a.sev >= ACTIVE_SEV) && (!f?.test || f.test(a)) && words.every((w) => a.txt.includes(w)));
+  }, [clean, tools.activeOnly, tools.filter, tools.query]);
+  const searchRef = useRef(null);
+  useEffect(() => { if (tools.searchOpen) setTimeout(() => searchRef.current?.focus(), 200); }, [tools.searchOpen]);
+
   return (
     <div className="p-4">
+      {tools.protocol && <EmergencyProtocol />}
       {/* Offline Indicator */}
       {isOffline && (
         <div className="mb-4 p-3 rounded-sm flex items-center gap-2" style={{ 
@@ -166,10 +193,29 @@ export default function CatastropheTab() {
           </button>
         </div>
       ) : (
-        <div>
-          {articles.map((article, i) => (
-            <NewsCard key={i} article={article} index={i} />
+        <div id="cat-lista" className="scroll-mt-20 rounded-sm">
+          {(tools.searchOpen || tools.query) && (
+            <label className="flex items-center gap-2 px-2 py-1.5 mb-3 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.7)', border: '1px solid rgb(var(--c) / 0.35)' }}>
+              <Search size={13} style={{ color: 'rgb(var(--c) / 0.6)' }} />
+              <input ref={searchRef} value={tools.query} onChange={(e) => setCatQuery(e.target.value)} placeholder={t('Região, distrito, país ou palavra (sismo, incêndio, IPMA…)')}
+                className="flex-1 min-w-0 bg-transparent outline-none text-xs" style={{ color: 'rgb(var(--c))' }} />
+              <button type="button" onClick={() => openCatSearch(false)} aria-label={t('Fechar pesquisa')}><X size={13} style={{ color: 'rgb(var(--c) / 0.6)' }} /></button>
+            </label>
+          )}
+          {catFiltered(tools) && (
+            <p className="text-[10px] uppercase tracking-wider mb-2 flex flex-wrap gap-2 items-center" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#ff0000' }} />
+              {tools.activeOnly && <span style={{ color: '#ef4444' }}>{t('Só alertas ativos')}</span>}
+              {tools.filter && <span>{t(CAT_FILTERS.find((x) => x.id === tools.filter).label)}</span>}
+              {tools.query.trim() && <span>«{tools.query.trim()}»</span>}
+              <span>· {shown.length}/{clean.length}</span>
+              <button type="button" onClick={clearCatFilters} className="ml-auto px-2 py-0.5 rounded-sm" style={{ border: '1px solid #ef444488', color: '#ef4444' }}>{t('Limpar filtros')}</button>
+            </p>
+          )}
+          {shown.map((article, i) => (
+            <NewsCard key={`${article.title}-${i}`} article={article} index={i} />
           ))}
+          {clean.length > 0 && shown.length === 0 && <p className="text-center text-xs py-6" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('Sem resultados com estes filtros.')}</p>}
           {articles.length === 0 && (
             <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.33)' }}>
               {t('Sem dados disponíveis')}

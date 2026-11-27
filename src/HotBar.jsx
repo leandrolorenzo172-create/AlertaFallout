@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Menu, Shield, Skull, AlertTriangle, Cloud, TrendingUp, Bot, Book, MapPin, Bell, Radio as RadioIcon, BrainCircuit, Disc3, Settings, Gamepad2, TrendingDown, Megaphone, ShieldAlert, Info, Languages, BellRing, Send, RotateCcw, LocateFixed, Layers, Ruler, Footprints, RefreshCw, ArrowUpToLine, Filter, ArrowDownUp, StickyNote, FilePlus, Trash2, Play, Pause, SkipForward, SkipBack, SlidersHorizontal, AudioLines, Shuffle, RotateCw, Volume2, VolumeX, Maximize, Trophy, HelpCircle, ChevronsDown, Anchor, CalendarDays, ChevronRight, Check, Siren, Tag, Search, LineChart, BarChart3, PlusCircle, Globe, Calculator } from 'lucide-react';
+import { useRadioRemote, onToggleRadio, onNextStation, onPrevStation, onToggleRecordMp3, requestRadioState } from './audio/radioRemote';
+import { Power, Circle } from 'lucide-react';
+import { usePizzaTools, onRefreshPizzaIndex, onTogglePizzaAlert, PIZZA_PEAK, PIZZA_SOURCES_ID } from './pizza/pizzaTools';
+import { Newspaper } from 'lucide-react';
+import { useCatTools, toggleActiveOnly, openProtocol, cycleCatFilter, openCatSearch, onRefreshCat, CAT_FILTERS } from './catastrophe/catTools';
 import { useCyberTools, onRefreshCyber, onRecalcRisk, setThreatType, toggleCritical, toggleCyberSub } from './cyber/cyberTools';
 import { THREAT_TYPES } from './lib/cyberRisk';
 import { useWarTools, toggleAlerts, cycleSeverity, setWarRegion, openWarSearch, onRefreshWar, toggleWarSub } from './war/warTools';
@@ -66,7 +71,7 @@ export const MAP_TOOLS = [
   { id: 'pin', label: 'Marcadores / Pins', icon: MapPin, mode: true },
   { id: 'layers', label: 'Alternar camadas', icon: Layers, keepOpen: true },
   { id: 'measure', label: 'Medir distância', icon: Ruler, mode: true },
-  { id: 'route', label: 'Rota', icon: Footprints },
+  { id: 'route', label: 'Rota', icon: Footprints, mode: true }, // rota a pé no mapa online (A -> B pelas ruas)
 ];
 
 // Na aba MANUAL, o menu ≡ mostra estas 4 ferramentas (src/manual/manualTools.js)
@@ -154,6 +159,31 @@ export const CYBER_TOOLS = [
   { id: 'recalc', label: 'Recalcular risco', icon: Calculator },
 ];
 
+// Na aba CATÁSTROFES, o menu ≡ filtra alertas, abre o protocolo de emergência, pesquisa e atualiza (src/catastrophe/catTools.js)
+export const CAT_TOOLS = [
+  { id: 'active', label: 'Alertas ativos', icon: Siren },
+  { id: 'protocol', label: 'Protocolo de emergência', icon: ShieldAlert },
+  { id: 'filter', label: 'Filtrar gravidade / tipo', icon: SlidersHorizontal },
+  { id: 'search', label: 'Pesquisar', icon: Search },
+  { id: 'refresh', label: 'Atualizar agora', icon: RefreshCw },
+  { id: 'top', label: 'Voltar ao topo', icon: ArrowUpToLine },
+];
+
+// Na aba RÁDIO, o menu ≡ controla o sintonizador e grava (src/audio/radioRemote.js). Fica aberto para se ver o estado.
+export const RADIO_TOOLS = [
+  { id: 'power', label: 'Ligar / Desligar', icon: Power, sym: '⏻', run: onToggleRadio },
+  { id: 'next', label: 'Próxima estação', icon: SkipForward, sym: '>>|', run: onNextStation },
+  { id: 'prev', label: 'Estação anterior', icon: SkipBack, sym: '|<<', run: onPrevStation },
+  { id: 'rec', label: 'Rec', icon: Circle, sym: '●', run: onToggleRecordMp3 },
+];
+
+// Na aba PIZZA, o menu ≡ atualiza o índice, mostra as fontes do cálculo e liga o alerta de pico (src/pizza/pizzaTools.js)
+export const PIZZA_TOOLS = [
+  { id: 'refresh', label: 'Atualizar índice', icon: RefreshCw },
+  { id: 'sources', label: 'Fontes do cálculo', icon: Newspaper },
+  { id: 'alert', label: 'Alerta', icon: Siren },
+];
+
 export default function HotBar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -184,6 +214,35 @@ export default function HotBar() {
   const inEco = activeTab === 'economia';
   const inWar = activeTab === 'guerra';
   const inCyber = activeTab === 'ciber';
+  const inCat = activeTab === 'catastrofes';
+  const inRadio = activeTab === 'radio';
+  const inPizza = activeTab === 'pizza';
+  const pizza = usePizzaTools();
+  const pizzaPeak = (pizza.level || 0) >= PIZZA_PEAK;
+  // onShowCalculationSources: vai até "Indicadores Atuais" e destaca as contagens e manchetes que pesam no índice
+  const onShowCalculationSources = () => { setOpen(false); setTimeout(() => focusCard(PIZZA_SOURCES_ID), 150); };
+  const runPizzaTool = (tool) => {
+    playSelectSound();
+    if (tool.id === 'refresh') onRefreshPizzaIndex();        // fica aberto: "A ATUALIZAR" e depois a variação
+    else if (tool.id === 'sources') onShowCalculationSources();
+    else if (tool.id === 'alert') onTogglePizzaAlert();      // ON/OFF; o ponto vermelho acende com alerta ativo ou índice >= 7,5
+  };
+  const radio = useRadioRemote();
+  React.useEffect(() => { if (inRadio) requestRadioState(); }, [inRadio]); // estado real do sintonizador ao entrar na aba
+  const [recTick, setRecTick] = useState(0); // relógio da gravação (mm:ss)
+  React.useEffect(() => { if (!radio.isRecording) return undefined; const id = setInterval(() => setRecTick((x) => x + 1), 1000); return () => clearInterval(id); }, [radio.isRecording]);
+  const mmss = (ms) => { const s2 = Math.max(0, Math.floor(ms / 1000)); return `${String(Math.floor(s2 / 60)).padStart(2, '0')}:${String(s2 % 60).padStart(2, '0')}`; };
+  const cat = useCatTools();
+  const runCatTool = (tool) => {
+    playSelectSound();
+    if (tool.id === 'filter') { cycleCatFilter(); return; }        // Todas -> Críticas -> Sismos -> Incêndios -> Meteorologia/Cheias (fica aberto)
+    if (tool.id === 'refresh') { onRefreshCat(); return; }          // fica aberto: "A ATUALIZAR" e depois a hora
+    setOpen(false);
+    if (tool.id === 'active') { toggleActiveOnly(); setTimeout(() => focusCard('cat-lista'), 150); }
+    else if (tool.id === 'protocol') openProtocol(true);
+    else if (tool.id === 'search') { openCatSearch(true); setTimeout(() => focusCard('cat-lista'), 150); }
+    else if (tool.id === 'top') setTimeout(scrollTop, 120);
+  };
   const cyber = useCyberTools();
   const runCyberTool = (tool) => {
     playSelectSound();
@@ -332,11 +391,112 @@ export default function HotBar() {
             className="fixed z-50 right-4 flex flex-col gap-1.5 no-scrollbar"
             style={{ bottom: '136px', maxHeight: '62vh', overflowY: 'auto' }}
           >
-            {(inCyber || inWar || inEco || inStrikes || inMeteo || inGame || inMusic || inFiles || inManual || inMap || inSettings) && (
+            {(inPizza || inRadio || inCat || inCyber || inWar || inEco || inStrikes || inMeteo || inGame || inMusic || inFiles || inManual || inMap || inSettings) && (
               <p className="px-1 text-[10px] uppercase tracking-widest text-right" style={{ color: 'rgb(var(--c) / 0.6)' }}>
                 {t('Ferramentas')} · {t(TABS.find((x) => x.id === activeTab)?.label || '')}
               </p>
             )}
+            {inPizza && PIZZA_TOOLS.map((tool, index) => {
+              const delta = pizza.delta == null ? '' : `${pizza.delta > 0 ? '+' : ''}${pizza.delta.toFixed(1)}`;
+              const info = {
+                refresh: pizza.loading ? t('A ATUALIZAR') : pizza.level != null ? `${Number(pizza.level).toFixed(1)}/10${delta ? ` (${delta})` : ''}` : '',
+                sources: '', alert: pizza.isPizzaAlertActive ? 'ON' : 'OFF',
+              }[tool.id];
+              const active = tool.id === 'alert' && pizza.isPizzaAlertActive;
+              const alert = tool.id === 'alert' && (pizza.isPizzaAlertActive || pizzaPeak);
+              const Icon = tool.icon;
+              return (
+                <motion.button
+                  key={tool.id}
+                  type="button"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => runPizzaTool(tool)}
+                  aria-pressed={tool.id === 'alert' ? pizza.isPizzaAlertActive : undefined}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded whitespace-nowrap transition-all"
+                  style={{
+                    background: active ? 'rgb(var(--c) / 0.16)' : 'rgb(var(--cd) / 0.95)',
+                    border: `1px solid ${alert ? '#ef444499' : active ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.3)'}`,
+                    color: active ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.85)',
+                    backdropFilter: 'blur(10px)', boxShadow: active ? '0 0 12px rgb(var(--c) / 0.45)' : '0 0 8px rgb(var(--c) / 0.12)', minWidth: '230px',
+                  }}
+                >
+                  <Icon size={16} className={tool.id === 'refresh' && pizza.loading ? 'animate-spin' : ''} />
+                  <span className="text-xs uppercase tracking-wider flex-1 text-left">{t(tool.label)}</span>
+                  {info && <span className="text-[10px] uppercase tracking-wider tabular-nums" style={{ color: tool.id === 'refresh' && pizza.delta > 0 ? '#ff6600' : undefined, opacity: active ? 1 : 0.7 }}>{info}</span>}
+                  {alert && <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#ff0000', boxShadow: '0 0 8px #ff0000' }} aria-label={pizzaPeak ? t('índice acima do limiar') : t('alerta ativo')} />}
+                </motion.button>
+              );
+            })}
+            {inRadio && (radio.station || radio.recMsg) && (
+              <p className="px-3 py-1.5 rounded text-[10px] uppercase tracking-wider truncate" style={{ background: 'rgb(var(--cd) / 0.95)', border: '1px solid rgb(var(--c) / 0.2)', color: radio.isRecording ? '#ef4444' : 'rgb(var(--c) / 0.7)', maxWidth: 260 }}>
+                {radio.recMsg && (radio.isRecording || !radio.station) ? radio.recMsg : `${radio.isRadioOn ? '▶' : '■'} ${radio.station}${radio.freq ? ` · ${radio.band === 'AM' ? Math.round(radio.freq) : Number(radio.freq).toFixed(1)}` : ''}`}
+              </p>
+            )}
+            {inRadio && RADIO_TOOLS.map((tool, index) => {
+              const rec = tool.id === 'rec' && radio.isRecording;
+              const on = tool.id === 'power' && radio.isRadioOn;
+              const info = { power: radio.isRadioOn ? 'ON' : 'OFF', next: '', prev: '', rec: rec ? mmss(Date.now() - radio.recStart + recTick * 0) : 'REC' }[tool.id];
+              const color = rec ? '#ef4444' : on ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.85)';
+              return (
+                <motion.button
+                  key={tool.id}
+                  type="button"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => { playSelectSound(); tool.run(); }}
+                  aria-pressed={tool.id === 'power' ? radio.isRadioOn : tool.id === 'rec' ? radio.isRecording : undefined}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded whitespace-nowrap transition-all ${rec ? 'animate-pulse' : ''}`}
+                  style={{
+                    background: rec ? '#ef444418' : on ? 'rgb(var(--c) / 0.16)' : 'rgb(var(--cd) / 0.95)',
+                    border: `1px solid ${rec ? '#ef4444' : on ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.3)'}`,
+                    color, backdropFilter: 'blur(10px)',
+                    boxShadow: rec ? '0 0 14px #ef444466' : on ? '0 0 12px rgb(var(--c) / 0.45)' : '0 0 8px rgb(var(--c) / 0.12)', minWidth: '230px',
+                  }}
+                >
+                  <span className="w-8 text-center text-sm font-bold tabular-nums" aria-hidden="true" style={{ color: tool.id === 'rec' ? '#ef4444' : undefined, textShadow: rec ? '0 0 8px #ef4444' : undefined }}>{tool.sym}</span>
+                  <span className="text-xs uppercase tracking-wider flex-1 text-left">{t(tool.label)}</span>
+                  <span className="text-[10px] uppercase tracking-wider tabular-nums" style={{ opacity: on || rec ? 1 : 0.6 }}>{info}</span>
+                  {rec && <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#ff0000', boxShadow: '0 0 8px #ff0000' }} />}
+                </motion.button>
+              );
+            })}
+            {inCat && CAT_TOOLS.map((tool, index) => {
+              const info = {
+                active: cat.activeOnly ? 'ON' : String(cat.activeCount),
+                protocol: '', top: '', search: cat.query.trim() ? `«${cat.query.trim().slice(0, 12)}»` : '',
+                filter: t(CAT_FILTERS.find((f) => f.id === cat.filter)?.label || 'Todas').toUpperCase(),
+                refresh: cat.loading ? t('A ATUALIZAR') : cat.lastSync ? hhmm(cat.lastSync) : '',
+              }[tool.id];
+              const active = (tool.id === 'active' && cat.activeOnly) || (tool.id === 'filter' && !!cat.filter) || (tool.id === 'search' && !!cat.query.trim());
+              const alert = tool.id === 'active' && cat.activeCount > 0;
+              const Icon = tool.icon;
+              return (
+                <motion.button
+                  key={tool.id}
+                  type="button"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => runCatTool(tool)}
+                  aria-pressed={tool.id === 'active' ? cat.activeOnly : undefined}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded whitespace-nowrap transition-all"
+                  style={{
+                    background: active ? 'rgb(var(--c) / 0.16)' : 'rgb(var(--cd) / 0.95)',
+                    border: `1px solid ${alert ? '#ef444499' : active ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.3)'}`,
+                    color: active ? 'rgb(var(--c))' : 'rgb(var(--c) / 0.85)',
+                    backdropFilter: 'blur(10px)', boxShadow: active ? '0 0 12px rgb(var(--c) / 0.45)' : '0 0 8px rgb(var(--c) / 0.12)', minWidth: '240px',
+                  }}
+                >
+                  <Icon size={16} className={tool.id === 'refresh' && cat.loading ? 'animate-spin' : ''} />
+                  <span className="text-xs uppercase tracking-wider flex-1 text-left">{t(tool.label)}</span>
+                  {info && <span className="text-[10px] uppercase tracking-wider truncate max-w-[110px]" style={{ color: alert ? '#ef4444' : undefined, opacity: alert || active ? 1 : 0.6 }}>{info}</span>}
+                  {alert && <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#ff0000', boxShadow: '0 0 8px #ff0000' }} />}
+                </motion.button>
+              );
+            })}
             {inCyber && CYBER_TOOLS.map((tool, index) => {
               const info = {
                 refresh: cyber.loading ? t('A ATUALIZAR') : cyber.lastSync ? hhmm(cyber.lastSync) : '',
@@ -792,7 +952,7 @@ export default function HotBar() {
                 {tool.id === 'idioma' && <span className="text-[10px] opacity-70">{isEn() ? 'US → PT' : 'PT → US'}</span>}
               </motion.button>
             ))}
-            {!inSettings && !inMap && !inManual && !inFiles && !inMusic && !inGame && !inMeteo && !inStrikes && !inEco && !inWar && !inCyber && tabs.map((tab, index) => (
+            {!inSettings && !inMap && !inManual && !inFiles && !inMusic && !inGame && !inMeteo && !inStrikes && !inEco && !inWar && !inCyber && !inCat && !inRadio && !inPizza && tabs.map((tab, index) => (
               <motion.button
                 key={tab.id}
                 initial={{ opacity: 0, x: 20 }}
@@ -823,7 +983,7 @@ export default function HotBar() {
       <motion.button
         onClick={handleToggle}
         whileTap={{ scale: 0.9 }}
-        aria-label={inSettings ? t('Ferramentas rápidas das definições') : inMap ? t('Ferramentas do mapa') : inManual ? t('Ferramentas do manual') : inFiles ? t('Ferramentas da base de conhecimento') : inMusic ? t('Controlo de música') : inGame ? t('Ferramentas do jogo') : inMeteo ? t('Ferramentas da meteorologia') : inStrikes ? t('Ferramentas das greves') : inEco ? t('Ferramentas da economia') : inWar ? t('Ferramentas da guerra') : inCyber ? t('Ferramentas de ciberataques') : t('Menu de navegação rápida')}
+        aria-label={inSettings ? t('Ferramentas rápidas das definições') : inMap ? t('Ferramentas do mapa') : inManual ? t('Ferramentas do manual') : inFiles ? t('Ferramentas da base de conhecimento') : inMusic ? t('Controlo de música') : inGame ? t('Ferramentas do jogo') : inMeteo ? t('Ferramentas da meteorologia') : inStrikes ? t('Ferramentas das greves') : inEco ? t('Ferramentas da economia') : inWar ? t('Ferramentas da guerra') : inCyber ? t('Ferramentas de ciberataques') : inCat ? t('Ferramentas das catástrofes') : inRadio ? t('Ferramentas do rádio') : inPizza ? t('Ferramentas do Índice Pizza') : t('Menu de navegação rápida')}
         className="fixed z-50 flex items-center justify-center"
         style={{
           right: '16px',
@@ -838,7 +998,7 @@ export default function HotBar() {
           boxShadow: '0 0 14px rgb(var(--c) / 0.27)',
         }}
       >
-        {((inCyber && cyber.criticalCount > 0) || (inWar && war.alertCount > 0) || (inEco && eco.urgentCount > 0) || (inStrikes && strikes.activeCount > 0) || (inMap && mapState.mode) || (inManual && filtersActive(manualView)) || (inFiles && filesView.types.length > 0)) && !open && <span className="absolute top-1 right-1 w-2 h-2 rounded-full animate-pulse" style={{ background: '#ff0000' }} />}
+        {((inPizza && (pizza.isPizzaAlertActive || pizzaPeak)) || (radio.isRecording) || (inCat && cat.activeCount > 0) || (inCyber && cyber.criticalCount > 0) || (inWar && war.alertCount > 0) || (inEco && eco.urgentCount > 0) || (inStrikes && strikes.activeCount > 0) || (inMap && mapState.mode) || (inManual && filtersActive(manualView)) || (inFiles && filesView.types.length > 0)) && !open && <span className="absolute top-1 right-1 w-2 h-2 rounded-full animate-pulse" style={{ background: '#ff0000' }} />}
         <AnimatePresence mode="wait">
           {open ? (
             <motion.span key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>

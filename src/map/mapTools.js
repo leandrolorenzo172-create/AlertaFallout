@@ -8,7 +8,7 @@ export const LAYER_LABEL = { road: 'Rodoviário', terrain: 'Terreno', sat: 'Sat�
 const KEY = 'sd_map_layer';
 
 let state = {
-  mode: null, // null | 'pin' | 'measure'
+  mode: null, // null | 'pin' | 'measure' | 'route' (rota a pé no mapa online)
   layer: (() => { try { const v = localStorage.getItem(KEY); return LAYERS.includes(v) ? v : 'road'; } catch { return 'road'; } })(),
   route: false, // painel da rota a pé offline aberto
 };

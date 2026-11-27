@@ -346,6 +346,7 @@ export function mountRadio(root, opts = {}) {
   function setStation(st) {
     if (state.station === st) return;
     state.station = st;
+    setTimeout(() => reportState(), 0);
     if (st) {
       el.name.textContent = st.name;
       el.genre.textContent = `${fmtFreq(st)} · ${st.genre || (state.custom.includes(st) ? tr('Estação personalizada') : tr('Rádio portuguesa'))}`;
@@ -489,8 +490,11 @@ export function mountRadio(root, opts = {}) {
     if (on) { state.lastVolAngle = state.volAngle; save('rf_last_vol', Math.round(state.volAngle)); }
   }
 
+  // Menu ≡ da aba RÁDIO: estado (ligado, emissora) por evento global
+  const reportState = () => window.dispatchEvent(new CustomEvent('pb-radio-state', { detail: { on: state.on, station: state.station ? state.station.name : '', freq: Number(state.freq[state.band].toFixed(band().digits)), band: state.band } }));
   function setPower(on) {
     state.on = on;
+    setTimeout(() => reportState(), 0);
     // rádio e música não tocam ao mesmo tempo: ao ligar o rádio, a música pára (e vice-versa)
     if (on) window.dispatchEvent(new CustomEvent('pb-audio-start', { detail: 'radio' }));
     chassis.classList.toggle('rf-off', !on);
@@ -803,6 +807,25 @@ export function mountRadio(root, opts = {}) {
   updateStartLabel();
   resize();
   raf = requestAnimationFrame(frame);
+
+  // Comandos do menu ≡ (aba RÁDIO): ligar/desligar, emissora seguinte/anterior e fluxo de áudio para gravar
+  const onRemote = (e) => {
+    const cmd = e.detail && (e.detail.cmd || e.detail);
+    if (cmd === 'toggle') { if (state.on) setVolAngle(-135); else { el.start.hidden = true; setVolAngle(state.lastVolAngle); } }
+    else if (cmd === 'next' || cmd === 'prev') {
+      if (!state.on) { el.start.hidden = true; setVolAngle(state.lastVolAngle); }
+      step(cmd === 'next' ? 1 : -1);
+    } else if (cmd === 'state') reportState();
+    else if (cmd === 'capture' && typeof e.detail.reply === 'function') {
+      // fluxo do leitor (só tem som se a emissora permitir; senão quem grava usa o microfone)
+      let stream = null;
+      try { if (loadedUrl && state.on) stream = (audio.captureStream || audio.mozCaptureStream).call(audio); } catch (err) { stream = null; }
+      e.detail.reply(stream, state.station ? state.station.name : '');
+    }
+  };
+  window.addEventListener('steeldeck:radio-cmd', onRemote);
+  offs.push(() => window.removeEventListener('steeldeck:radio-cmd', onRemote));
+  setTimeout(reportState, 0);
 
   // a música começou a tocar: desligar o rádio (volume a zero, como se fosse rodado à mão)
   const onOtherAudio = (e) => { if (e.detail !== 'radio' && state.on) setVolAngle(-135); };

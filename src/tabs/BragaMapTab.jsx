@@ -5,6 +5,7 @@ import { MapPin, Trash2, X, Palette, Save, Crosshair, Ruler, Undo2, Footprints, 
 import { useMapTools, setMode, openRoute, onMapAction, LAYER_LABEL } from '@/map/mapTools';
 import { useNetwork } from '@/lib/ai/net';
 import ROTA_HTML from '@/map/rota-offline.html?raw';
+import { walkRoute } from '@/map/walkRoute';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { alpha } from '../theme';
@@ -88,6 +89,16 @@ export default function BragaMapTab() {
   const tools = useMapTools();
   const net = useNetwork();
   const [measure, setMeasure] = useState([]); // pontos da medição
+  // ROTA no mapa online: pontos A e B e o caminho a pé pelas ruas (OSRM / OpenStreetMap)
+  const [routePts, setRoutePts] = useState([]);
+  const [route, setRoute] = useState(null);   // { path, meters, minutes, online }
+  const [routing, setRouting] = useState(false);
+  const calcRoute = React.useCallback(async (pts) => {
+    if (pts.length < 2) { setRoute(null); return; }
+    setRouting(true);
+    const r = await walkRoute(pts[0], pts[1]);
+    setRouting(false); setRoute(r);
+  }, []);
   const [userPos, setUserPos] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = React.useRef(null);
@@ -97,6 +108,7 @@ export default function BragaMapTab() {
   useEffect(() => {
     if (tools.mode !== 'pin') { setShowForm(false); setNewPin(null); }
     if (tools.mode !== 'measure') setMeasure([]);
+    if (tools.mode !== 'route') { setRoutePts([]); setRoute(null); }
   }, [tools.mode]);
   // sair do separador desliga os modos
   useEffect(() => () => { setMode(null); openRoute(false); }, []);
@@ -120,6 +132,11 @@ export default function BragaMapTab() {
 
   const handleMapClick = (latlng) => {
     if (tools.mode === 'measure') { setMeasure((m) => [...m, { lat: latlng.lat, lng: latlng.lng }]); return; }
+    if (tools.mode === 'route') { // 1.º toque = A, 2.º = B; um 3.º recomeça com um novo A
+      const p = { lat: latlng.lat, lng: latlng.lng };
+      const next = routePts.length >= 2 ? [p] : [...routePts, p];
+      setRoutePts(next); calcRoute(next); return;
+    }
     if (tools.mode !== 'pin') return; // sem modo ativo, tocar no mapa só serve para navegar
     setNewPin({ lat: latlng.lat, lng: latlng.lng });
     setPinName('');
@@ -170,7 +187,7 @@ export default function BragaMapTab() {
 
       <div className="p-3 rounded-sm mb-3" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
         <p className="text-[10px] leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          {t('📍 Usa o botão ≡ para as ferramentas: centrar a tua posição, colocar pinos (nome, descrição e cor, guardados no dispositivo), mudar a camada, medir distâncias e calcular uma rota a pé offline.')}
+          {t('📍 Usa o botão ≡ para as ferramentas: centrar a tua posição, colocar pinos (nome, descrição e cor, guardados no dispositivo), mudar a camada, medir distâncias e calcular a rota a pé entre dois pontos no mapa.')}
         </p>
       </div>
 
@@ -193,6 +210,13 @@ export default function BragaMapTab() {
               </CircleMarker>
             </>
           )}
+          {route && <Polyline positions={route.path} pathOptions={{ color: '#0d0b08', weight: 8, opacity: 0.6 }} />}
+          {route && <Polyline positions={route.path} pathOptions={{ color: '#f59e0b', weight: 4.5, dashArray: route.online ? undefined : '8 8' }} />}
+          {routePts.map((p, i) => (
+            <CircleMarker key={`r${i}`} center={[p.lat, p.lng]} radius={8} pathOptions={{ color: '#0d0b08', weight: 2, fillColor: i === 0 ? '#22c55e' : '#ef4444', fillOpacity: 1 }}>
+              <Popup><span style={{ fontFamily: 'monospace', fontSize: 11 }}>{i === 0 ? t('Ponto A') : t('Ponto B')}</span></Popup>
+            </CircleMarker>
+          ))}
           {measure.length > 1 && <Polyline positions={measure.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#f59e0b', weight: 3, dashArray: '6 6' }} />}
           {measure.map((p, i) => <CircleMarker key={i} center={[p.lat, p.lng]} radius={5} pathOptions={{ color: '#0d0b08', weight: 2, fillColor: i === 0 ? '#22c55e' : '#f59e0b', fillOpacity: 1 }} />)}
           {pins.map((pin) => (
@@ -227,6 +251,26 @@ export default function BragaMapTab() {
           <div className="absolute left-2 right-2 top-2 z-[1050] flex items-center gap-2 px-3 py-2 rounded-sm text-[11px]" style={hud}>
             <MapPin size={14} className="shrink-0" /><span className="flex-1 min-w-0">{t('MODO PINOS: toca no mapa para colocar um pino.')}</span>
             <button type="button" onClick={() => setMode(null)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
+          </div>
+        )}
+        {tools.mode === 'route' && (
+          <div className="absolute left-2 right-2 top-2 z-[1050] px-3 py-2 rounded-sm text-[11px]" style={hud}>
+            <div className="flex items-center gap-2">
+              <Footprints size={14} className="shrink-0" />
+              <span className="flex-1 min-w-0 font-bold">
+                {routing ? t('A calcular a rota a pé…')
+                  : route ? t('Distância a pé: {d} | Tempo estimado: {m} min', { d: `${(route.meters / 1000).toFixed(2)} km`, m: route.minutes })
+                    : routePts.length === 1 ? t('ROTA: toca no ponto B.') : t('ROTA: toca no ponto A e depois no B.')}
+              </span>
+            </div>
+            {route && !route.online && <p className="mt-1 text-[10px]" style={{ color: '#ef4444' }}>{t('Sem ligação ao serviço de rotas: distância em linha reta (tracejado). Para rotas sem rede usa a Rota offline.')}</p>}
+            {route && route.online && <p className="mt-1 text-[10px]" style={{ color: 'rgb(var(--c) / 0.55)' }}>{t('Caminho a pé pelas ruas do OpenStreetMap (OSRM) · tempo a 4,8 km/h')}</p>}
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button type="button" disabled={!routePts.length} onClick={() => { const n = routePts.slice(0, -1); setRoutePts(n); calcRoute(n); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Undo2 size={11} />{t('Desfazer')}</button>
+              <button type="button" disabled={!routePts.length} onClick={() => { setRoutePts([]); setRoute(null); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Trash2 size={11} />{t('Limpar')}</button>
+              <button type="button" onClick={() => openRoute(true)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Rota offline')}</button>
+              <button type="button" onClick={() => setMode(null)} className="ml-auto px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
+            </div>
           </div>
         )}
         {tools.mode === 'measure' && (

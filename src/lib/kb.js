@@ -8,6 +8,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const TEXT_EXT = ['txt', 'md', 'csv', 'json', 'xml'];
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp'];
+const AUDIO_EXT = ['mp3', 'webm', 'ogg', 'm4a', 'wav']; // gravações do rádio/microfone (guardadas, sem texto)
 export const ACCEPT = '.pdf,.txt,.md,.csv,.json,.xml,.docx,.png,.jpg,.jpeg,.webp';
 const CATEGORY = { pdf: 'Manual PDF', docx: 'Documento', txt: 'Texto', md: 'Texto', csv: 'Dados', json: 'Dados', xml: 'Dados' };
 
@@ -78,7 +79,7 @@ async function extract(file, ext) {
 // Importa um ficheiro. Devolve { status: 'ok' | 'duplicado' | 'erro' | 'nao_suportado', doc? }
 export async function importFile(file, onStep = () => {}) {
   const ext = (file.name.split('.').pop() || '').toLowerCase();
-  if (![...TEXT_EXT, ...IMAGE_EXT, 'pdf', 'docx'].includes(ext)) return { status: 'nao_suportado' };
+  if (![...TEXT_EXT, ...IMAGE_EXT, ...AUDIO_EXT, 'pdf', 'docx'].includes(ext)) return { status: 'nao_suportado' };
   const id = `${file.name}|${file.size}|${file.lastModified || 0}`; // o mesmo ficheiro não é guardado duas vezes
   const existing = await run('docs', 'readonly', (s) => s.get(id));
   if (existing) return { status: 'duplicado', doc: existing };
@@ -88,7 +89,7 @@ export async function importFile(file, onStep = () => {}) {
     onStep('INDEXAR');
     const doc = {
       id, name: file.name, title: file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '), type: ext,
-      category: IMAGE_EXT.includes(ext) ? 'Imagem' : (CATEGORY[ext] || 'Outro'),
+      category: IMAGE_EXT.includes(ext) ? 'Imagem' : AUDIO_EXT.includes(ext) ? 'Áudio' : (CATEGORY[ext] || 'Outro'),
       folder: (file.webkitRelativePath || '').split('/')[0] || 'Geral',
       size_kb: Math.round((file.size || 0) / 1024), created_date: new Date().toISOString(), enabled: true,
       pages, unit, chars: pages.reduce((n, p) => n + p.length, 0),
