@@ -2,12 +2,14 @@
 // e caminho mais curto com A* (heurística = distância em linha reta). Sem servidor depois do download.
 import { get, put, getAll } from './mapsDb';
 import { inBbox, haversine } from './tileMath';
+import { compressStreets } from '../geocode';
 import { t } from '@/i18n';
 
 // Servidores Overpass públicos e gratuitos (tenta por ordem)
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 // tudo o que se pode percorrer a pé (exclui autoestradas, vias rápidas e caminhos privados/proibidos a peões)
-const QUERY = (b) => `[out:json][timeout:120];way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s},${b.w},${b.n},${b.e});(._;>;);out skel qt;`;
+// vias com etiquetas (para o nome da rua) + nós só com coordenadas
+const QUERY = (b) => `[out:json][timeout:120];way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s},${b.w},${b.n},${b.e})->.w;.w out body qt;node(w.w);out skel qt;`;
 
 async function overpass(bbox, signal) {
   let lastErr = null;
@@ -32,24 +34,28 @@ export async function buildGraphForArea(areaId, bbox, onProgress = () => {}, sig
   onProgress({ msg: t('Rotas: a construir a malha…') });
   const nodeIdx = new Map(); const lat = []; const lng = [];
   for (const el of data.elements) if (el.type === 'node') { nodeIdx.set(el.id, lat.length); lat.push(el.lat); lng.push(el.lon); }
-  const adj = Array.from({ length: lat.length }, () => []);
+  const adj = Array.from({ length: lat.length }, () => []); // [vizinho, distância, índice do nome] …
+  const names = []; const nameIdx = new Map();
   for (const el of data.elements) {
     if (el.type !== 'way' || !el.nodes) continue;
+    const nm = el.tags?.name || el.tags?.ref || '';
+    let ni = -1;
+    if (nm) { if (!nameIdx.has(nm)) { nameIdx.set(nm, names.length); names.push(nm); } ni = nameIdx.get(nm); }
     for (let i = 1; i < el.nodes.length; i++) {
       const a = nodeIdx.get(el.nodes[i - 1]); const b = nodeIdx.get(el.nodes[i]);
       if (a == null || b == null || a === b) continue;
       const d = haversine(lat[a], lng[a], lat[b], lng[b]);
-      adj[a].push(b, d); adj[b].push(a, d); // a pé, todas as vias nos dois sentidos
+      adj[a].push(b, d, ni); adj[b].push(a, d, ni); // a pé, todas as vias nos dois sentidos
     }
   }
   const n = lat.length; const off = new Uint32Array(n + 1);
-  for (let i = 0; i < n; i++) off[i + 1] = off[i] + adj[i].length / 2;
-  const to = new Uint32Array(off[n]); const w = new Float32Array(off[n]);
-  for (let i = 0; i < n; i++) for (let k = 0, j = off[i]; k < adj[i].length; k += 2, j++) { to[j] = adj[i][k]; w[j] = adj[i][k + 1]; }
-  const graph = { n, lat: Float64Array.from(lat), lng: Float64Array.from(lng), off, to, w, bbox };
+  for (let i = 0; i < n; i++) off[i + 1] = off[i] + adj[i].length / 3;
+  const to = new Uint32Array(off[n]); const w = new Float32Array(off[n]); const nm = new Int32Array(off[n]);
+  for (let i = 0; i < n; i++) for (let k = 0, j = off[i]; k < adj[i].length; k += 3, j++) { to[j] = adj[i][k]; w[j] = adj[i][k + 1]; nm[j] = adj[i][k + 2]; }
+  const graph = { n, lat: Float64Array.from(lat), lng: Float64Array.from(lng), off, to, w, nm, names, bbox };
   await put('graphs', areaId, graph);
   graphCache.set(areaId, graph);
-  const bytes = graph.lat.byteLength + graph.lng.byteLength + off.byteLength + to.byteLength + w.byteLength;
+  const bytes = graph.lat.byteLength + graph.lng.byteLength + off.byteLength + to.byteLength + w.byteLength + nm.byteLength + names.join('').length * 2;
   onProgress({ msg: t('Rotas: {n} pontos de caminho guardados.', { n }) });
   return { nodes: n, bytes };
 }
@@ -91,7 +97,7 @@ export async function routeOffline(a, b) {
   }
   const s = nearest(g, a.lat, a.lng); const dst = nearest(g, b.lat, b.lng);
   if (!s || !dst) return { error: 'far' };
-  const dist = new Float64Array(g.n).fill(Infinity); const prev = new Int32Array(g.n).fill(-1); const closed = new Uint8Array(g.n);
+  const dist = new Float64Array(g.n).fill(Infinity); const prev = new Int32Array(g.n).fill(-1); const prevEdge = new Int32Array(g.n).fill(-1); const closed = new Uint8Array(g.n);
   const h = (i) => haversine(g.lat[i], g.lng[i], g.lat[dst.i], g.lng[dst.i]);
   const heap = new Heap(); dist[s.i] = 0; heap.push(s.i, h(s.i));
   while (heap.size) {
@@ -101,11 +107,16 @@ export async function routeOffline(a, b) {
     for (let j = g.off[u]; j < g.off[u + 1]; j++) {
       const v = g.to[j]; if (closed[v]) continue;
       const nd = dist[u] + g.w[j];
-      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; heap.push(v, nd + h(v)); }
+      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; prevEdge[v] = j; heap.push(v, nd + h(v)); }
     }
   }
   if (!Number.isFinite(dist[dst.i])) return { error: 'nopath' };
-  const path = []; for (let i = dst.i; i !== -1; i = prev[i]) path.push([g.lat[i], g.lng[i]]);
-  path.reverse();
-  return { path: [[a.lat, a.lng], ...path, [b.lat, b.lng]], meters: dist[dst.i] + s.m + dst.m, snapA: s.m, snapB: dst.m };
+  const path = []; const parts = [];
+  for (let i = dst.i; i !== -1; i = prev[i]) {
+    path.push([g.lat[i], g.lng[i]]);
+    const j = prevEdge[i]; // nome da rua do troço que chega a este nó (malhas antigas não têm nomes)
+    if (j >= 0) parts.push({ name: g.nm && g.nm[j] >= 0 ? g.names[g.nm[j]] : '', m: g.w[j] });
+  }
+  path.reverse(); parts.reverse();
+  return { path: [[a.lat, a.lng], ...path, [b.lat, b.lng]], meters: dist[dst.i] + s.m + dst.m, snapA: s.m, snapB: dst.m, streets: g.nm ? compressStreets(parts) : [] };
 }

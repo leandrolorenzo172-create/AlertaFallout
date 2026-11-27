@@ -10,6 +10,9 @@ import OfflineTileLayer from '@/map/offline/OfflineTileLayer';
 import OfflineMapsPanel from '@/map/offline/OfflineMapsPanel';
 import { routeOffline } from '@/map/offline/offlineRouting';
 import { hasOfflineData } from '@/map/offline/offlineMapManager';
+import RouteBar from '@/map/RouteBar';
+import { reverseName, nameUnnamed } from '@/map/geocode';
+import { useBackClose } from '@/lib/useBackClose';
 import { elevationProfile, naismithMinutes, getElevation } from '@/map/offline/elevation';
 import { useTracker, clearTrail } from '@/map/offline/tracker';
 import 'leaflet/dist/leaflet.css';
@@ -105,9 +108,12 @@ export default function BragaMapTab() {
   const net = useNetwork();
   const [measure, setMeasure] = useState([]); // pontos da medição
   // ROTA no mapa online: pontos A e B e o caminho a pé pelas ruas (OSRM / OpenStreetMap)
-  const [routePts, setRoutePts] = useState([]);
-  const [route, setRoute] = useState(null);   // { path, meters, minutes, online }
+  // ends = [origem, destino] (cada um { lat, lng, label?, kind? } ou null) — partilhado pela barra De/Para e pelo HUD
+  const [ends, setEnds] = useState([null, null]);
+  const routePts = ends.filter(Boolean);
+  const [route, setRoute] = useState(null);   // { path, meters, minutes, online, streets }
   const [routing, setRouting] = useState(false);
+  const [streetsOpen, setStreetsOpen] = useState(false); // lista de ruas completa ou resumida (3 linhas)
   // há mapa guardado (área ou pacote)? Com mapa guardado a rota faz-se sempre no mapa real; o esquemático é só para quem não guardou nada
   const [hasOffline, setHasOffline] = useState(false);
   useEffect(() => { if (!tools.offlinePanel) hasOfflineData().then(setHasOffline); }, [tools.offlinePanel]);
@@ -119,8 +125,37 @@ export default function BragaMapTab() {
     if (off.path) r = { path: off.path, meters: off.meters, source: 'offline', online: true };
     else { const w = await walkRoute(pts[0], pts[1]); r = { ...w, source: w.online ? 'osrm' : 'straight', offErr: off.error }; }
     const profile = await elevationProfile(r.path, { online: navigator.onLine !== false }).catch(() => null);
-    setRouting(false); setRoute({ ...r, profile, minutes: naismithMinutes(r.meters, profile) });
+    const full = { ...r, profile, minutes: naismithMinutes(r.meters, profile) };
+    setRouting(false); setRoute(full);
+    // troços sem nome (passeios/caminhos): pergunta a rua mais próxima e atualiza o percurso
+    if (navigator.onLine !== false && r.streets?.some((x) => !x.name && x.at)) {
+      setRoute({ ...full, naming: true });
+      const named = await nameUnnamed(r.streets).catch(() => r.streets);
+      setRoute((cur) => (cur && cur.path === r.path ? { ...cur, streets: named, naming: false } : cur));
+    }
   }, []);
+  // Define origem/destino (vindo do mapa, de um pino, da barra De/Para ou dos botões) e recalcula a rota pelas ruas
+  const applyEnds = React.useCallback((next) => {
+    setEnds(next);
+    if (next[0] || next[1]) setMode('route'); // a barra também ativa o modo rota
+    if (next[0] && next[1]) calcRoute(next); else setRoute(null);
+  }, [calcRoute]);
+  const addRoutePoint = (p) => applyEnds(!ends[0] ? [p, ends[1]] : !ends[1] ? [ends[0], p] : [p, null]); // 1.º = A, 2.º = B, 3.º recomeça
+  // nome da rua de cada ponto sem nome (Nominatim; sem rede usa o pino mais próximo ou as coordenadas)
+  const [namePending, setNamePending] = useState([false, false]);
+  useEffect(() => {
+    ends.forEach((p, i) => {
+      if (!p || p.label) return;
+      setNamePending((x) => { const n = [...x]; n[i] = true; return n; });
+      const near = pins.find((pin) => L.latLng(pin.lat, pin.lng).distanceTo(L.latLng(p.lat, p.lng)) <= 60);
+      (near ? Promise.resolve(near.name) : reverseName(p.lat, p.lng)).then((name) => {
+        setNamePending((x) => { const n = [...x]; n[i] = false; return n; });
+        if (!name) return;
+        setEnds((cur) => (cur[i] && cur[i].lat === p.lat && cur[i].lng === p.lng ? Object.assign([...cur], { [i]: { ...cur[i], label: name } }) : cur));
+      });
+    });
+  }, [ends]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // altitude no ponto atual (GPS; se o GPS não der altitude, usa o relevo guardado)
   const tracker = useTracker();
   const [demAlt, setDemAlt] = useState(null);
@@ -138,13 +173,22 @@ export default function BragaMapTab() {
   const [toast, setToast] = useState(null);
   const toastTimer = React.useRef(null);
   const onMsg = React.useCallback((text, err = false) => { setToast({ text, err }); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), err ? 7000 : 4000); }, []);
+  // "A sua localização": GPS de alta precisão (até 10 s); senão a última posição conhecida
+  const gpsPoint = React.useCallback(() => new Promise((resolve) => {
+    const fallback = () => { const q = tracker.pos || userPos; if (q) resolve({ lat: q.lat, lng: q.lng, label: t('A sua localização'), kind: 'gps' }); else { onMsg(t('Sem sinal GPS: ativa a localização ou toca no mapa.'), true); resolve(null); } };
+    if (!navigator.geolocation) { fallback(); return; }
+    navigator.geolocation.getCurrentPosition((g) => resolve({ lat: g.coords.latitude, lng: g.coords.longitude, label: t('A sua localização'), kind: 'gps' }), fallback, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  }), [tracker.pos, userPos, onMsg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // trocar de modo limpa o modo anterior (formulário de pino ou pontos de medição)
   useEffect(() => {
     if (tools.mode !== 'pin') { setShowForm(false); setNewPin(null); }
     if (tools.mode !== 'measure') setMeasure([]);
-    if (tools.mode !== 'route') { setRoutePts([]); setRoute(null); }
+    if (tools.mode !== 'route') { setEnds([null, null]); setRoute(null); }
   }, [tools.mode]);
+  // botão voltar (Android/browser) fecha estes painéis sem sair do separador MAPA
+  useBackClose(tools.offlinePanel, () => openOfflinePanel(false), 'offline-maps');
+  useBackClose(tools.route, () => openRoute(false), 'route-schematic');
   // sair do separador desliga os modos
   useEffect(() => () => { setMode(null); openRoute(false); openOfflinePanel(false); }, []);
   const measured = measure.reduce((sum, p, i) => (i ? sum + L.latLng(measure[i - 1]).distanceTo(L.latLng(p)) : 0), 0);
@@ -167,11 +211,7 @@ export default function BragaMapTab() {
 
   const handleMapClick = (latlng) => {
     if (tools.mode === 'measure') { setMeasure((m) => [...m, { lat: latlng.lat, lng: latlng.lng }]); return; }
-    if (tools.mode === 'route') { // 1.º toque = A, 2.º = B; um 3.º recomeça com um novo A
-      const p = { lat: latlng.lat, lng: latlng.lng };
-      const next = routePts.length >= 2 ? [p] : [...routePts, p];
-      setRoutePts(next); calcRoute(next); return;
-    }
+    if (tools.mode === 'route') { addRoutePoint({ lat: latlng.lat, lng: latlng.lng }); return; } // 1.º toque = A, 2.º = B, 3.º recomeça
     if (tools.mode !== 'pin') return; // sem modo ativo, tocar no mapa só serve para navegar
     setNewPin({ lat: latlng.lat, lng: latlng.lng });
     setPinName('');
@@ -226,6 +266,11 @@ export default function BragaMapTab() {
         </p>
       </div>
 
+      {/* Rota estilo Google Maps: De / Para (ligada à rota a pé pelas ruas) */}
+      <RouteBar ends={ends} pending={namePending} pins={pins} getView={viewBbox} onGps={gpsPoint}
+        onSet={(i, p) => applyEnds(Object.assign([...ends], { [i]: p }))}
+        onSwap={() => applyEnds([ends[1], ends[0]])} />
+
       {/* Mapa: stacking context próprio (isolation) para as camadas do Leaflet não passarem por cima do menu ≡ */}
       <div className="rounded-sm overflow-hidden relative" style={{ border: '1px solid rgb(var(--c) / 0.2)', height: 'min(68vh, 640px)', minHeight: 420, isolation: 'isolate' }}>
         <MapContainer
@@ -254,9 +299,9 @@ export default function BragaMapTab() {
           )}
           {route && <Polyline positions={route.path} pathOptions={{ color: '#0d0b08', weight: 8, opacity: 0.6 }} />}
           {route && <Polyline positions={route.path} pathOptions={{ color: '#f59e0b', weight: 4.5, dashArray: route.online ? undefined : '8 8' }} />}
-          {routePts.map((p, i) => (
+          {ends.map((p, i) => p && (
             <CircleMarker key={`r${i}`} center={[p.lat, p.lng]} radius={8} pathOptions={{ color: '#0d0b08', weight: 2, fillColor: i === 0 ? '#22c55e' : '#ef4444', fillOpacity: 1 }}>
-              <Popup><span style={{ fontFamily: 'monospace', fontSize: 11 }}>{i === 0 ? t('Ponto A') : t('Ponto B')}</span></Popup>
+              <Popup><span style={{ fontFamily: 'monospace', fontSize: 11 }}>{i === 0 ? t('Ponto A') : t('Ponto B')}{p.label ? ` · ${p.label}` : ''}</span></Popup>
             </CircleMarker>
           ))}
           {measure.length > 1 && <Polyline positions={measure.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#f59e0b', weight: 3, dashArray: '6 6' }} />}
@@ -266,6 +311,7 @@ export default function BragaMapTab() {
               key={pin.id}
               position={[pin.lat, pin.lng]}
               icon={createColorIcon(pin.color)}
+              eventHandlers={{ click: () => { if (tools.mode === 'route') addRoutePoint({ lat: pin.lat, lng: pin.lng, label: pin.name, kind: 'pin' }); } }}
             >
               <Popup>
                 <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
@@ -316,12 +362,20 @@ export default function BragaMapTab() {
               <span className="flex-1 min-w-0 font-bold">
                 {routing ? t('A calcular a rota a pé…')
                   : route ? t('Distância a pé: {d} | Tempo estimado: {m} min', { d: `${(route.meters / 1000).toFixed(2)} km`, m: route.minutes })
-                    : routePts.length === 1 ? t('ROTA: toca no ponto B.') : t('ROTA: toca no ponto A e depois no B.')}
+                    : ends[0] && !ends[1] ? t('ROTA: toca no ponto B.') : !ends[0] && ends[1] ? t('ROTA: toca no ponto A.') : t('ROTA: toca no ponto A e depois no B.')}
               </span>
             </div>
             {route?.profile && (
               <p className="mt-1 text-[11px] font-bold tabular-nums">
                 ▲ D+ {Math.round(route.profile.up)} m · ▼ D− {Math.round(route.profile.down)} m · {t('máx.')} {Math.round(route.profile.max)} m{curAlt != null ? ` · ${t('atual')} ${curAlt} m` : ''}
+              </p>
+            )}
+            {(route?.streets?.some((x) => x.name) || route?.naming) && (
+              <p className="mt-1 text-[11px] leading-snug cursor-pointer" role="button" tabIndex={0} aria-expanded={streetsOpen}
+                onClick={() => setStreetsOpen((v) => !v)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStreetsOpen((v) => !v); } }}
+                style={{ color: 'rgb(var(--c) / 0.9)', ...(streetsOpen ? null : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>
+                <span className="opacity-70">{t('Percurso:')} </span>{route.naming && <span className="opacity-60">({t('a identificar ruas…')}) </span>}
+                {route.streets.map((x, i) => `${x.name || t('caminho sem nome')}${x.m >= 50 ? ` (${x.m >= 1000 ? `${(x.m / 1000).toFixed(1)} km` : `${Math.round(x.m / 10) * 10} m`})` : ''}`).join(' → ')}
               </p>
             )}
             {route && (
@@ -331,9 +385,9 @@ export default function BragaMapTab() {
               </p>
             )}
             <div className="flex flex-wrap gap-2 mt-2">
-              <button type="button" disabled={!routePts.length} onClick={() => { const n = routePts.slice(0, -1); setRoutePts(n); calcRoute(n); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Undo2 size={11} />{t('Desfazer')}</button>
-              <button type="button" disabled={!routePts.length} onClick={() => { setRoutePts([]); setRoute(null); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Trash2 size={11} />{t('Limpar')}</button>
-              <button type="button" disabled={!tracker.pos} onClick={() => { const p = { lat: tracker.pos.lat, lng: tracker.pos.lng }; const n = routePts.length >= 1 ? [p, routePts[routePts.length - 1]] : [p]; setRoutePts(n); calcRoute(n); }} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}>{t('Partir do GPS')}</button>
+              <button type="button" disabled={!routePts.length} onClick={() => applyEnds(ends[1] ? [ends[0], null] : [null, null])} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Undo2 size={11} />{t('Desfazer')}</button>
+              <button type="button" disabled={!routePts.length} onClick={() => { setEnds([null, null]); setRoute(null); }} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Trash2 size={11} />{t('Limpar')}</button>
+              <button type="button" disabled={!tracker.pos} onClick={() => { const p = { lat: tracker.pos.lat, lng: tracker.pos.lng, label: t('A sua localização'), kind: 'gps' }; applyEnds([p, ends[1] || (ends[0]?.kind !== 'gps' ? ends[0] : null)]); }} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}>{t('Partir do GPS')}</button>
               {!hasOffline && <button type="button" onClick={() => openRoute(true)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Esquemático')}</button>}
               <button type="button" onClick={() => setMode(null)} className="ml-auto px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
             </div>

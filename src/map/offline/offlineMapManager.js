@@ -77,7 +77,7 @@ export async function saveArea({ name, bbox, layer = 'road', minZoom = 10, maxZo
   }
   // 3) malha de caminhos e estradas para rotas offline
   if (graph && est.graphOk) {
-    try { const g = await buildGraphForArea(id, bbox, (p) => onProgress({ phase: 'rotas', ...p }), signal); area.graph = true; area.bytes += g.bytes; area.graphNodes = g.nodes; }
+    try { const g = await buildGraphForArea(id, bbox, (p) => onProgress({ phase: 'rotas', ...p }), signal); area.graph = true; area.graphNames = true; area.bytes += g.bytes; area.graphNodes = g.nodes; }
     catch (e) { if (signal?.aborted) throw e; area.warnings.push('rotas'); onProgress({ phase: 'rotas', msg: t('Malha de rotas não descarregada ({e}).', { e: e.message }) }); }
   }
   area.done = true; await put('areas', id, area);
@@ -97,7 +97,7 @@ export async function addGraphToArea(id, onProgress = () => {}, signal) {
   if (!area) throw new Error(t('Área não encontrada.'));
   if (bboxKm2(area.bbox) > MAX_GRAPH_KM2) throw new Error(t('Área grande demais para a malha de rotas (máx. 900 km²): o mapa e o relevo guardam-se na mesma.'));
   const g = await buildGraphForArea(id, area.bbox, onProgress, signal);
-  const next = { ...area, graph: true, graphNodes: g.nodes, bytes: (area.bytes || 0) + g.bytes, warnings: (area.warnings || []).filter((w) => w !== 'rotas') };
+  const next = { ...area, graph: true, graphNames: true, graphNodes: g.nodes, bytes: (area.bytes || 0) + g.bytes, warnings: (area.warnings || []).filter((w) => w !== 'rotas') };
   await put('areas', id, next);
   return next;
 }

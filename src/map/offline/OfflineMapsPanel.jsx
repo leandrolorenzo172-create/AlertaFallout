@@ -133,8 +133,8 @@ export default function OfflineMapsPanel({ getViewBbox, defaultLayer = 'road', o
                   <b className="block truncate">{a.name}{a.done ? '' : ` (${t('incompleta')})`}</b>
                   <span className="opacity-70">{t(OFFLINE_LAYERS[a.layer]?.label || a.layer)} · z{a.minZoom}–{a.maxZoom} · {MB(a.bytes || 0)}{a.dem ? ` · ${t('relevo')}` : ''}{a.graph ? ` · ${t('rotas')}` : ''} · {new Date(a.created).toLocaleDateString('pt-PT')}</span>
                 </span>
-                {!a.graph && bboxKm2(a.bbox) <= MAX_GRAPH_KM2 && (
-                  <button type="button" disabled={!!prog} onClick={() => addRoutes(a)} className="px-2 py-1.5 rounded-sm text-[9px] uppercase tracking-wider disabled:opacity-30" style={{ border: '1px solid #ffaa00aa', color: '#ffaa00' }} title={t('Esta área não tem rotas offline: descarregar agora')}>{t('+ Rotas')}</button>
+                {!a.graphNames && bboxKm2(a.bbox) <= MAX_GRAPH_KM2 && (
+                  <button type="button" disabled={!!prog} onClick={() => addRoutes(a)} className="px-2 py-1.5 rounded-sm text-[9px] uppercase tracking-wider disabled:opacity-30" style={{ border: '1px solid #ffaa00aa', color: '#ffaa00' }} title={a.graph ? t('Atualizar as rotas offline (com nomes das ruas)') : t('Esta área não tem rotas offline: descarregar agora')}>{t('+ Rotas')}</button>
                 )}
                 <button type="button" onClick={() => onFly?.(a.bbox)} aria-label={t('Ver {n}', { n: a.name })} className="p-1.5 rounded-sm" style={btn(false)}><Eye size={13} /></button>
                 <button type="button" disabled={!!prog} onClick={async () => { await deleteArea(a.id); refresh(); }} aria-label={t('Apagar {n}', { n: a.name })} className="p-1.5 rounded-sm disabled:opacity-30" style={{ border: '1px solid #ef444488', color: '#ef4444' }}><Trash2 size={13} /></button>

@@ -1,3 +1,5 @@
+import { compressStreets } from './geocode';
+
 // Rota a pé no mapa online (aba MAPA > ROTA): caminho pelas ruas do OpenStreetMap com o serviço público OSRM (perfil a pé)
 // de routing.openstreetmap.de. Sem rede (ou se o serviço falhar), devolve a distância em linha reta.
 const OSRM_FOOT = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot';
@@ -11,18 +13,21 @@ export function straightDistance(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-// -> { path: [[lat, lng], …], meters, minutes, online: true } ou, sem serviço, a linha reta com online: false
+// -> { path: [[lat, lng], …], meters, minutes, streets: [{ name, m }], online: true } ou, sem serviço, a linha reta com online: false
 export async function walkRoute(a, b) {
   try {
-    const url = `${OSRM_FOOT}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson&steps=false`;
+    const url = `${OSRM_FOOT}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson&steps=true`;
     const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = await r.json();
     const route = j.routes && j.routes[0];
     if (j.code !== 'Ok' || !route) throw new Error(j.code || 'sem rota');
-    return { path: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]), meters: route.distance, minutes: Math.max(1, Math.round(route.distance / WALK_M_PER_MIN)), online: true };
+    // nomes das ruas pela ordem do percurso (passos do OSRM)
+    const mid = (g) => { const c = g?.coordinates; if (!c?.length) return undefined; const [lng, lat] = c[Math.floor(c.length / 2)]; return [lat, lng]; };
+    const streets = compressStreets((route.legs || []).flatMap((l) => l.steps || []).map((s) => ({ name: s.name, m: s.distance, at: s.name ? undefined : mid(s.geometry) })), { keepUnnamed: true });
+    return { path: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]), meters: route.distance, minutes: Math.max(1, Math.round(route.distance / WALK_M_PER_MIN)), streets, online: true };
   } catch (e) {
     const meters = straightDistance(a, b);
-    return { path: [[a.lat, a.lng], [b.lat, b.lng]], meters, minutes: Math.max(1, Math.round(meters / WALK_M_PER_MIN)), online: false, error: e.message };
+    return { path: [[a.lat, a.lng], [b.lat, b.lng]], streets: [], meters, minutes: Math.max(1, Math.round(meters / WALK_M_PER_MIN)), online: false, error: e.message };
   }
 }
