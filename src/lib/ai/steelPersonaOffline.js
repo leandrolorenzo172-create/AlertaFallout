@@ -285,7 +285,8 @@ export function joke() {
 
 // ---------- Intenções simples (antes da pesquisa) ----------
 const n = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[!?.,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-const GREET_RE = /^(ola|oi|ole|hey|hello|hi|bom dia|boa tarde|boa noite|boas|saudacoes|mr\.? ?steel|mister steel|steel|estas ai|esta ai|estas por ai|alguem ai)( (mr\.? ?steel|steel))?$/;
+// cumprimentos, sozinhos ou combinados ("ola bom dia", "oi boa tarde mr steel", "bom dia tudo bem")
+const GREET_RE = /^((ola|oi|ole|hey|hello|hi|bom dia|boa tarde|boa noite|boas|saudacoes|mr\.? ?steel|mister steel|steel|amigo|estas ai|esta ai|estas por ai|alguem ai)( |$))+$/;
 const WHO_RE = /^(quem es( tu)?|o que es( tu)?|quem e o mr\.? ?steel|o que fazes|o que sabes fazer|como funcionas|apresenta te|ajuda|help|menu)$/;
 const THANKS_RE = /^(obrigad[oa]|muito obrigad[oa]|obg|valeu|thanks|obrigado mr\.? ?steel|perfeito|otimo|excelente|fixe|top)( mr\.? ?steel)?$/;
 const CONT_RE = /^(continua|continue|mais|e depois|e entao|segue|seguinte|prossegue|explica melhor|explica|desenvolve|aprofunda|mais detalhes|da exemplos|exemplos|resume|resume isso|resumo|em resumo|sintetiza|tl ?dr|o que mais)( isso| isto| por favor| pf)?$/;

@@ -11,6 +11,7 @@ import { contextFor, answerLocally, summaryEntry } from './localEngine';
 import { intentOf, styleSamples, isJoke, joke } from './steelPersonaOffline';
 import FORMULA from '@/data/mrsteel/formula.md?raw';
 import { getAiMode } from './aiTools';
+import { isConversation, CHAT_PROMPT } from './chatMode';
 import FORMULA_RESUMO from '@/data/mrsteel/formula-resumo.md?raw';
 import { locale } from '../../i18n';
 
@@ -41,6 +42,19 @@ const CASUAL = /^(escreve|redige|reescreve|traduz|corrige|melhora|cria|inventa|f
 
 // Contexto da app para a IA online. Devolve { system, ctx } para ask() reutilizar os excertos nas referências.
 async function buildSystem(question) {
+  // Conversa (desabafo, opinião, piada, "como estás?"): sem manuais, sem fórmula de resumo, sem perguntas de seguimento
+  if (isConversation(question) && !CASUAL.test(question.trim())) {
+    const ex = styleSamples(4);
+    const system = `${getInstructions()}
+
+${CHAT_PROMPT}
+${isJoke(question) ? `\nO utilizador pediu uma piada. Conta esta (ou uma parecida, leve e sem ofender ninguém), em 1–3 frases: ${joke()}\n` : ''}
+# TOM (inspiração, não copies à letra)
+- Conversa de café: ${ex.conversa.join(' | ')}
+
+Data e hora do dispositivo: ${new Date().toLocaleString(locale())}. Responde em português de Portugal (ou na língua em que te escreverem), tratando por "tu". Não escrevas linha de perguntas de seguimento.`;
+    return { system, ctx: [] };
+  }
   const casual = intentOf(question) || CASUAL.test(question.trim());
   const ctx = casual ? [] : await contextFor(question, CTX_N, { chars: CTX_CHARS, minScore: CTX_MIN }).catch(() => []);
   const blocks = ctx.map((c) => `### [${c.ref}]\n${c.text}`).join('\n\n');

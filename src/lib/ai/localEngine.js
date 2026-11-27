@@ -11,6 +11,7 @@ import stationsPT from '@/data/stationsPT.json';
 import { locale } from '../../i18n';
 import { cleanNoise, intentOf, greeting, starter, identity, question, missing, rephrase, thanks, opener, smallTalk, isJoke, joke } from './steelPersonaOffline';
 import RESUMOS from '@/data/mrsteel/resumos.json';
+import { isConversation, offlineChatReply } from './chatMode';
 
 // ---------- Texto ----------
 const STOP = new Set(('a o os as um uma uns umas de do da dos das em no na nos nas num numa nuns numas dum duma ao aos por para pelo pela pelos pelas com sem sob sobre '
@@ -478,6 +479,8 @@ export async function answerLocally(qIn, { reason = 'offline', history = [] } = 
   const nWords = norm(qtext).split(/\s+/).filter(Boolean).length;
   // ...a não ser que seja uma pergunta técnica com resposta nos ficheiros ("o que comer numa emergência")
   const technical = /\b(como|o que|qual|quais|quanto|quantos|onde|porque|emergencia|sobreviv\w*|guia|manual)\b/.test(norm(qtext));
+  // conversa (desabafo, opinião, boa notícia, pergunta ao Mr. Steel): responde como amigo, sem ir aos manuais
+  if (isConversation(qtext) && !technical) return { text: offlineChatReply(qtext), refs: [], followups: [], found: true };
   if (chat && nWords <= 6 && !technical) return { text: chat.text, refs: [], followups: [], found: true };
 
   // 3. "Saber mais sobre: X" -> os pontos-chave do tema (organizados, nunca o texto cru)
