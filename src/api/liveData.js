@@ -1,5 +1,6 @@
 import { locale, t as tr, isEn } from '../i18n';
 import { getLoc } from '../location';
+import { computeCyberRisk } from '../lib/cyberRisk';
 import { isValidStrikeNotice, strikeSector } from '../lib/strikeFilter';
 // Dados reais de fontes públicas, usados quando a app corre fora do claude.ai.
 // - Meteorologia e avisos: IPMA (api.ipma.pt). Previsão a 15 dias: Open-Meteo, com o IPMA (5 dias) como reserva.
@@ -266,9 +267,11 @@ export async function fetchCatastrophes() {
 
 // ---------------- Notícias (ficheiro gerado no GitHub Actions) ----------------
 let newsCache = null;
-async function fetchNewsFile() {
-  if (newsCache && Date.now() - newsCache.at < 5 * 60000) return newsCache.data;
-  const data = await getJson(`./data/news.json?t=${Math.floor(Date.now() / 300000)}`);
+// "Atualizar agora" dos separadores: a próxima leitura ignora a cópia em memória
+export const invalidateNews = () => { newsCache = null; };
+async function fetchNewsFile(fresh = false) {
+  if (!fresh && newsCache && Date.now() - newsCache.at < 5 * 60000) return newsCache.data;
+  const data = await getJson(`./data/news.json?t=${fresh ? Date.now() : Math.floor(Date.now() / 300000)}`);
   newsCache = { at: Date.now(), data };
   return data;
 }
@@ -295,7 +298,9 @@ export async function fetchDashboard() {
   const natural_disaster_risk = cat ? clamp(round1(cats.slice(0, 5).reduce((s, a) => s + a.severity, 0) / Math.max(1, Math.min(5, cats.length))), 1, 10) : 0;
   // usa o índice do separador Instabilidade Económica quando existe (notícias de economia); senão, o cálculo antigo
   const economic_instability = n ? (n.economy?.level ?? scoreFromCount(c.econ, Math.max(10, c.total * 0.12))) : 0;
-  const cyber_risk = n ? scoreFromCount(c.cyber, Math.max(6, c.total * 0.05)) : 0;
+  // Risco cibernético: pontuação 0–100 da aba Ciberataques (gravidade + volume), no painel em 0–10
+  const cyberRisk = n?.cyber?.items ? computeCyberRisk(n.cyber.items) : null;
+  const cyber_risk = cyberRisk ? clamp(round1(cyberRisk.score / 10), 1, 10) : (n ? scoreFromCount(c.cyber, Math.max(6, c.total * 0.05)) : 0);
   // índice de greves (só para mostrar no Painel; não entra na ameaça global)
   const strike_index = n?.strikes ? cleanStrikes(n.strikes).level : 0;
   const global_threat_level = round1(war_risk * 0.35 + geopolitical_tension * 0.2 + natural_disaster_risk * 0.2 + economic_instability * 0.15 + cyber_risk * 0.1);
@@ -306,14 +311,22 @@ export async function fetchDashboard() {
   const when = n?.generated ? new Date(n.generated).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
   return {
     war_risk, geopolitical_tension, natural_disaster_risk, economic_instability, cyber_risk, strike_index, global_threat_level, critical_events,
-    summary: `${tr('Índices calculados automaticamente, não são uma avaliação oficial.')} ${n ? tr('Baseados em {t} notícias de jornais portugueses ({w} sobre conflitos, {e} sobre economia, {c} sobre ciberataques), recolhidas em {when}', { t: c.total, w: c.war, e: c.econ, c: c.cyber, when }) : tr('Notícias indisponíveis')}${cat ? tr(', e em {n} alertas do GDACS e do USGS.', { n: cats.length }) : '.'}`,
+    summary: `${tr('Índices calculados automaticamente, não são uma avaliação oficial.')} ${n ? tr('Baseados em {t} notícias de jornais portugueses ({w} sobre conflitos, {e} sobre economia, {c} sobre ciberataques), recolhidas em {when}', { t: c.total, w: c.war, e: c.econ, c: cyberRisk ? cyberRisk.n7 : c.cyber, when }) : tr('Notícias indisponíveis')}${cat ? tr(', e em {n} alertas do GDACS e do USGS.', { n: cats.length }) : '.'}`,
   };
 }
 
 // ---------------- Instabilidade económica e Greves (gerados em scripts/fetch-news.mjs) ----------------
 // economy = { level 1-10, total, negative, history: [{ d: 'AAAA-MM-DD', v }], articles: [{ title, summary, url, source, date, negative }] }
-export async function fetchEconomy() {
-  const n = await fetchNewsFile().catch(() => null);
+// ---------------- Ciberataques (13 fontes de cibersegurança, recolhidas de hora a hora) ----------------
+// cyber = { items: [{ title, summary, url, source, domain, date, types[], severity, sector, official }], sources: [{ name, domain, group, ok, n }], risk }
+export async function fetchCyber({ fresh = false } = {}) {
+  const n = await fetchNewsFile(fresh).catch(() => null);
+  if (!n?.cyber) throw new Error(tr('Dados de ciberataques ainda não disponíveis. São recolhidos de hora a hora.'));
+  return { ...n.cyber, risk: computeCyberRisk(n.cyber.items), generated: n.generated }; // risco recalculado com a hora atual
+}
+
+export async function fetchEconomy({ fresh = false } = {}) {
+  const n = await fetchNewsFile(fresh).catch(() => null);
   if (!n?.economy) throw new Error(tr('Dados de economia ainda não disponíveis. São recolhidos de hora a hora.'));
   return { ...n.economy, generated: n.generated };
 }
@@ -332,8 +345,8 @@ export function cleanStrikes(st) {
     upcoming: (st.upcoming || []).filter(isValidStrikeNotice).map((u) => ({ ...u, sector: strikeSector(live(u), u.summary) })),
   };
 }
-export async function fetchStrikes() {
-  const n = await fetchNewsFile().catch(() => null);
+export async function fetchStrikes({ fresh = false } = {}) {
+  const n = await fetchNewsFile(fresh).catch(() => null);
   if (!n?.strikes) throw new Error(tr('Dados de greves ainda não disponíveis. São recolhidos de hora a hora.'));
   return { ...cleanStrikes(n.strikes), generated: n.generated };
 }

@@ -8,6 +8,7 @@ import { enableNotifications, isRegistered, pushSupported } from '@/notify/push'
 import { testWeatherAlert, testNotifications } from '@/notify/strikeAlerts';
 import { askPermission, testAlert, checkStrikeAlerts, ANTECEDENCIA_DIAS } from '@/notify/strikeAlerts';
 import { t } from '@/i18n';
+import { onSettingsAction, focusCard } from '@/settingsActions';
 
 const notifications = [
   { key: 'guerra_enabled', label: t('Guerra & Conflitos'), desc: t('Notícias sobre guerras ativas e conflitos armados'), icon: '⚔️', color: '#ff0000' },
@@ -66,6 +67,24 @@ export default function NotificationsTab() {
     catch (e) { setPushMsg(e.message); } finally { setBusy(false); }
   };
   const [perm, setPerm] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+  // "Testar notificações" (o mesmo handler do botão e da ferramenta TESTE do menu ≡)
+  const runTest = async () => {
+    setPushMsg(t('A enviar notificações de teste…'));
+    const ok = await testNotifications();
+    setPushMsg(ok ? t('Enviadas 2 notificações de teste. Se não aparecerem, confirma nas definições do telemóvel que as notificações desta app estão permitidas.') : t('As notificações não estão autorizadas neste telemóvel: carrega primeiro em "Ativar notificações no telemóvel". O aviso de teste aparece só dentro da app.'));
+  };
+  // Ferramentas rápidas do menu ≡: ATIVAR NOTIFICAÇÃO, TESTE e REPOR PREDEFINIÇÕES (categorias)
+  const actions = React.useRef({});
+  actions.current = { activatePush, runTest, perm };
+  useEffect(() => onSettingsAction((id) => {
+    const show = () => setTimeout(() => focusCard('set-push'), 60); // mostra o estado/resultado
+    if (id === 'ativar') {
+      show();
+      if (!pushSupported()) setPushMsg(t('✖ Este browser não mostra notificações. Usa o Chrome com a app instalada no ecrã inicial; até lá os avisos só aparecem dentro da app.'));
+      else actions.current.activatePush();
+    } else if (id === 'teste') { show(); actions.current.runTest(); }
+    else if (id === 'repor-notificacoes') { setSettings(DEFAULTS); setSaved(false); setPushMsg(t('Categorias repostas: carrega em "Guardar definições" para as guardar.')); }
+  }), []);
   const handleToggle = (key) => {
     // ligar os avisos de greve pede logo autorização para notificações no telemóvel
     if (key === 'greves_enabled' && !settings[key]) askPermission().then(setPerm);
@@ -155,7 +174,7 @@ export default function NotificationsTab() {
       </div>
 
       {/* Como funcionam os avisos: explicação, estado deste telemóvel, ativação e exemplo */}
-      <div className="p-3 rounded-sm mb-4 text-[10px] leading-relaxed" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)', color: 'rgb(var(--c) / 0.6)' }}>
+      <div id="set-push" className="p-3 rounded-sm mb-4 text-[10px] leading-relaxed" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)', color: 'rgb(var(--c) / 0.6)' }}>
         <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'rgb(var(--c) / 0.85)' }}>{t('Como funcionam os avisos')}</p>
         <ul className="space-y-1.5 mb-3">
           <li>{t('📲 Chegam como')}{' '}<b>{t('notificação no telemóvel')}</b>{t(', mesmo com a app fechada, entre as 8h e as 23h.')}</li>
@@ -183,7 +202,7 @@ export default function NotificationsTab() {
             </div>
           )}
           <div>
-            <button type="button" onClick={async () => { const ok = await testNotifications(); setPushMsg(ok ? t('Enviadas 2 notificações de teste. Se não aparecerem, confirma nas definições do telemóvel que as notificações desta app estão permitidas.') : t('As notificações não estão autorizadas neste telemóvel: carrega primeiro em "Ativar notificações no telemóvel". O aviso de teste aparece só dentro da app.')); }}
+            <button type="button" onClick={runTest}
               className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={{ border: '1px solid rgb(var(--c) / 0.4)', color: 'rgb(var(--c))' }}>
               🔔 {t('Testar notificações')}
             </button>

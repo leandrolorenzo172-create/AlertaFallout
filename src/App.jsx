@@ -9,6 +9,7 @@ import { IS_ARTIFACT } from '@/api/base44Client';
 import DashboardTab from './tabs/DashboardTab';
 import WarNewsTab from './tabs/WarNewsTab';
 import EconomyTab from './tabs/EconomyTab';
+import CyberTab from './tabs/CyberTab';
 import StrikesTab from './tabs/StrikesTab';
 import StrikeBanner from './notify/StrikeBanner';
 import CatastropheTab from './tabs/CatastropheTab';
@@ -51,6 +52,7 @@ export default function App() {
     dashboard: <DashboardTab onThreatLevelChange={handleThreat} />,
     guerra: <WarNewsTab />,
     economia: <EconomyTab />,
+    ciber: <CyberTab />,
     greves: <StrikesTab />,
     catastrofes: <CatastropheTab />,
     meteo: <WeatherTab />,

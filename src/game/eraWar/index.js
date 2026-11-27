@@ -8,6 +8,7 @@ import { render, themeColors, drawIcon, capIcon, CANVAS } from './render';
 import * as audio from './audio';
 import { card, spritesReady } from './sprites';
 import { locale, t as tr } from '../../i18n';
+import { onGameCommand, reportGame } from '../gameRemote';
 
 const STATS_KEY = 'pb_erawar_stats';
 export function loadStats() {
@@ -151,6 +152,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   function setPaused(p) {
     if (g.over) return;
     paused = p;
+    reportGame({ paused: p });
     audio.pauseAudio(p);
     overlay(p ? `<h2>${tr('PAUSA')}</h2><p class="ew-small">${tr('Dificuldade:')} ${DIFFICULTY[g.difficulty].label}</p>
       <div class="ew-row"><button type="button" class="ew-btn" data-act="resume">${tr('CONTINUAR')}</button><button type="button" class="ew-btn" data-act="restart">${tr('RECOMEÇAR')}</button><button type="button" class="ew-btn" data-act="exit">${tr('SAIR')}</button></div>` : '');
@@ -158,6 +160,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   }
   function restart() {
     g = createGame({ difficulty }); recorded = false; sirenDone = false; iconEra = -1; paused = false; overlay(''); last = performance.now();
+    reportGame({ paused: false });
     audio.pauseAudio(false); audio.ui.start(); audio.playMusic('battle', 0); audio.setMusicEra(0);
   }
 
@@ -198,7 +201,7 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
   let fsOn = false;
   const setFs = (on) => {
     fsOn = on; root.classList.toggle('ew-fs', on);
-    el.fs.setAttribute('aria-pressed', String(on)); el.fs.innerHTML = on ? tr('&#10529; SAIR DO ECRÃ INTEIRO') : tr('&#10530; ECRÃ INTEIRO');
+    el.fs.setAttribute('aria-pressed', String(on)); reportGame({ fullscreen: on }); el.fs.innerHTML = on ? tr('&#10529; SAIR DO ECRÃ INTEIRO') : tr('&#10530; ECRÃ INTEIRO');
     document.documentElement.style.overflow = on ? 'hidden' : '';
   };
   on(el.fs, 'click', async () => {
@@ -212,6 +215,13 @@ export function mountEraWar(root, { difficulty = 'medium', onExit = () => {} } =
     }
   });
   on(document, 'fullscreenchange', () => { if (!document.fullscreenElement && fsOn) setFs(false); });
+  // Menu ≡ da aba MINI JOGO: pausa, recomeçar, ecrã inteiro e som (mesmos handlers dos botões do jogo)
+  offs.push(onGameCommand((cmd) => {
+    if (cmd === 'pause') { audio.ui.select(); setPaused(!paused); }
+    else if (cmd === 'restart') restart();
+    else if (cmd === 'fullscreen') el.fs.click();
+    else if (cmd === 'sound-sync') syncAudioBtns();
+  }));
   on(window, 'keydown', (e) => { if (e.key === 'Escape' && fsOn && !document.fullscreenElement) setFs(false); });
   const tab = (n) => {
     [0, 1].forEach((k) => { el[`panel${k}`].hidden = k !== n; el[`tab${k}`].setAttribute('aria-selected', String(k === n)); });

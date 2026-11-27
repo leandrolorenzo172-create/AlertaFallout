@@ -7,7 +7,10 @@ import '../game/eraWar/eraWar.css';
 import * as audio from '../game/eraWar/audio';
 import { mountSpace, createSpace } from '../game/lcd/space';
 import { mountSnake, createSnake } from '../game/lcd/snake';
-import { createScreen, demoInput, runLoop, loadBest } from '../game/lcd/engine';
+import { createScreen, demoInput, runLoop, loadBest, getSound, setSound } from '../game/lcd/engine';
+import { onGameCommand, reportGame, closeGamePanel, bumpSound, GAME_IDS } from '../game/gameRemote';
+import { useGameRemote } from '../game/useGameRemote';
+import { X } from 'lucide-react';
 import '../game/lcd/lcd.css';
 import { t } from '@/i18n';
 
@@ -46,14 +49,14 @@ function LcdPreview({ kind }) {
   );
 }
 
-function LcdGame({ kind, onExit }) {
+function LcdGame({ kind, onExit, autoStart }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
-    const stop = (kind === 'space' ? mountSpace : mountSnake)(el, { onExit });
+    const stop = (kind === 'space' ? mountSpace : mountSnake)(el, { onExit, autoStart });
     el.scrollIntoView({ block: 'start' });
     return stop;
-  }, [kind, onExit]);
+  }, [kind, onExit]); // eslint-disable-line react-hooks/exhaustive-deps
   return <div ref={ref} style={{ scrollMarginTop: 46 }} />;
 }
 
@@ -94,6 +97,77 @@ function Game({ difficulty, onExit }) {
   return <div ref={ref} />;
 }
 
+// ---------- Painéis do menu ≡: Recordes e Ajuda ----------
+const HELP = {
+  erawar: [
+    [t('Objetivo'), t('Destrói o abrigo inimigo antes que ele destrua o teu.')],
+    [t('Tropas'), t('3 por era: linha da frente, atiradores e pesadas. Teclas 1, 2 e 3 no PC.')],
+    [t('Caricas e XP'), t('Ganhas caricas e XP a cada baixa. As caricas pagam tropas e torres; o XP faz evoluir de era (tecla E).')],
+    [t('Eras'), t('Primitivos → Sucateiros → Milícia → Táticas → Futurista. Cada era traz tropas e torres mais fortes.')],
+    [t('Torres'), t('Até 3 espaços na base (tecla T compra). Podes vender para recuperar caricas.')],
+    [t('Especiais'), t('Ataque especial com recarga (tecla Q): destroços, morteiros, gás tóxico, bombardeamento e Mini Nuke.')],
+    [t('Pausa'), t('Botão ❚❚, tecla P ou Esc.')],
+  ],
+  space: [
+    [t('Objetivo'), t('Abate as vagas que chegam pela direita, desvia-te das montanhas e vence o chefe de cada nível.')],
+    [t('Mover'), t('Analógico no ecrã ou setas/WASD.')],
+    [t('Disparar'), t('Botão A ou espaço (manter = automático).')],
+    [t('Laser'), t('Botão B ou X: atravessa tudo na linha, número limitado.')],
+    [t('Vidas'), t('3 corações; há bónus de vida pelo caminho.')],
+    [t('Pausa / sair'), t('PAUSA ou P · SAIR ou Esc.')],
+  ],
+  snake: [
+    [t('Objetivo'), t('Come os pontos para crescer e somar pontos sem bater nas paredes nem no próprio corpo.')],
+    [t('Direção'), t('Analógico, deslizar o dedo ou setas/WASD.')],
+    [t('Nível'), t('9 velocidades, escolhe no menu com ◀ ▶.')],
+    [t('Bónus'), t('Um bicho aparece por pouco tempo e vale mais pontos.')],
+    [t('Pausa / sair'), t('Botão A ou P · SAIR ou Esc.')],
+  ],
+};
+function GamePanel({ kind, game, onClose }) {
+  const stats = loadStats();
+  const box = { background: 'rgb(var(--cd))', border: '1px solid rgb(var(--c) / 0.6)', boxShadow: '0 0 18px rgb(var(--c) / 0.35)' };
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3" style={{ background: '#000000b3' }} role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="w-full max-w-md max-h-[85vh] overflow-y-auto p-4 rounded-sm" style={box} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-3">
+          {kind === 'stats' ? <Trophy size={15} /> : <Gamepad2 size={15} />}
+          <h3 className="flex-1 text-xs uppercase tracking-wider font-bold">{kind === 'stats' ? t('Recordes e estatísticas') : `${t('Ajuda')} — ${GAMES.find((g) => g.id === game)?.name}`}</h3>
+          <button type="button" onClick={onClose} aria-label={t('Fechar')} className="p-1 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.3)' }}><X size={14} /></button>
+        </div>
+        {kind === 'stats' ? (
+          <div className="space-y-3 text-[11px]">
+            <div>
+              <p className="uppercase tracking-wider font-bold mb-1.5" style={{ color: '#ffb000' }}>{t('Guerra das Eras')}</p>
+              <table className="w-full"><tbody>
+                {DIFFS.map((d) => { const st = stats[d.id] || { w: 0, l: 0 }; const n = st.w + st.l; return (
+                  <tr key={d.id} style={{ borderTop: '1px solid rgb(var(--c) / 0.15)' }}>
+                    <td className="py-1">{DIFFICULTY[d.id].label}</td>
+                    <td className="py-1 text-right tabular-nums">{t('{w} vitórias · {l} derrotas', { w: st.w, l: st.l })}</td>
+                    <td className="py-1 text-right tabular-nums w-14" style={{ color: 'rgb(var(--c) / 0.6)' }}>{n ? `${Math.round((st.w / n) * 100)}%` : '—'}</td>
+                  </tr>); })}
+              </tbody></table>
+            </div>
+            {['space', 'snake'].map((k) => (
+              <div key={k} className="flex items-center justify-between p-2 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.2)' }}>
+                <span className="uppercase tracking-wider font-bold" style={{ color: '#ffb000' }}>{GAMES.find((g) => g.id === k).name}</span>
+                <span className="tabular-nums">{t('Recorde')}: <b>{String(loadBest(LCD_INFO[k].best)).padStart(LCD_INFO[k].digits, '0')}</b></span>
+              </div>
+            ))}
+            <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.55)' }}>{t('Os jogos LCD guardam só o melhor resultado; a Guerra das Eras conta vitórias e derrotas por dificuldade. Tudo fica neste aparelho.')}</p>
+          </div>
+        ) : (
+          <dl className="space-y-2 text-[11px]">
+            {HELP[game].map(([k, v]) => (
+              <div key={k}><dt className="uppercase tracking-wider font-bold" style={{ color: '#ffb000' }}>{k}</dt><dd style={{ color: 'rgb(var(--c) / 0.85)' }}>{v}</dd></div>
+            ))}
+          </dl>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MiniGameTab() {
   const [playing, setPlaying] = useState(null);
   const [game, setGame] = useState(() => { try { return localStorage.getItem('pb_minijogo_game') || 'erawar'; } catch { return 'erawar'; } });
@@ -117,8 +191,37 @@ export default function MiniGameTab() {
   const startMenuMusic = () => { if (!playing && game === 'erawar') { audio.unlock(); audio.playMusic('menu'); } };
   useEffect(() => () => audio.stopMusic(), []);
 
-  if (playing) return <div className="pt-3"><Game difficulty={playing} onExit={exit} /></div>;
-  if (lcdPlaying && game !== 'erawar') return <div className="pt-3"><LcdGame kind={game} onExit={exitLcd} /></div>;
+  // ---------- Menu ≡ da aba MINI JOGO (src/game/gameRemote.js) ----------
+  const remote = useGameRemote();
+  const inMatch = !!playing || (lcdPlaying && game !== 'erawar');
+  useEffect(() => { reportGame({ game, inMatch, ...(inMatch ? {} : { paused: false }) }); }, [game, inMatch]);
+  useEffect(() => () => reportGame({ inMatch: false, paused: false }), []);
+  useEffect(() => { setSnd(audio.getPrefs()); }, [remote.tick]); // som mudado pelo menu: atualiza MÚSICA / EFEITOS
+  const cmdRef = useRef(null);
+  cmdRef.current = (cmd) => {
+    if (cmd === 'switch') { // próximo jogo, de volta ao seletor
+      setPlaying(null); setLcdPlaying(false);
+      pickGame(GAME_IDS[(GAME_IDS.indexOf(game) + 1) % GAME_IDS.length]);
+    } else if (cmd === 'restart' && !inMatch) { // no seletor: começa já com a dificuldade escolhida
+      audio.ui.confirm();
+      if (game === 'erawar') setPlaying(diff); else setLcdPlaying('auto');
+    } else if (cmd === 'sound') {
+      if (game === 'erawar') {
+        // TUDO -> SÓ MÚSICA -> SÓ EFEITOS -> MUDO -> TUDO (os mesmos interruptores MÚSICA / EFEITOS)
+        const p = audio.getPrefs(); audio.unlock();
+        const next = p.music && p.sfx ? [true, false] : p.music ? [false, true] : p.sfx ? [false, false] : [true, true];
+        audio.setPref('music', next[0]); audio.setPref('sfx', next[1]);
+        if (next[0] && !playing) audio.playMusic('menu');
+        window.dispatchEvent(new CustomEvent('steeldeck:game-cmd', { detail: 'sound-sync' }));
+      } else if (!inMatch) setSound(!getSound()); // em partida, o próprio jogo LCD trata do som (tecla virtual)
+      bumpSound();
+    }
+  };
+  useEffect(() => onGameCommand((cmd) => cmdRef.current(cmd)), []);
+  const panelEl = remote.panel ? <GamePanel kind={remote.panel} game={game} onClose={closeGamePanel} /> : null;
+
+  if (playing) return <div className="pt-3"><Game difficulty={playing} onExit={exit} />{panelEl}</div>;
+  if (lcdPlaying && game !== 'erawar') return <div className="pt-3"><LcdGame kind={game} onExit={exitLcd} autoStart={lcdPlaying === 'auto'} />{panelEl}</div>;
   const sndBtn = (k, label) => (
     <button type="button" aria-pressed={snd[k]} onClick={() => toggle(k)} className="px-2 py-1 rounded-sm text-[10px] tracking-wider"
       style={{ border: `1px solid rgb(var(--c) / ${snd[k] ? 0.8 : 0.25})`, color: `rgb(var(--c) / ${snd[k] ? 1 : 0.5})`, textDecoration: snd[k] ? 'none' : 'line-through', background: 'rgb(var(--cb) / 0.8)' }}>
@@ -129,6 +232,7 @@ export default function MiniGameTab() {
   const box = { background: 'rgb(var(--cd) / 0.45)', border: '2px solid rgb(var(--c) / 0.3)' };
   return (
     <div className="p-4 max-w-3xl mx-auto" onPointerDown={startMenuMusic}>
+      {panelEl}
       <div className="flex items-center gap-2 mb-4">
         <Gamepad2 size={16} />
         <h2 className="text-sm uppercase tracking-wider font-bold flex-1">{t('Mini Jogo')}</h2>

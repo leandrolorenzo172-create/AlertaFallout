@@ -2,6 +2,7 @@
 // Corre no GitHub Actions antes de compilar a app (o browser não pode ler estes feeds diretamente).
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { isValidStrikeNotice, strikeSector } from '../src/lib/strikeFilter.js';
+import { CYBER_SOURCES, classifyCyber, isSecurityNews, computeCyberRisk } from '../src/lib/cyberRisk.js';
 
 const FEEDS = [
   { source: 'RTP', url: 'https://www.rtp.pt/noticias/rss/mundo' },
@@ -17,6 +18,10 @@ const FEEDS = [
   { source: 'Notícias ao Minuto', url: 'https://www.noticiasaominuto.com/rss/economia', topic: 'economia' },
   { source: 'ECO', url: 'https://eco.sapo.pt/feed/', topic: 'economia' },
   { source: 'Jornal de Negócios', url: 'https://www.jornaldenegocios.pt/rss', topic: 'economia' },
+  // Investing.com Portugal: mercados, ações, matérias-primas, forex e cripto (pt.investing.com/news)
+  { source: 'Investing.com', url: 'https://pt.investing.com/rss/news.rss', topic: 'economia' },
+  { source: 'Investing.com', url: 'https://pt.investing.com/rss/news_25.rss', topic: 'economia' },  // mercado de ações
+  { source: 'Investing.com', url: 'https://pt.investing.com/rss/news_301.rss', topic: 'economia' }, // criptomoedas
 ];
 // Endereço da app publicada: o script lê o news.json anterior para acumular a contagem anual de greves
 // e o histórico do índice económico entre execuções (o GitHub Actions não guarda ficheiros de uma vez para a outra).
@@ -30,7 +35,7 @@ const ECON = /\b(inflacao|recessao|crise economica|crise financeira|bolsas?|tari
 const ECON_NEG = /\b(crise|recessao|inflacao (sobe|dispara|acelera|aumenta)|subida (dos precos|da inflacao)|falencias?|insolvenc\w+|despedimentos?|layoff|desemprego (sobe|aumenta)|quedas? (das bolsas|nas bolsas)|bolsas? (afundam?|caem|em queda)|tarifas|guerra comercial|divida (sobe|aumenta)|resgate|incumprimento|abrandamento|estagnacao|contracao|perdas?|prejuizos?|cortes?)\b/;
 // greves: notícias sobre greves e paralisações (exclui "greve de fome")
 // notícias de economia (para a lista do separador): têm de falar de economia, não basta virem do feed
-const ECON_WIDE = /\b(economi\w+|empresas?|precos?|salari\w+|orcamento|oe20\d\d|impostos?|irs|iva|pib|bolsas?|bancos?|banca|mercados?|investi\w+|exportac\w+|inflacao|juros|euribor|credito|habitacao|rendas?|combustive\w+|gasolina|gasoleo|energia|eletricidade|lucros?|receitas|despesa|divida|defice|emprego|desemprego|tarifas|accoes|acoes|cotac\w+|fiscal)\b/;
+const ECON_WIDE = /\b(economi\w+|empresas?|precos?|salari\w+|orcamento|oe20\d\d|impostos?|irs|iva|pib|bolsas?|bancos?|banca|mercados?|investi\w+|exportac\w+|inflacao|juros|euribor|credito|habitacao|rendas?|combustive\w+|gasolina|gasoleo|energia|eletricidade|lucros?|receitas|despesa|divida|defice|emprego|desemprego|tarifas|accoes|acoes|cotac\w+|fiscal|ouro|prata|petroleo|brent|gas natural|forex|cambio|dolar|cripto\w*|bitcoin|ethereum|nasdaq|wall street|dow jones|s&p|euro stoxx|psi|futuros|materias-primas|obrigac\w+|etfs?|fundos?)\b/;
 // greves: o validador e os setores estão em src/lib/strikeFilter.js (partilhado com a app)
 // ---------- Data da greve (o dia em que acontece, tirado do título/resumo) ----------
 // Reconhece: "12 de dezembro", "11 e 12 de dezembro", "de 3 a 5 de dezembro", "12/12", "amanhã", "hoje",
@@ -82,8 +87,13 @@ const decode = (s) => s
   .replace(/<[^>]+>/g, ' ')
   .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;|&#0?39;/g, "'")
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)))
+  .replace(/<\/?[a-z][^>]*>/gi, ' ') // HTML que vinha codificado (&lt;p&gt;) só aparece depois de descodificar
   .replace(/\s+/g, ' ').trim();
 const tag = (xml, name) => { const m = xml.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`, 'i')); return m ? decode(m[1]) : ''; };
+
+// RFC 822 ("Wed, 26 Nov 2026 19:45:00 GMT") ou "2026-11-26 19:45:00" (Investing.com, em UTC)
+const TZ = { CET: '+0100', CEST: '+0200', WET: '+0000', WEST: '+0100', EET: '+0200', EEST: '+0300', BST: '+0100' }; // abreviaturas que o Date.parse não conhece (CERT-EU usa CET)
+const parseDate = (v) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(v) ? Date.parse(`${v.replace(' ', 'T')}Z`) : Date.parse(String(v).replace(/\b(CEST|CET|WEST|WET|EEST|EET|BST)\b/, (z) => TZ[z]))) || Date.now();
 
 async function readFeed({ source, url, topic }) {
   const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; rss-reader)' }, signal: AbortSignal.timeout(20000) });
@@ -96,7 +106,7 @@ async function readFeed({ source, url, topic }) {
   const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || [];
   return items.map((it) => {
     const linkTag = tag(it, 'link');
-    return { source, topic: topic || 'mundo', title: tag(it, 'title'), summary: tag(it, 'description').slice(0, 240), url: /^https?:\/\//.test(linkTag) ? linkTag : '', date: Date.parse(tag(it, 'pubDate')) || Date.now() };
+    return { source, topic: topic || 'mundo', title: tag(it, 'title'), summary: tag(it, 'description').slice(0, 240), url: /^https?:\/\//.test(linkTag) ? linkTag : '', date: parseDate(tag(it, 'pubDate')) };
   }).filter((a) => a.title);
 }
 
@@ -207,8 +217,29 @@ const strikes = {
 const today = new Date().toISOString().slice(0, 10);
 const hist = (previous?.economy?.history || []).filter((h) => h.d !== today);
 hist.push({ d: today, v: econLevel });
-const economy = { level: econLevel, total: econTotal, negative: econNeg, history: hist.slice(-60), articles: econArticles.slice(0, 25) };
+const economy = { level: econLevel, total: econTotal, negative: econNeg, history: hist.slice(-60), articles: econArticles.slice(0, 40) };
+
+// ---------- Ciberataques: 13 fontes de cibersegurança (internacionais, PT/BR e alertas oficiais) ----------
+const cyberStatus = new Map(); const cyberAll = [];
+await Promise.all(CYBER_SOURCES.map(async (src) => {
+  try {
+    const items = (await readFeed({ source: src.name, url: src.url, topic: 'ciber' })).filter((a) => !src.filter || isSecurityNews(`${a.title} ${a.summary}`));
+    cyberAll.push(...items.map((a) => ({ ...a, ...classifyCyber({ ...a, official: src.official }), domain: src.domain })));
+    const st = cyberStatus.get(src.name) || { name: src.name, domain: src.domain, group: src.group, ok: false, n: 0 };
+    cyberStatus.set(src.name, { ...st, ok: true, n: st.n + items.length });
+  } catch (e) {
+    if (!cyberStatus.get(src.name)?.ok) cyberStatus.set(src.name, { name: src.name, domain: src.domain, group: src.group, ok: false, n: 0, error: e.message });
+  }
+}));
+const seenC = new Set();
+const cyberItems = cyberAll.filter((a) => Date.now() - a.date <= 7 * 86400000)
+  .sort((p, q) => q.date - p.date)
+  .filter((a) => { const k = norm(a.title).slice(0, 70); if (seenC.has(k)) return false; seenC.add(k); return true; })
+  .slice(0, 200)
+  .map(({ topic, ...a }) => a);
+const cyber = { items: cyberItems, sources: [...cyberStatus.values()], risk: computeCyberRisk(cyberItems) };
+console.log(`ciber: ${cyberItems.length} ocorrências em 7 dias de ${cyber.sources.filter((x) => x.ok).length}/${cyber.sources.length} fontes; risco ${cyber.risk.score}/100 (${cyber.risk.level})`);
 
 mkdirSync('public/data', { recursive: true });
-writeFileSync('public/data/news.json', JSON.stringify({ generated: new Date().toISOString(), counts, war: war.slice(0, 30), economy, strikes }));
+writeFileSync('public/data/news.json', JSON.stringify({ generated: new Date().toISOString(), counts, war: war.slice(0, 30), economy, strikes, cyber }));
 console.log(`news.json: ${counts.total} notícias do mundo, ${war.length} sobre conflitos; economia ${econTotal} (${econNeg} negativas, índice ${econLevel}); greves no ano ${strikes.count} (${strikesNow.length} recentes, ${strikes.upcoming.length} com dia marcado)`);

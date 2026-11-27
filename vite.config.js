@@ -31,9 +31,19 @@ function serviceWorker() {
   };
 }
 
+// Copia a aplicação de rota a pé offline (ficheiro único) para dist/rota-offline.html: abre-se também sozinha
+function standaloneRoute() {
+  let outDir = 'dist';
+  return {
+    name: 'steeldeck-rota-offline', apply: 'build',
+    configResolved(cfg) { outDir = cfg.build.outDir; },
+    writeBundle() { fs.copyFileSync('src/map/rota-offline.html', path.join(outDir, 'rota-offline.html')); },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [react(), serviceWorker()],
+  plugins: [react(), standaloneRoute(), serviceWorker()],
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   build: {
     assetsInlineLimit: 100000,

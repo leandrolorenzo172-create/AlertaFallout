@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Polyline, CircleMarker, Circle } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Trash2, X, Palette, Save, Crosshair } from 'lucide-react';
+import { MapPin, Trash2, X, Palette, Save, Crosshair, Ruler, Undo2, Footprints, Layers } from 'lucide-react';
+import { useMapTools, setMode, openRoute, onMapAction, LAYER_LABEL } from '@/map/mapTools';
+import { useNetwork } from '@/lib/ai/net';
+import ROTA_HTML from '@/map/rota-offline.html?raw';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { alpha } from '../theme';
@@ -29,6 +32,14 @@ function createColorIcon(color) {
   });
 }
 
+// Camadas do mapa (ferramenta ALTERNAR CAMADAS). Os mosaicos vêm da rede; sem rede, aparecem os que o browser já guardou.
+const TILES = {
+  road: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', max: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  terrain: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', max: 17, attribution: '&copy; OpenStreetMap, SRTM | <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)' },
+  sat: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', max: 19, attribution: 'Imagens &copy; Esri, Maxar, Earthstar Geographics' },
+};
+
+// Cliques no mapa: só fazem alguma coisa no modo ativo (pinos ou medição), para não haver conflitos
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
     click(e) {
@@ -38,6 +49,35 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
+// CENTRAR POSIÇÃO: geolocalização do dispositivo -> centra o mapa e mostra a posição atual
+function LocateControl({ onPos, onMsg }) {
+  const map = useMap();
+  useEffect(() => onMapAction((id) => {
+    if (id !== 'center') return;
+    if (!('geolocation' in navigator)) { onMsg(t('Este dispositivo não tem geolocalização.'), true); return; }
+    onMsg(t('A obter a tua posição…'));
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+        onPos(pos);
+        map.flyTo([pos.lat, pos.lng], Math.max(map.getZoom(), 16), { duration: 0.8 });
+        onMsg(t('📍 Posição atual (precisão ±{m} m).', { m: Math.round(pos.acc) }));
+      },
+      (err) => onMsg(err.code === 1 ? t('A localização está bloqueada para esta app. Ativa-a nas definições do telemóvel.')
+        : err.code === 3 ? t('O GPS demorou demasiado. Tenta ao ar livre ou com melhor sinal.')
+          : t('Não foi possível obter a posição (sem sinal GPS ou sem rede).'), true),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
+    );
+  }), [map, onPos, onMsg]);
+  return null;
+}
+
+const fmtDist = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`);
+
+// Painel por cima do mapa (HUD) no estilo do tema
+const hud = { background: 'rgb(var(--cd) / 0.94)', border: '1px solid rgb(var(--c) / 0.45)', color: 'rgb(var(--c))', boxShadow: '0 0 12px rgb(var(--c) / 0.25)', backdropFilter: 'blur(6px)' };
+const hudBtn = { background: 'rgb(var(--cb) / 0.7)', border: '1px solid rgb(var(--c) / 0.35)', color: 'rgb(var(--c))' };
+
 export default function BragaMapTab() {
   const [pins, setPins] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -45,6 +85,22 @@ export default function BragaMapTab() {
   const [pinName, setPinName] = useState('');
   const [pinDesc, setPinDesc] = useState('');
   const [pinColor, setPinColor] = useState(PIN_COLORS[0].value);
+  const tools = useMapTools();
+  const net = useNetwork();
+  const [measure, setMeasure] = useState([]); // pontos da medição
+  const [userPos, setUserPos] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimer = React.useRef(null);
+  const onMsg = React.useCallback((text, err = false) => { setToast({ text, err }); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), err ? 7000 : 4000); }, []);
+
+  // trocar de modo limpa o modo anterior (formulário de pino ou pontos de medição)
+  useEffect(() => {
+    if (tools.mode !== 'pin') { setShowForm(false); setNewPin(null); }
+    if (tools.mode !== 'measure') setMeasure([]);
+  }, [tools.mode]);
+  // sair do separador desliga os modos
+  useEffect(() => () => { setMode(null); openRoute(false); }, []);
+  const measured = measure.reduce((sum, p, i) => (i ? sum + L.latLng(measure[i - 1]).distanceTo(L.latLng(p)) : 0), 0);
 
   useEffect(() => {
     const saved = localStorage.getItem('braga_custom_pins');
@@ -63,6 +119,8 @@ export default function BragaMapTab() {
   };
 
   const handleMapClick = (latlng) => {
+    if (tools.mode === 'measure') { setMeasure((m) => [...m, { lat: latlng.lat, lng: latlng.lng }]); return; }
+    if (tools.mode !== 'pin') return; // sem modo ativo, tocar no mapa só serve para navegar
     setNewPin({ lat: latlng.lat, lng: latlng.lng });
     setPinName('');
     setPinDesc('');
@@ -112,20 +170,94 @@ export default function BragaMapTab() {
 
       <div className="p-3 rounded-sm mb-3" style={{ background: 'rgb(var(--c) / 0.06)', border: '1px solid rgb(var(--c) / 0.2)' }}>
         <p className="text-[10px] leading-relaxed" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-          {t('📍 Clique no mapa para adicionar um pino. Defina nome, descrição e cor. Os pinos ficam guardados no dispositivo (offline).')}
+          {t('📍 Usa o botão ≡ para as ferramentas: centrar a tua posição, colocar pinos (nome, descrição e cor, guardados no dispositivo), mudar a camada, medir distâncias e calcular uma rota a pé offline.')}
         </p>
       </div>
 
-      {/* Add pin form */}
+      {/* Mapa: stacking context próprio (isolation) para as camadas do Leaflet não passarem por cima do menu ≡ */}
+      <div className="rounded-sm overflow-hidden relative" style={{ border: '1px solid rgb(var(--c) / 0.2)', height: 'min(68vh, 640px)', minHeight: 420, isolation: 'isolate' }}>
+        <MapContainer
+          center={BRAGA_CENTER}
+          zoom={13}
+          style={{ height: '100%', width: '100%', cursor: tools.mode ? 'crosshair' : undefined }}
+          zoomControl={false}
+        >
+          <TileLayer key={tools.layer} url={TILES[tools.layer].url} maxZoom={TILES[tools.layer].max} attribution={TILES[tools.layer].attribution} />
+          <MapClickHandler onMapClick={handleMapClick} />
+          <LocateControl onPos={setUserPos} onMsg={onMsg} />
+          {userPos && (
+            <>
+              <Circle center={[userPos.lat, userPos.lng]} radius={userPos.acc} pathOptions={{ color: '#f59e0b', weight: 1, fillOpacity: 0.08 }} />
+              <CircleMarker center={[userPos.lat, userPos.lng]} radius={8} pathOptions={{ color: '#0d0b08', weight: 2, fillColor: '#f59e0b', fillOpacity: 1 }}>
+                <Popup><span style={{ fontFamily: 'monospace', fontSize: 11 }}>{t('Estás aqui')}</span></Popup>
+              </CircleMarker>
+            </>
+          )}
+          {measure.length > 1 && <Polyline positions={measure.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#f59e0b', weight: 3, dashArray: '6 6' }} />}
+          {measure.map((p, i) => <CircleMarker key={i} center={[p.lat, p.lng]} radius={5} pathOptions={{ color: '#0d0b08', weight: 2, fillColor: i === 0 ? '#22c55e' : '#f59e0b', fillOpacity: 1 }} />)}
+          {pins.map((pin) => (
+            <Marker
+              key={pin.id}
+              position={[pin.lat, pin.lng]}
+              icon={createColorIcon(pin.color)}
+            >
+              <Popup>
+                <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+                  <strong>{pin.name}</strong>
+                  <br />
+                  {pin.desc && <span style={{ color: '#999' }}>{pin.desc}<br /></span>}
+                  <span style={{ color: pin.color, fontSize: '10px' }}>
+                    ● {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
+                  </span>
+                  <br />
+                  <button type="button" onClick={() => handleDeletePin(pin.id)} style={{ marginTop: 4, color: '#ff6666', fontSize: 10, textTransform: 'uppercase' }}>{t('Remover')}</button>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+
+        {/* Camada atual */}
+        <span className="absolute left-2 bottom-2 z-[1050] px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider pointer-events-none" style={hud}>
+          <Layers size={10} className="inline mr-1" />{t(LAYER_LABEL[tools.layer])}{net !== 'online' ? ` · ${t('sem rede: só mosaicos já vistos')}` : ''}
+        </span>
+
+        {/* HUD do modo ativo */}
+        {tools.mode === 'pin' && !showForm && (
+          <div className="absolute left-2 right-2 top-2 z-[1050] flex items-center gap-2 px-3 py-2 rounded-sm text-[11px]" style={hud}>
+            <MapPin size={14} className="shrink-0" /><span className="flex-1 min-w-0">{t('MODO PINOS: toca no mapa para colocar um pino.')}</span>
+            <button type="button" onClick={() => setMode(null)} className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
+          </div>
+        )}
+        {tools.mode === 'measure' && (
+          <div className="absolute left-2 right-2 top-2 z-[1050] px-3 py-2 rounded-sm text-[11px]" style={hud}>
+            <div className="flex items-center gap-2">
+              <Ruler size={14} className="shrink-0" />
+              <span className="flex-1 min-w-0 font-bold">{measure.length < 2 ? t('MEDIR: toca em dois ou mais pontos.') : `${t('Distância')}: ${fmtDist(measured)} · ${measure.length} ${t('pontos')}`}</span>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button type="button" disabled={!measure.length} onClick={() => setMeasure((m) => m.slice(0, -1))} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Undo2 size={11} />{t('Desfazer')}</button>
+              <button type="button" disabled={!measure.length} onClick={() => setMeasure([])} className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider disabled:opacity-30" style={hudBtn}><Trash2 size={11} />{t('Limpar')}</button>
+              <button type="button" onClick={() => setMode(null)} className="ml-auto px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider" style={hudBtn}>{t('Sair')}</button>
+            </div>
+          </div>
+        )}
+        {toast && (
+          <div role="status" className="absolute left-2 right-2 bottom-10 z-[1060] px-3 py-2 rounded-sm text-[11px]" style={{ ...hud, border: toast.err ? '1px solid #ef4444' : hud.border, color: toast.err ? '#ef4444' : hud.color }}>
+            {toast.text}
+          </div>
+        )}
+
+        {/* Formulário do novo pino, por cima do mapa */}
       <AnimatePresence>
         {showForm && newPin && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden mb-3"
+            className="overflow-hidden absolute left-2 right-2 top-2 z-[1100] max-h-[85%] overflow-y-auto"
           >
-            <div className="p-4 rounded-sm" style={{ background: 'rgb(var(--cd) / 0.33)', border: '1px solid rgb(var(--c) / 0.27)' }}>
+            <div className="p-4 rounded-sm" style={hud}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Crosshair size={14} style={{ color: 'rgb(var(--c))' }} />
@@ -205,38 +337,6 @@ export default function BragaMapTab() {
         )}
       </AnimatePresence>
 
-      {/* Map */}
-      <div className="rounded-sm overflow-hidden relative" style={{ border: '1px solid rgb(var(--c) / 0.2)', height: '450px' }}>
-        <MapContainer
-          center={BRAGA_CENTER}
-          zoom={13}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <MapClickHandler onMapClick={handleMapClick} />
-          {pins.map((pin) => (
-            <Marker
-              key={pin.id}
-              position={[pin.lat, pin.lng]}
-              icon={createColorIcon(pin.color)}
-            >
-              <Popup>
-                <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
-                  <strong>{pin.name}</strong>
-                  <br />
-                  {pin.desc && <span style={{ color: '#999' }}>{pin.desc}<br /></span>}
-                  <span style={{ color: pin.color, fontSize: '10px' }}>
-                    ● {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
-                  </span>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
       </div>
 
       {/* Pin list */}
@@ -278,11 +378,25 @@ export default function BragaMapTab() {
         </div>
       )}
 
+      {/* ROTA: aplicação de rota a pé 100% offline (ficheiro único src/map/rota-offline.html, em iframe isolado) */}
+      <AnimatePresence>
+        {tools.route && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex flex-col" style={{ background: '#0d0b08' }} role="dialog" aria-label={t('Rota a pé offline')}>
+            <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid #f59e0b55', color: '#f59e0b' }}>
+              <Footprints size={15} />
+              <span className="flex-1 text-xs uppercase tracking-wider font-bold">{t('Rota a pé — offline')}</span>
+              <button type="button" onClick={() => openRoute(false)} aria-label={t('Fechar')} className="p-1.5 rounded-sm" style={{ border: '1px solid #f59e0b55' }}><X size={15} /></button>
+            </div>
+            <iframe title={t('Rota a pé offline')} srcDoc={ROTA_HTML} sandbox="allow-scripts" className="flex-1 w-full border-0" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {pins.length === 0 && !showForm && (
         <div className="mt-3 p-4 text-center rounded-sm" style={{ background: 'rgb(var(--cd) / 0.2)', border: '1px dashed rgb(var(--c) / 0.13)' }}>
           <MapPin size={20} style={{ color: 'rgb(var(--c) / 0.27)' }} className="mx-auto mb-2" />
           <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.33)' }}>
-            {t('Sem pinos. Clique no mapa para começar.')}
+            {t('Sem pinos. Abre o menu ≡ e escolhe Marcadores / Pins.')}
           </p>
         </div>
       )}

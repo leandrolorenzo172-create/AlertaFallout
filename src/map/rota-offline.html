@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rota a pé offline — SteelDeck</title>
+<!--
+  ROTA A PÉ 100% OFFLINE — SteelDeck
+  Ficheiro único (HTML + CSS + JS), sem fetch, sem APIs de rotas, sem CDNs.
+  1. O mapa (exemplo de Braga desenhado por código, ou imagem local carregada pelo utilizador) é pintado
+     num <canvas> oculto e os píxeis são lidos com getImageData.
+  2. Cada píxel é classificado pela cor (estilo OpenStreetMap): ruas/passeios/caminhos = transitável;
+     quarteirões, edifícios, água e o resto = obstáculo. A imagem passa a uma grelha de células de 3×3 px.
+  3. Caminho mais curto com A* em 8 direções (ortogonal = 1, diagonal = √2), sem cortar esquinas.
+  4. Cliques fora de uma rua encaixam (snap) na célula transitável mais próxima num raio de 30 px.
+  5. Distância = soma dos passos × tamanho da célula × escala (m/píxel). Tempo a pé a 4,8 km/h (80 m/min).
+  O mapa de exemplo e as imagens locais (lidas com FileReader como data: URL) não "sujam" o canvas,
+  por isso não há SecurityError / Tainted Canvas.
+-->
+<style>
+  :root { --bg: #0d0b08; --panel: #15110b; --amber: #f59e0b; --amber-d: #f59e0b55; --amber-dd: #f59e0b22; --red: #ef4444; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--amber); font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace; }
+  body { display: flex; flex-direction: column; }
+  header { padding: 8px 10px; border-bottom: 1px solid var(--amber-d); background: var(--panel); display: flex; flex-direction: column; gap: 6px; }
+  .hud { font-size: 13px; font-weight: bold; letter-spacing: .03em; text-shadow: 0 0 6px var(--amber-d); min-height: 1.3em; }
+  .status { font-size: 11px; opacity: .8; min-height: 1.2em; }
+  .status.err { color: var(--red); opacity: 1; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button, label.btn, input[type=number] {
+    font: inherit; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--amber);
+    background: #0d0b08; border: 1px solid var(--amber-d); border-radius: 3px; padding: 6px 9px; cursor: pointer;
+    box-shadow: 0 0 6px var(--amber-dd);
+  }
+  button:hover, label.btn:hover { border-color: var(--amber); }
+  button:disabled { opacity: .35; cursor: default; }
+  button.on { background: var(--amber-dd); border-color: var(--amber); }
+  input[type=number] { width: 70px; text-transform: none; cursor: text; padding: 5px 6px; }
+  input[type=file] { display: none; }
+  .cal { font-size: 10px; opacity: .85; display: flex; align-items: center; gap: 4px; }
+  #wrap { flex: 1; overflow: auto; position: relative; background: #050403; touch-action: pan-x pan-y; }
+  #view { display: block; transform-origin: 0 0; cursor: crosshair; image-rendering: auto; }
+  .legend { font-size: 10px; opacity: .7; padding: 4px 10px; border-top: 1px solid var(--amber-dd); background: var(--panel); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 3px 0 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class="hud" id="hud">Distância a pé: — | Tempo estimado: —</div>
+  <div class="row">
+    <button id="undo" type="button" disabled>Desfazer</button>
+    <button id="clear" type="button" disabled>Limpar</button>
+    <label class="btn" for="file">Carregar mapa</label>
+    <input id="file" type="file" accept="image/*">
+    <button id="sample" type="button">Mapa de Braga</button>
+    <button id="grid" type="button" title="Mostrar as células transitáveis">Ver grelha</button>
+    <button id="zout" type="button" aria-label="Afastar">−</button>
+    <button id="zin" type="button" aria-label="Aproximar">+</button>
+    <span class="cal">Escala <input id="scale" type="number" min="0.05" max="1000" step="0.1" value="4.5"> m/px</span>
+  </div>
+  <div class="status" id="status">Toca no mapa para marcar o Ponto A e depois o Ponto B.</div>
+</header>
+<div id="wrap"><canvas id="view"></canvas></div>
+<div class="legend"><span class="dot" style="background:#22c55e"></span>A <span class="dot" style="background:#ef4444"></span>B <span class="dot" style="background:#f59e0b"></span>rota a pé · mapa de exemplo esquemático (não é cartografia oficial)</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Parâmetros ----------
+  const CELL = 3;              // tamanho da célula da grelha, em píxeis
+  const SNAP_PX = 30;          // raio do encaixe automático, em píxeis
+  const WALK_M_PER_MIN = 80;   // 4,8 km/h
+  const SCALE_KEY = 'sd_rota_scale';
+
+  const $ = (id) => document.getElementById(id);
+  const view = $('view'); const vctx = view.getContext('2d');
+  const work = document.createElement('canvas');               // canvas oculto de análise
+  const wctx = work.getContext('2d', { willReadFrequently: true });
+
+  let base = null;     // canvas com o mapa sem rótulos (o que é analisado)
+  let labels = null;   // função que desenha rótulos por cima (só no mapa de exemplo)
+  let grid = null;     // { cols, rows, walk: Uint8Array }
+  let points = [];     // [{x,y}] em píxeis da imagem (já encaixados)
+  let path = null;     // [{x,y}] centros das células da rota
+  let meters = 0;
+  let showGrid = false;
+  let zoom = 1;
+
+  try { const s = parseFloat(localStorage.getItem(SCALE_KEY)); if (s > 0) $('scale').value = s; } catch (e) { /* sem armazenamento */ }
+  const scale = () => { const v = parseFloat($('scale').value); return v > 0 ? v : 4.5; };
+
+  const setStatus = (msg, err) => { const el = $('status'); el.textContent = msg; el.className = 'status' + (err ? ' err' : ''); };
+
+  // ---------- 1. Classificação de cores (estilo OpenStreetMap) ----------
+  // true = transitável a pé
+  function walkable(r, g, b) {
+    if (b > r + 25 && b > g) return false;                                    // água (azul)
+    if (r >= 246 && g >= 246 && b >= 246) return true;                         // branco / quase branco: ruas
+    if (r > 200 && b - r >= 6 && b - r <= 20 && Math.abs(r - g) < 8) return true; // cinzento-azulado claro: ruas pedonais (#dddde8)
+    if (r > 230 && g > 170 && b < 215 && r - b > 30) return true;              // amarelo / laranja claro: estradas (#f7fabf, #fcd6a4)
+    if (r > 200 && g >= 100 && g <= 190 && b < 150) return true;               // salmão / castanho claro: caminhos e trilhos
+    return false;                                                             // bege/cinzento de quarteirões, edifícios, verde, rótulos…
+  }
+
+  // ---------- 2. Grelha a partir dos píxeis ----------
+  function buildGrid() {
+    const W = base.width, H = base.height;
+    work.width = W; work.height = H;
+    wctx.drawImage(base, 0, 0);
+    let data;
+    try { data = wctx.getImageData(0, 0, W, H).data; }
+    catch (e) { setStatus('Não foi possível ler os píxeis desta imagem.', true); grid = null; return; }
+    const cols = Math.floor(W / CELL), rows = Math.floor(H / CELL);
+    const raw = new Uint8Array(cols * rows);
+    const need = Math.ceil(CELL * CELL * 0.4);       // ≥ 40 % de píxeis transitáveis na célula
+    for (let cy = 0; cy < rows; cy++) {
+      for (let cx = 0; cx < cols; cx++) {
+        let n = 0;
+        for (let y = cy * CELL; y < cy * CELL + CELL; y++) {
+          let i = (y * W + cx * CELL) * 4;
+          for (let x = 0; x < CELL; x++, i += 4) if (walkable(data[i], data[i + 1], data[i + 2])) n++;
+        }
+        raw[cy * cols + cx] = n >= need ? 1 : 0;
+      }
+    }
+    // fecho morfológico (dilatar e erodir 1 célula): tapa falhas de 1 célula causadas por texto ou antialiasing
+    const dil = morph(raw, cols, rows, true);
+    const walk = morph(dil, cols, rows, false);
+    for (let i = 0; i < walk.length; i++) if (raw[i]) walk[i] = 1; // nunca perde células que já eram transitáveis
+    grid = { cols, rows, walk };
+  }
+  function morph(src, cols, rows, dilate) {
+    const out = new Uint8Array(src.length);
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      let v = dilate ? 0 : 1;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy;
+        const s = nx < 0 || ny < 0 || nx >= cols || ny >= rows ? 0 : src[ny * cols + nx];
+        if (dilate ? s : !s) { v = dilate ? 1 : 0; }
+      }
+      out[y * cols + x] = v;
+    }
+    return out;
+  }
+  const isWalk = (cx, cy) => cx >= 0 && cy >= 0 && cx < grid.cols && cy < grid.rows && grid.walk[cy * grid.cols + cx] === 1;
+
+  // ---------- 3. Encaixe (snap) na célula transitável mais próxima, num raio de 30 px ----------
+  function snap(px, py) {
+    const cx0 = Math.floor(px / CELL), cy0 = Math.floor(py / CELL);
+    if (isWalk(cx0, cy0)) return { cx: cx0, cy: cy0, moved: 0 };
+    const R = Math.ceil(SNAP_PX / CELL);
+    let best = null, bestD = Infinity;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const cx = cx0 + dx, cy = cy0 + dy;
+      if (!isWalk(cx, cy)) continue;
+      const d = Math.hypot((cx + 0.5) * CELL - px, (cy + 0.5) * CELL - py);
+      if (d <= SNAP_PX && d < bestD) { bestD = d; best = { cx, cy, moved: d }; }
+    }
+    return best;
+  }
+
+  // ---------- 4. A* em 8 direções ----------
+  const DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
+  function astar(s, t) {
+    const { cols, rows } = grid; const N = cols * rows;
+    const g = new Float32Array(N).fill(Infinity);
+    const from = new Int32Array(N).fill(-1);
+    const closed = new Uint8Array(N);
+    const heap = new MinHeap();
+    const h = (x, y) => { const dx = Math.abs(x - t.cx), dy = Math.abs(y - t.cy); return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy); }; // octil
+    const si = s.cy * cols + s.cx, ti = t.cy * cols + t.cx;
+    g[si] = 0; heap.push(si, h(s.cx, s.cy));
+    while (heap.size) {
+      const cur = heap.pop();
+      if (cur === ti) break;
+      if (closed[cur]) continue;
+      closed[cur] = 1;
+      const x = cur % cols, y = (cur / cols) | 0;
+      for (const [dx, dy, c] of DIRS) {
+        const nx = x + dx, ny = y + dy;
+        if (!isWalk(nx, ny)) continue;
+        if (dx && dy && (!isWalk(x + dx, y) || !isWalk(x, y + dy))) continue; // não corta esquinas de edifícios
+        const ni = ny * cols + nx;
+        if (closed[ni]) continue;
+        const ng = g[cur] + c;
+        if (ng < g[ni]) { g[ni] = ng; from[ni] = cur; heap.push(ni, ng + h(nx, ny)); }
+      }
+    }
+    if (si !== ti && from[ti] === -1) return null;
+    const out = []; let i = ti;
+    while (i !== -1) { out.push({ x: (i % cols + 0.5) * CELL, y: (((i / cols) | 0) + 0.5) * CELL }); if (i === si) break; i = from[i]; }
+    out.reverse();
+    return { cells: out, cost: g[ti] };
+  }
+  class MinHeap {
+    constructor() { this.k = []; this.p = []; }
+    get size() { return this.k.length; }
+    push(key, pri) {
+      const k = this.k, p = this.p; let i = k.length; k.push(key); p.push(pri);
+      while (i > 0) { const j = (i - 1) >> 1; if (p[j] <= p[i]) break; [k[i], k[j]] = [k[j], k[i]]; [p[i], p[j]] = [p[j], p[i]]; i = j; }
+    }
+    pop() {
+      const k = this.k, p = this.p; const top = k[0]; const lk = k.pop(), lp = p.pop();
+      if (k.length) {
+        k[0] = lk; p[0] = lp; let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1; let m = i;
+          if (l < k.length && p[l] < p[m]) m = l;
+          if (r < k.length && p[r] < p[m]) m = r;
+          if (m === i) break;
+          [k[i], k[m]] = [k[m], k[i]]; [p[i], p[m]] = [p[m], p[i]]; i = m;
+        }
+      }
+      return top;
+    }
+  }
+
+  // ---------- 5. Desenho ----------
+  function draw() {
+    if (!base) return;
+    view.width = base.width; view.height = base.height;
+    vctx.drawImage(base, 0, 0);
+    if (labels) labels(vctx);
+    if (showGrid && grid) {
+      vctx.fillStyle = 'rgba(245,158,11,0.28)';
+      for (let y = 0; y < grid.rows; y++) for (let x = 0; x < grid.cols; x++) if (grid.walk[y * grid.cols + x]) vctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+    }
+    if (path && path.length > 1) {
+      vctx.lineJoin = 'round'; vctx.lineCap = 'round';
+      vctx.strokeStyle = 'rgba(13,11,8,0.75)'; vctx.lineWidth = 8; strokePath();
+      vctx.strokeStyle = '#f59e0b'; vctx.lineWidth = 4.5; strokePath();
+    }
+    points.forEach((p, i) => pin(p, i === 0 ? '#22c55e' : '#ef4444', i === 0 ? 'A' : 'B'));
+    view.style.width = `${base.width * zoom}px`;
+  }
+  function strokePath() { vctx.beginPath(); vctx.moveTo(path[0].x, path[0].y); for (let i = 1; i < path.length; i++) vctx.lineTo(path[i].x, path[i].y); vctx.stroke(); }
+  function pin(p, color, txt) {
+    vctx.save();
+    vctx.fillStyle = color; vctx.strokeStyle = '#0d0b08'; vctx.lineWidth = 2.5;
+    vctx.beginPath(); vctx.moveTo(p.x, p.y); vctx.arc(p.x, p.y - 20, 11, Math.PI * 0.75, Math.PI * 2.25); vctx.closePath(); vctx.fill(); vctx.stroke();
+    vctx.fillStyle = '#0d0b08'; vctx.font = 'bold 12px ui-monospace, monospace'; vctx.textAlign = 'center'; vctx.textBaseline = 'middle';
+    vctx.fillText(txt, p.x, p.y - 20);
+    vctx.restore();
+  }
+  function updateHud() {
+    if (path && meters > 0) {
+      const km = meters / 1000;
+      const min = Math.max(1, Math.round(meters / WALK_M_PER_MIN));
+      $('hud').textContent = `Distância a pé: ${km.toFixed(2)} km | Tempo estimado: ${min} min`;
+    } else $('hud').textContent = 'Distância a pé: — | Tempo estimado: —';
+    $('undo').disabled = !points.length; $('clear').disabled = !points.length;
+  }
+
+  // ---------- 6. Interação ----------
+  function route() {
+    path = null; meters = 0;
+    if (points.length === 2) {
+      const a = { cx: Math.floor(points[0].x / CELL), cy: Math.floor(points[0].y / CELL) };
+      const b = { cx: Math.floor(points[1].x / CELL), cy: Math.floor(points[1].y / CELL) };
+      const t0 = performance.now();
+      const r = astar(a, b);
+      if (!r) setStatus('Não há caminho a pé entre estes pontos neste mapa (ruas desligadas ou água pelo meio).', true);
+      else {
+        path = r.cells; meters = r.cost * CELL * scale();
+        setStatus(`Rota calculada com A* em ${Math.round(performance.now() - t0)} ms (${r.cells.length} células). Toca de novo para começar outra.`);
+      }
+    }
+    draw(); updateHud();
+  }
+  view.addEventListener('click', (e) => {
+    if (!grid) return;
+    const rect = view.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (base.width / rect.width);
+    const py = (e.clientY - rect.top) * (base.height / rect.height);
+    const s = snap(px, py);
+    if (!s) { setStatus('Nenhuma rua ou caminho a menos de 30 px deste ponto. Toca mais perto de uma via.', true); return; }
+    if (points.length >= 2) { points = []; path = null; }
+    points.push({ x: (s.cx + 0.5) * CELL, y: (s.cy + 0.5) * CELL });
+    if (points.length === 1) setStatus(s.moved > 1 ? `Ponto A encaixado na via mais próxima (${Math.round(s.moved)} px). Agora marca o Ponto B.` : 'Ponto A marcado. Agora marca o Ponto B.');
+    route();
+  });
+  $('undo').addEventListener('click', () => { points.pop(); route(); if (!points.length) setStatus('Toca no mapa para marcar o Ponto A e depois o Ponto B.'); else if (points.length === 1) setStatus('Ponto B removido. Marca outro Ponto B.'); });
+  $('clear').addEventListener('click', () => { points = []; route(); setStatus('Toca no mapa para marcar o Ponto A e depois o Ponto B.'); });
+  $('grid').addEventListener('click', () => { showGrid = !showGrid; $('grid').classList.toggle('on', showGrid); draw(); });
+  $('scale').addEventListener('change', () => { try { localStorage.setItem(SCALE_KEY, String(scale())); } catch (e) { /* sem armazenamento */ } if (path) route(); });
+  const setZoom = (z) => { zoom = Math.min(4, Math.max(0.25, z)); draw(); };
+  $('zin').addEventListener('click', () => setZoom(zoom * 1.25));
+  $('zout').addEventListener('click', () => setZoom(zoom / 1.25));
+  $('sample').addEventListener('click', () => { loadSample(); $('scale').value = 4.5; setStatus('Mapa de exemplo de Braga carregado (1 px ≈ 4,5 m). Marca o Ponto A.'); });
+
+  // Imagem local: lida como data: URL (nada sai do dispositivo e o canvas não fica "sujo")
+  $('file').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 2400; // limita o tamanho para a grelha continuar rápida
+        const k = Math.min(1, MAX / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        base = c; labels = null; points = []; path = null; buildGrid(); fit(); route();
+        const pct = grid ? Math.round(grid.walk.reduce((s, v) => s + v, 0) / grid.walk.length * 100) : 0;
+        setStatus(`Mapa "${f.name}" carregado: ${pct}% transitável.${k < 1 ? ' Reduzido para análise rápida — ajusta a escala (m/px).' : ' Confirma a escala (m/px) do teu mapa.'}`, pct < 2);
+      };
+      img.onerror = () => setStatus('Não foi possível abrir esta imagem.', true);
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+    e.target.value = '';
+  });
+  function fit() { const w = $('wrap').clientWidth || base.width; zoom = Math.min(1.5, Math.max(0.25, w / base.width)); draw(); }
+
+  // ---------- 7. Mapa de exemplo de Braga (desenhado por código, estilo OSM) ----------
+  // Esquemático: eixos e referências aproximados do centro de Braga, para testar sem nenhuma imagem.
+  function loadSample() {
+    const W = 1200, H = 900;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+    x.fillStyle = '#f2efe9'; x.fillRect(0, 0, W, H);                // quarteirões (obstáculo)
+    for (let i = 0; i < 900; i++) {                                    // edifícios (obstáculo)
+      const bx = rnd() * W, by = rnd() * H, bw = 10 + rnd() * 26, bh = 8 + rnd() * 22;
+      x.fillStyle = rnd() < 0.5 ? '#d9d0c9' : '#e0dfdf'; x.fillRect(bx, by, bw, bh);
+    }
+    // parques (verde, obstáculo) com caminhos de terra
+    const parks = [[640, 610, 190, 110], [300, 160, 120, 80], [880, 250, 110, 90]];
+    x.fillStyle = '#c8facc'; parks.forEach(([px, py, pw, ph]) => x.fillRect(px, py, pw, ph));
+
+    // rio Este (água) de nordeste para sudoeste
+    x.strokeStyle = '#aad3df'; x.lineWidth = 20; x.lineCap = 'round'; x.lineJoin = 'round';
+    x.beginPath(); x.moveTo(1210, 120); x.bezierCurveTo(1000, 300, 900, 520, 760, 660); x.bezierCurveTo(640, 780, 420, 820, -10, 880); x.stroke();
+
+    const road = (pts, fill, w) => {
+      x.lineCap = 'round'; x.lineJoin = 'round';
+      x.strokeStyle = '#b9b2a8'; x.lineWidth = w + 3; line(pts);
+      x.strokeStyle = fill; x.lineWidth = w; line(pts);
+    };
+    const line = (pts) => { x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) x.lineTo(pts[i][0], pts[i][1]); x.stroke(); };
+
+    // malha de ruas residenciais (branco), ligeiramente irregular
+    for (let gx = 40; gx < W; gx += 70 + Math.round(rnd() * 25)) road([[gx + rnd() * 10, -10], [gx - 15 + rnd() * 30, H / 2], [gx + rnd() * 20, H + 10]], '#ffffff', 8);
+    for (let gy = 30; gy < H; gy += 65 + Math.round(rnd() * 25)) road([[-10, gy + rnd() * 10], [W / 2, gy - 12 + rnd() * 24], [W + 10, gy + rnd() * 12]], '#ffffff', 8);
+    // tapar algumas ruas para criar quarteirões grandes (o A* tem de contornar)
+    x.fillStyle = '#f2efe9';
+    [[150, 420, 120, 90], [960, 520, 130, 100], [420, 40, 110, 70], [1040, 700, 120, 120], [60, 640, 110, 100]].forEach(([a, b, w, h]) => x.fillRect(a, b, w, h));
+    x.fillStyle = '#c8facc'; parks.forEach(([px, py, pw, ph]) => x.fillRect(px, py, pw, ph));
+
+    // caminhos de terra nos parques (salmão)
+    road([[650, 700], [720, 640], [820, 690]], '#fa8072', 5); road([[735, 610], [735, 720]], '#fa8072', 5);
+    road([[310, 230], [360, 175], [410, 220]], '#fa8072', 5);
+    road([[890, 330], [935, 260], [985, 320]], '#fa8072', 5);
+
+    // eixos principais (amarelo/laranja)
+    road([[600, -10], [590, 200], [575, 420], [560, 640], [540, 910]], '#fcd6a4', 14);      // Av. da Liberdade (N–S)
+    road([[-10, 380], [300, 395], [575, 420], [860, 400], [1210, 360]], '#f7fabf', 12);    // Av. Central / eixo E–O
+    road([[-10, 140], [400, 150], [800, 130], [1210, 90]], '#f7fabf', 11);                  // variante norte
+    road([[1210, 820], [900, 600], [575, 420], [260, 210], [100, -10]], '#fcd6a4', 13);     // diagonal Gualtar – Maximinos
+    // pontes sobre o rio: as estradas desenhadas por cima da água atravessam-no
+    // ruas pedonais do centro histórico (cinzento-azulado)
+    road([[520, 330], [640, 330]], '#dddde8', 10); road([[520, 470], [640, 470]], '#dddde8', 10);
+    road([[520, 330], [520, 470]], '#dddde8', 10); road([[640, 330], [640, 470]], '#dddde8', 10);
+    road([[460, 420], [700, 420]], '#dddde8', 10);
+    // praça (pedonal)
+    x.fillStyle = '#dddde8'; x.fillRect(548, 392, 54, 54);
+
+    base = c;
+    labels = (ctx) => {
+      const L = [
+        [575, 405, 'Praça da República'], [612, 250, 'Av. da Liberdade'], [470, 455, 'Sé de Braga'],
+        [150, 372, 'Av. Central'], [860, 560, 'Rio Este'], [735, 600, 'Parque da Ponte'],
+        [140, 80, 'Estação CP ←'], [1100, 800, 'Gualtar / UMinho →'], [1110, 330, 'Bom Jesus →'], [900, 120, 'Variante Norte'],
+      ];
+      ctx.save(); ctx.font = 'bold 13px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+      for (const [lx, ly, txt] of L) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 4; ctx.strokeText(txt, lx, ly); ctx.fillStyle = '#3d3427'; ctx.fillText(txt, lx, ly); }
+      ctx.restore();
+    };
+    points = []; path = null;
+    buildGrid(); fit(); route();
+  }
+
+  window.addEventListener('resize', () => { if (base && zoom <= 1.5) fit(); });
+  loadSample();
+})();
+</script>
+</body>
+</html>

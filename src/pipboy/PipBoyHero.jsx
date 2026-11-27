@@ -6,6 +6,7 @@ import { fetchWeather } from '@/api/liveData';
 import { useLoc } from '@/location';
 import { t, locale } from '@/i18n';
 import { useSettings } from '@/theme';
+import { useNowPlaying } from '@/audio/useNowPlaying';
 
 const levelColor = (v) => (v >= 8 ? '#ff0000' : v >= 6 ? '#ff6600' : v >= 4 ? '#ffaa00' : 'rgb(var(--c))');
 
@@ -116,16 +117,33 @@ export default function PipBoyHero({ data }) {
   const alerts = weather?.here_alerts || [];
   const auto = modeFromWeather(braga);
   const mode = test === 'auto' ? auto : test;
+  const playingNow = useNowPlaying();
+  // formato pedido: "Aba Radio a tocar - [Estação] - [Música]" / "Aba Musica - [Música]"
+  const playingText = !playingNow ? '' : playingNow.kind === 'radio'
+    ? [t('Aba Radio a tocar'), playingNow.station, playingNow.track].filter(Boolean).join(' - ')
+    : [t('Aba Musica'), playingNow.track].filter(Boolean).join(' - ');
   const date = now.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\./g, '').toUpperCase();
 
   return (
     <div className="mb-6">
       {/* Relógio */}
-      <div className="flex items-baseline gap-3 px-3 py-2 mb-3 rounded-md" style={{ background: 'rgb(var(--cd) / 0.5)', border: '1px solid rgb(var(--c) / 0.2)' }}>
-        <span className="text-4xl font-bold tabular-nums leading-none" style={{ textShadow: '0 0 12px rgb(var(--c) / 0.6)' }}>
-          {now.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false })}
-        </span>
-        <span className="text-sm tracking-wider" style={{ color: 'rgb(var(--c) / 0.8)' }}>{date}</span>
+      <div className="flex items-center gap-3 px-3 py-2 mb-3 rounded-md min-w-0" style={{ background: 'rgb(var(--cd) / 0.5)', border: '1px solid rgb(var(--c) / 0.2)' }}>
+        <div className={`flex shrink-0 ${playingText ? 'flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-3' : 'items-baseline gap-3'}`}>
+          <span className="text-4xl font-bold tabular-nums leading-none" style={{ textShadow: '0 0 12px rgb(var(--c) / 0.6)' }}>
+            {now.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false })}
+          </span>
+          <span className={`tracking-wider ${playingText ? 'text-[11px] sm:text-sm' : 'text-sm'}`} style={{ color: 'rgb(var(--c) / 0.8)' }}>{date}</span>
+        </div>
+        {/* A tocar (Rádio ou Música): só aparece com reprodução ativa, à direita da linha âmbar */}
+        {playingText && (
+          <>
+            <span aria-hidden="true" className="self-stretch shrink-0" style={{ width: 2, background: '#ffaa00', boxShadow: '0 0 6px #ffaa00, 0 0 12px #ffaa0066', borderRadius: 1 }} />
+            <p className="flex-1 min-w-0 text-right text-xs sm:text-sm tracking-wide leading-snug" aria-live="polite" title={playingText}
+              style={{ color: '#ffaa00', textShadow: '0 0 6px #ffaa0088', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>
+              <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle animate-pulse" style={{ background: '#ffaa00' }} />{playingText}
+            </p>
+          </>
+        )}
       </div>
 
       {/* Nível global: toque abre a visão geral (resumo e eventos críticos do painel) */}
@@ -147,7 +165,7 @@ export default function PipBoyHero({ data }) {
         </div>
         <Metric label={t('Tensão geopolítica')} value={Number(data?.geopolitical_tension) || 0} align="right" go="/guerra" hint={t('Abrir separador Guerra')} />
         <Metric label={t('Catástrofes')} value={Number(data?.natural_disaster_risk) || 0} go="/catastrofes" hint={t('Abrir separador Catástrofes')} />
-        <Metric label={t('Risco cibernético')} value={Number(data?.cyber_risk) || 0} align="right" go={toSummary} hint={t('Ver visão geral')} />
+        <Metric label={t('Risco cibernético')} value={Number(data?.cyber_risk) || 0} align="right" go="/ciber" hint={t('Abrir separador Ciberataques')} />
         <Metric label={t('Instab. económica')} value={Number(data?.economic_instability) || 0} go="/economia" hint={t('Abrir separador Economia')} />
         <Metric label={t('Greves')} value={Number(data?.strike_index) || 0} align="right" go="/greves" hint={t('Abrir separador Greves')} />
       </div>

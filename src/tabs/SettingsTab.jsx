@@ -1,11 +1,27 @@
 import React from 'react';
-import { Settings, Languages, MapPin, LocateFixed, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell } from 'lucide-react';
+import { Settings, Languages, MapPin, LocateFixed, Palette, LayoutGrid, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Bell, Info, ChevronDown } from 'lucide-react';
 import { THEMES, useSettings, setSettings, resetSettings, orderTabs } from '../theme';
 import { TABS } from '../HotBar';
 import NotificationsTab from './NotificationsTab';
 import AiSettings from '../pipboy/AiSettings';
 import { t, LANGS, useLang } from '@/i18n';
 import { LOCATIONS, useLoc, locMode, setLocManual, detectLocation } from '@/location';
+import { useNetwork } from '@/lib/ai/net';
+import { useAiConfig, activeProvider } from '@/lib/ai/config';
+import { PROVIDERS } from '@/lib/ai/providers';
+import { IS_ARTIFACT } from '@/api/base44Client';
+import { CARD_IDS, onSettingsAction, focusCard, focusAfterReload, takePendingFocus } from '@/settingsActions';
+
+// Nome da aplicação mostrado em "Sobre o sistema"
+export const APP_NAME = 'SteelDeck -Terminal by:PandaSteel';
+
+// Troca de idioma (o mesmo handler dos botões do cartão Idioma e da ferramenta rápida do menu ≡).
+// As traduções são lidas ao arrancar, por isso a app recarrega; o cartão Idioma fica destacado ao voltar.
+export function switchLang(id) {
+  setSettings({ lang: id });
+  focusAfterReload(CARD_IDS.idioma);
+  setTimeout(() => location.reload(), 50);
+}
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--cb) / 0.6)', border: '1px solid rgb(var(--c) / 0.3)', color: 'rgb(var(--c))' };
@@ -31,7 +47,7 @@ function LocationSection() {
     finally { setBusy(false); }
   };
   return (
-    <section className="p-3 rounded-sm mb-4" style={box}>
+    <section id={CARD_IDS.localizacao} className="p-3 rounded-sm mb-4" style={box}>
       <Title icon={MapPin}>{t('Localização')}</Title>
       <p className="text-[10px] mb-3" style={{ color: 'rgb(var(--c) / 0.6)' }}>
         {t('O tempo, os alertas do IPMA e as notificações do tempo são da cidade escolhida. A posição exata fica só no telemóvel; só se usa a cidade.')}
@@ -53,10 +69,93 @@ function LocationSection() {
   );
 }
 
+// Sobre o sistema: aplicação, idioma, rede, IA online, modo da IA, instalação (PWA) e armazenamento usado
+function SystemInfoSection({ open, setOpen }) {
+  const lang = useLang();
+  const net = useNetwork();
+  useAiConfig(); // atualiza quando a IA online é configurada
+  const prov = activeProvider();
+  const [storage, setStorage] = React.useState(null);
+  React.useEffect(() => {
+    if (!open || !navigator.storage?.estimate) return;
+    navigator.storage.estimate().then((e) => setStorage(e)).catch(() => setStorage(null));
+  }, [open]);
+  const standalone = typeof window !== 'undefined' && (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true);
+  const mb = (b) => `${(b / 1048576).toFixed(1)} MB`;
+  const aiOnline = IS_ARTIFACT ? 'Claude (claude.ai)' : prov ? PROVIDERS[prov.id]?.label : t('não configurada');
+  const aiMode = net === 'online' && (IS_ARTIFACT || prov) ? t('Online (IA ligada)') : t('Offline (base local e documentos)');
+  const rows = [
+    [t('Aplicação'), APP_NAME],
+    [t('Idioma'), LANGS.find((l) => l.id === lang)?.label || lang],
+    [t('Rede'), net === 'online' ? t('Online') : t('Sem ligação')],
+    [t('IA online'), aiOnline],
+    [t('Modo IA'), aiMode],
+    [t('Modo instalado (PWA)'), standalone ? t('Sim, instalada no ecrã inicial') : t('Não (aberta no browser)')],
+    [t('Armazenamento usado'), storage ? `${mb(storage.usage || 0)}${storage.quota ? ` / ${mb(storage.quota)}` : ''}` : '—'],
+  ];
+  return (
+    <section id={CARD_IDS.sobre} className="p-3 rounded-sm mb-4" style={box}>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full flex items-center justify-between">
+        <span className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}><Info size={14} /> {t('Sobre o sistema')}</span>
+        <ChevronDown size={14} style={{ color: 'rgb(var(--c))', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+      </button>
+      {open && (
+        <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11px]">
+          {rows.map(([k, v]) => (
+            <React.Fragment key={k}>
+              <dt className="uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.55)' }}>{k}</dt>
+              <dd className="min-w-0 break-words" style={{ color: 'rgb(var(--c))' }}>{v}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+}
+
+// Confirmação antes de repor as predefinições (evita reposições acidentais a partir do menu ≡)
+function ConfirmReset({ onCancel, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4" style={{ background: '#000000aa' }} role="dialog" aria-modal="true" aria-labelledby="reset-title" onClick={onCancel}>
+      <div className="w-full max-w-sm p-4 rounded-sm" style={{ background: 'rgb(var(--cd))', border: '1px solid rgb(var(--c) / 0.6)', boxShadow: '0 0 18px rgb(var(--c) / 0.35)' }} onClick={(e) => e.stopPropagation()}>
+        <p id="reset-title" className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'rgb(var(--c))' }}><RotateCcw size={14} /> {t('Repor predefinições')}</p>
+        <p className="text-[11px] mb-4" style={{ color: 'rgb(var(--c) / 0.75)' }}>{t('O tema, a ordem e os separadores escondidos da barra e as categorias de notificações voltam aos valores originais. O idioma, a cidade, a IA e os teus documentos ficam como estão.')}</p>
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={onCancel} autoFocus className="px-3 py-2 rounded-sm text-xs uppercase tracking-wider" style={btn}>{t('Cancelar')}</button>
+          <button type="button" onClick={onConfirm} className="px-3 py-2 rounded-sm text-xs uppercase tracking-wider font-bold" style={{ ...btn, border: '1px solid #ffaa00', color: '#ffaa00' }}>{t('Repor')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsTab() {
   const s = useSettings();
   const lang = useLang();
   const tabs = orderTabs(TABS, s.order);
+  const [aboutOpen, setAboutOpen] = React.useState(false);
+  const [confirmReset, setConfirmReset] = React.useState(false);
+  const [resetMsg, setResetMsg] = React.useState('');
+
+  // Ferramentas rápidas do menu ≡ (ver src/settingsActions.js)
+  React.useEffect(() => onSettingsAction((id) => {
+    if (id === 'sobre') { setAboutOpen(true); setTimeout(() => focusCard(CARD_IDS.sobre), 60); } // abre se estiver recolhido
+    else if (id === 'idioma') { focusCard(CARD_IDS.idioma); switchLang(lang === 'pt' ? 'en' : 'pt'); }
+    else if (id === 'localizacao') focusCard(CARD_IDS.localizacao);
+    else if (id === 'notificacoes') focusCard(CARD_IDS.notificacoes);
+    else if (id === 'repor') setConfirmReset(true);
+  }), [lang]);
+  // depois de mudar de idioma (a app recarrega), destaca o cartão Idioma
+  React.useEffect(() => { const id = takePendingFocus(); if (id) setTimeout(() => focusCard(id), 400); }, []);
+
+  const doReset = () => {
+    setConfirmReset(false);
+    resetSettings(); // tema e barra (o mesmo handler do botão "Repor tema e barra originais")
+    window.dispatchEvent(new CustomEvent('steeldeck:settings-action', { detail: { id: 'repor-notificacoes' } })); // categorias de notificações
+    setResetMsg(t('✔ Predefinições repostas.'));
+    setTimeout(() => setResetMsg(''), 4000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const move = (id, dir) => {
     const ids = tabs.map((x) => x.id);
@@ -76,15 +175,18 @@ export default function SettingsTab() {
         <Settings size={16} style={{ color: 'rgb(var(--c))' }} />
         <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>{t('Definições')}</h2>
       </div>
+      {resetMsg && <p role="status" className="text-[11px] mb-3 px-3 py-2 rounded-sm" style={{ ...box, color: '#ffaa00' }}>{resetMsg}</p>}
+
+      <SystemInfoSection open={aboutOpen} setOpen={setAboutOpen} />
 
       {/* Idioma da app */}
-      <section className="p-3 rounded-sm mb-4" style={box}>
+      <section id={CARD_IDS.idioma} className="p-3 rounded-sm mb-4" style={box}>
         <Title icon={Languages}>{t('Idioma')}</Title>
         <div className="grid grid-cols-2 gap-2">
           {LANGS.map((l) => {
             const on = lang === l.id;
             return (
-              <button key={l.id} type="button" onClick={() => { if (lang === l.id) return; setSettings({ lang: l.id }); setTimeout(() => location.reload(), 50); }} aria-pressed={on}
+              <button key={l.id} type="button" onClick={() => { if (lang !== l.id) switchLang(l.id); }} aria-pressed={on}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-sm text-xs text-left"
                 style={{ ...btn, border: `1px solid rgb(var(--c) / ${on ? 1 : 0.3})`, boxShadow: on ? '0 0 10px rgb(var(--c) / 0.5)' : 'none' }}>
                 <span className="text-base leading-none">{l.flag}</span>
@@ -150,10 +252,11 @@ export default function SettingsTab() {
       <AiSettings />
 
       {/* Notificações (antigo separador Alertas) */}
-      <section className="rounded-sm" style={box}>
+      <section id={CARD_IDS.notificacoes} className="rounded-sm" style={box}>
         <div className="px-3 pt-3"><Title icon={Bell}>{t('Notificações')}</Title></div>
         <NotificationsTab />
       </section>
+      {confirmReset && <ConfirmReset onCancel={() => setConfirmReset(false)} onConfirm={doReset} />}
     </div>
   );
 }

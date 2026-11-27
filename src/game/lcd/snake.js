@@ -1,4 +1,5 @@
 // Cobra — o clássico da cobrinha num ecrã LCD (84x48), com recorde guardado no browser.
+import { attachLcdRemote } from './remote';
 // Direção: setas / WASD / 2 4 6 8 ou deslizar o dedo no ecrã · Nível no menu: ◀ ▶ · Pausa: OK / P · Sair: C / Esc
 import { W, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
@@ -164,10 +165,15 @@ export function createSnake(scr, shell, { demo = false, onQuit = () => {}, music
   }
 
   reset();
-  return { update, draw, pause() { if (mode === 'play') { paused = true; M.pause(true); } } };
+  return {
+    update, draw, pause() { if (mode === 'play') { paused = true; M.pause(true); } },
+    // menu ≡: estado e recomeçar já
+    get status() { return { mode, paused }; },
+    restart() { start(); },
+  };
 }
 
-export function mountSnake(root, { onExit = () => {} } = {}) {
+export function mountSnake(root, { onExit = () => {}, autoStart = false } = {}) {
   const shell = mountShell(root, {
     title: tr('Cobra'), stick: 'dominant',
     a: { k: 'ok', label: tr('PAUSA') }, b: { k: 'mute', label: tr('SOM') },
@@ -175,10 +181,12 @@ export function mountSnake(root, { onExit = () => {} } = {}) {
     help: tr('PC: setas/WASD mudam a direção · espaço/Enter começa · ◀ ▶ escolhem o nível no menu · P pausa · Esc sai · M som'),
   });
   let stopped = false;
-  const cleanup = () => { stopped = true; music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
+  const cleanup = () => { stopped = true; offRemote(); music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
   const music = lcdMusic('snake');
   const game = createSnake(createScreen(shell.canvas), shell, { music, onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
   const stopLoop = runLoop(game.update, game.draw);
+  const offRemote = attachLcdRemote(shell, game);
+  if (autoStart) game.restart(); // começado pelo menu ≡ (REINICIAR PARTIDA): salta o ecrã inicial
   const onHide = () => { if (document.hidden) game.pause(); };
   document.addEventListener('visibilitychange', onHide);
   return () => { if (!stopped) cleanup(); };

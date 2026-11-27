@@ -1,4 +1,5 @@
 // Patrulha Estelar — shooter de rolagem lateral no ecrã LCD (84x48). Original, inspirado nos jogos de telemóvel antigos.
+import { attachLcdRemote } from './remote';
 // Mover: setas / WASD / 2 4 6 8 · Disparar: espaço / 5 (manter = automático) · Laser: X / 0 · Pausa: OK / P · Sair: C / Esc
 import { W, H, createScreen, mountShell, runLoop, SFX, getSound, setSound, loadBest, saveBest } from './engine';
 
@@ -330,12 +331,15 @@ export function createSpace(scr, shell, { demo = false, onQuit = () => {}, music
 
   return {
     update, draw, pause() { if (mode === 'play') { paused = true; M.pause(true); } },
+    // menu ≡: estado e recomeçar já
+    get status() { return { mode, paused }; },
+    restart() { reset(); mode = 'play'; paused = false; SFX_.start(); M.play(1); },
     // para testes: saltar para um nível/chefe e ler o estado
     _test: { boss(l) { reset(); st.level = l; mode = 'play'; startBoss(); }, get state() { return { mode, level: st.level, lives: st.lives, score: st.score, boss: st.boss && { k: st.boss.k, hp: st.boss.hp } }; }, set lives(v) { st.lives = v; } },
   };
 }
 
-export function mountSpace(root, { onExit = () => {} } = {}) {
+export function mountSpace(root, { onExit = () => {}, autoStart = false } = {}) {
   const shell = mountShell(root, {
     title: tr('Patrulha Estelar'), stick: 'free',
     a: { k: 'fire', label: tr('DISPARO') }, b: { k: 'alt', label: tr('LASER') },
@@ -343,10 +347,12 @@ export function mountSpace(root, { onExit = () => {} } = {}) {
     help: tr('PC: setas/WASD movem · espaço dispara (manter = automático) · X laser · P pausa · Esc sai · M som'),
   });
   let stopped = false;
-  const cleanup = () => { stopped = true; music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
+  const cleanup = () => { stopped = true; offRemote(); music.stop(); stopLoop(); document.removeEventListener('visibilitychange', onHide); shell.destroy(); };
   const music = lcdMusic('space');
   const game = createSpace(createScreen(shell.canvas), shell, { music, onQuit: () => { if (!stopped) { cleanup(); onExit(); } } });
   const stopLoop = runLoop(game.update, game.draw);
+  const offRemote = attachLcdRemote(shell, game);
+  if (autoStart) game.restart(); // começado pelo menu ≡ (REINICIAR PARTIDA): salta o ecrã inicial
   const onHide = () => { if (document.hidden) game.pause(); };
   document.addEventListener('visibilitychange', onHide);
   return () => { if (!stopped) cleanup(); };

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { alpha } from '../theme';
 import { t } from '@/i18n';
+import { plainText } from '@/lib/plainText';
 
 function severityColor(sev) {
   if (sev >= 8) return '#ff0000';
@@ -22,13 +23,13 @@ export default function NewsCard({ article, index = 0 }) {
       style={{ background: 'rgb(var(--cd) / 0.53)', border: '1px solid rgb(var(--c) / 0.13)', borderLeft: `3px solid ${color}` }}
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-bold leading-snug min-w-0" style={{ color: 'rgb(var(--c))' }}>{article.title}</h3>
+        <h3 className="text-sm font-bold leading-snug min-w-0" style={{ color: 'rgb(var(--c))' }}>{plainText(article.title)}</h3>
         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm shrink-0 tabular-nums" style={{ color, border: `1px solid ${alpha(color, '66')}` }}>
           {sev}/10
         </span>
       </div>
       {article.summary && (
-        <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgb(var(--c) / 0.67)' }}>{article.summary}</p>
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgb(var(--c) / 0.67)' }}>{plainText(article.summary)}</p>
       )}
       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.4)' }}>
         {article.region && <span>{article.region}</span>}

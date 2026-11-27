@@ -5,6 +5,9 @@ import { ACCEPT, importFile, listDocs, updateDoc, deleteDoc, searchDocs, request
 import { manualSections } from '@/data/survivalManual';
 import { DEFAULT_INSTRUCTIONS, getState, getCustomText, parseInstructionFile, findRisks, diffLines, applyVersion, activate } from '@/lib/aiInstructions';
 import { t, locale } from '@/i18n';
+import { isGuide } from '@/lib/guide';
+import { useFilesView, viewDocs, onImportRequest, filesFiltered, FILE_TYPES } from '@/files/filesTools';
+import { NotePanel, TypeFilterPanel, SortPanel, ResetLibraryDialog } from '@/files/FilesPanels';
 
 const box = { background: 'rgb(var(--cd) / 0.4)', border: '1px solid rgb(var(--c) / 0.2)' };
 const btn = { background: 'rgb(var(--c) / 0.13)', border: '1px solid rgb(var(--c) / 0.35)', color: 'rgb(var(--c))' };
@@ -22,6 +25,10 @@ export default function KnowledgeFilesTab() {
   const [proposal, setProposal] = useState(null); // { name, text, diff, risks }
   const [ai, setAi] = useState(getState());
   const fileRef = useRef(null); const folderRef = useRef(null); const promptRef = useRef(null);
+
+  const view = useFilesView();
+  // IMPORTAR FICHEIRO (menu ≡): abre o mesmo seletor do botão "Ficheiros" (fluxo de importação existente)
+  useEffect(() => onImportRequest(() => fileRef.current?.click()), []);
 
   const load = useCallback(() => listDocs().then(setDocs).catch(() => setStatus({ type: 'error', text: t('Não foi possível abrir o armazenamento local.') })), []);
   useEffect(() => {
@@ -74,6 +81,9 @@ export default function KnowledgeFilesTab() {
     if (promptRef.current) promptRef.current.value = '';
   };
   const activeCount = docs.filter((d) => d.enabled !== false).length;
+  const shownDocs = viewDocs(docs, view); // filtro por tipo + ordenação (menu ≡)
+  const typeCounts = Object.fromEntries(FILE_TYPES.map((ty) => [ty, docs.filter((d) => d.type === ty).length]));
+  const removable = docs.filter((d) => !isGuide(d)).length;
   const statusColor = status?.type === 'error' ? '#ff6600' : status?.type === 'ok' ? 'rgb(var(--c))' : '#ffaa00';
 
   return (
@@ -94,6 +104,12 @@ export default function KnowledgeFilesTab() {
       <input id="kb-files" ref={fileRef} type="file" multiple accept={ACCEPT} hidden onChange={(e) => handleUpload(e.target.files)} />
       <input id="kb-folder" ref={folderRef} type="file" multiple hidden onChange={(e) => handleUpload(e.target.files)} />
       <p className="text-xs mb-3" role="status" style={{ color: statusColor, minHeight: '1.2em' }}>{status?.text}</p>
+
+      {/* Painéis das ferramentas rápidas (menu ≡) */}
+      {view.panel === 'note' && <NotePanel onSaved={(text) => setStatus({ type: 'ok', text })} />}
+      {view.panel === 'filter' && <TypeFilterPanel counts={typeCounts} />}
+      {view.panel === 'sort' && <SortPanel />}
+      {view.confirmReset && <ResetLibraryDialog total={removable} onDone={(text, err) => setStatus({ type: err ? 'error' : 'ok', text })} />}
 
       {/* Pesquisa unificada */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-sm mb-2" style={box}>
@@ -129,14 +145,21 @@ export default function KnowledgeFilesTab() {
       {/* Documentos */}
       <div className="flex flex-col gap-1.5 mb-6">
         {docs.length === 0 && <p className="text-center text-xs py-6 rounded-sm" style={{ ...box, color: 'rgb(var(--c) / 0.5)' }}>{t('> Sem documentos importados_')}</p>}
-        {docs.map((d) => (
+        {filesFiltered(view) && docs.length > 0 && (
+          <p className="text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+            {view.types.length > 0 && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle" style={{ background: '#ff0000' }} />}
+            {view.types.length ? t('Filtro: {f} · {a} de {b}', { f: view.types.map((x) => x.toUpperCase()).join(', '), a: shownDocs.length, b: docs.length }) : t('{a} documento(s)', { a: shownDocs.length })}
+          </p>
+        )}
+        {docs.length > 0 && shownDocs.length === 0 && <p className="text-center text-xs py-4 rounded-sm" style={{ ...box, color: 'rgb(var(--c) / 0.5)' }}>{t('Nenhum documento deste tipo. Abre o menu ≡ para mudar o filtro.')}</p>}
+        {shownDocs.map((d) => (
           <div key={d.id} className="p-2.5 rounded-sm" style={{ ...box, opacity: d.enabled === false ? 0.55 : 1 }}>
             <div className="flex items-center gap-2">
               <FileText size={15} className="shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs truncate">{d.title}</p>
                 <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.55)' }}>
-                  {d.category} · {d.type.toUpperCase()} · {sizeLabel(d.size_kb)} · {new Date(d.created_date).toLocaleDateString(locale())} · {d.chars ? `${d.pages.length} ${d.unit}` : t('sem texto')}
+                  {t(d.category)} · {d.type.toUpperCase()} · {sizeLabel(d.size_kb)} · {new Date(d.created_date).toLocaleDateString(locale())} · {d.chars ? `${d.pages.length} ${d.unit}` : t('sem texto')}
                 </p>
               </div>
               <button type="button" onClick={() => openDoc(d.id)} aria-label={`Abrir ${d.title}`} className="p-1.5 rounded-sm" style={btn}><BookOpen size={13} /></button>

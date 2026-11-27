@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Skull, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
+import { Skull, RefreshCw, Loader2, AlertTriangle, Search, X } from 'lucide-react';
+import { invalidateNews } from '@/api/liveData';
+import { plainText } from '@/lib/plainText';
+import { useWarTools, reportWar, onWarRefresh, ALERT_SEV, setWarQuery, openWarSearch, warFiltered, clearWarFilters } from '@/war/warTools';
 import NewsCard from '../pipboy/NewsCard';
 import { t, locale } from '@/i18n';
 
@@ -24,9 +27,10 @@ export default function WarNewsTab() {
         return;
       }
 
-      if (isRefresh) setRefreshing(true);
+      if (isRefresh) { setRefreshing(true); invalidateNews(); } // atualizar: ignora a cópia em memória
       else setLoading(true);
       setError(null);
+      reportWar({ loading: true });
       
       const data = await base44.integrations.Core.InvokeLLM({
       prompt: `Fornece as 8 notícias mais recentes e relevantes sobre guerras ativas, conflitos armados, preparação militar, e tensões bélicas globais. Data atual: ${new Date().toISOString().split('T')[0]}. Inclui conflitos como Ucrânia-Rússia, Médio Oriente, e qualquer novo conflito. Para cada notícia dá severidade de 1-10.`,
@@ -63,6 +67,7 @@ export default function WarNewsTab() {
       setLoading(false);
       setRefreshing(false);
       setIsOffline(false);
+      reportWar({ loading: false, lastSync: Date.now() });
     } catch (err) {
       // Try to load from cache on error
       const cached = localStorage.getItem('war_news_cache');
@@ -75,6 +80,7 @@ export default function WarNewsTab() {
       }
       setLoading(false);
       setRefreshing(false);
+      reportWar({ loading: false });
     }
   };
 
@@ -104,6 +110,24 @@ export default function WarNewsTab() {
       window.removeEventListener('offline', handleOffline);
     };
   }, [error]);
+
+  // ---------- Filtros do menu ≡ (alertas, gravidade, região, palavra-chave) ----------
+  const tools = useWarTools();
+  const refreshRef = useRef(fetchNews); refreshRef.current = fetchNews;
+  useEffect(() => onWarRefresh(() => refreshRef.current(true)), []);
+  const clean = useMemo(() => articles.map((a) => ({ ...a, title: plainText(a.title), summary: plainText(a.summary), sev: Math.round(Number(a.severity) || 0) })), [articles]);
+  useEffect(() => {
+    const counts = {}; clean.forEach((a) => { const r = a.region || 'Global'; counts[r] = (counts[r] || 0) + 1; });
+    reportWar({ alertCount: clean.filter((a) => a.sev >= ALERT_SEV).length, regions: Object.entries(counts).sort((x, y) => y[1] - x[1]) });
+  }, [clean]);
+  const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const shown = useMemo(() => {
+    const words = norm(tools.query).split(/\s+/).filter(Boolean);
+    return clean.filter((a) => (!tools.alertsOnly || a.sev >= ALERT_SEV) && a.sev >= tools.minSev && (!tools.region || (a.region || 'Global') === tools.region)
+      && (!words.length || words.every((w) => norm(`${a.title} ${a.summary} ${a.source} ${a.region}`).includes(w))));
+  }, [clean, tools.alertsOnly, tools.minSev, tools.region, tools.query]);
+  const searchRef = useRef(null);
+  useEffect(() => { if (tools.searchOpen) setTimeout(() => searchRef.current?.focus(), 200); }, [tools.searchOpen]);
 
   return (
     <div className="p-4">
@@ -165,10 +189,30 @@ export default function WarNewsTab() {
           </button>
         </div>
       ) : (
-        <div>
-          {articles.map((article, i) => (
-            <NewsCard key={i} article={article} index={i} />
+        <div id="guerra-lista" className="scroll-mt-20 rounded-sm">
+          {(tools.searchOpen || tools.query) && (
+            <label className="flex items-center gap-2 px-2 py-1.5 mb-3 rounded-sm" style={{ background: 'rgb(var(--cb) / 0.7)', border: '1px solid rgb(var(--c) / 0.35)' }}>
+              <Search size={13} style={{ color: 'rgb(var(--c) / 0.6)' }} />
+              <input ref={searchRef} value={tools.query} onChange={(e) => setWarQuery(e.target.value)} placeholder={t('País, líder, rota marítima, ataque, cessar-fogo, fonte…')}
+                className="flex-1 min-w-0 bg-transparent outline-none text-xs" style={{ color: 'rgb(var(--c))' }} />
+              <button type="button" onClick={() => openWarSearch(false)} aria-label={t('Fechar pesquisa')}><X size={13} style={{ color: 'rgb(var(--c) / 0.6)' }} /></button>
+            </label>
+          )}
+          {warFiltered(tools) && (
+            <p className="text-[10px] uppercase tracking-wider mb-2 flex flex-wrap gap-2 items-center" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#ff0000' }} />
+              {tools.alertsOnly && <span style={{ color: '#ef4444' }}>{t('Só alertas ativos')}</span>}
+              {tools.minSev > 0 && <span>≥ {tools.minSev}/10</span>}
+              {tools.region && <span>{t(tools.region)}</span>}
+              {tools.query.trim() && <span>«{tools.query.trim()}»</span>}
+              <span>· {shown.length}/{clean.length}</span>
+              <button type="button" onClick={clearWarFilters} className="ml-auto px-2 py-0.5 rounded-sm" style={{ border: '1px solid #ef444488', color: '#ef4444' }}>{t('Limpar filtros')}</button>
+            </p>
+          )}
+          {shown.map((article, i) => (
+            <NewsCard key={`${article.title}-${i}`} article={article} index={i} />
           ))}
+          {clean.length > 0 && shown.length === 0 && <p className="text-center text-xs py-6" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('Sem resultados com estes filtros.')}</p>}
           {articles.length === 0 && (
             <p className="text-center text-xs py-8" style={{ color: 'rgb(var(--c) / 0.33)' }}>
               {t('Sem dados disponíveis')}

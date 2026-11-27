@@ -1,4 +1,5 @@
 import { locale, t as tr } from '../i18n';
+import { attachPlayer, reportMusic, getMusic, EQ_GAINS } from './musicRemote';
 // Leitor de músicas do dispositivo (offline). JavaScript puro: os ficheiros são lidos
 // localmente pelo elemento <audio> e guardados no próprio browser (IndexedDB). Nada é enviado para fora.
 
@@ -108,6 +109,7 @@ export function mountVinylPlayer(root) {
   let current = -1;
   let db = null;
   let destroyed = false;
+  let report = () => {}; // envia o estado ao menu ≡ (definido mais abaixo)
 
   const say = (t) => { el.msg.textContent = t || ''; };
   const playing = () => !audio.paused && !audio.ended && current >= 0;
@@ -134,6 +136,7 @@ export function mountVinylPlayer(root) {
 
   function renderState() {
     const on = playing();
+    report();
     root.classList.toggle('vp-playing', on);
     el.play.classList.toggle('act', on);
     el.pause.classList.toggle('act', !on && current >= 0 && audio.currentTime > 0);
@@ -175,21 +178,90 @@ export function mountVinylPlayer(root) {
 
   function play() {
     window.dispatchEvent(new CustomEvent('pb-audio-start', { detail: 'music' })); // o rádio desliga-se
-    if (!tracks.length) return;
+    if (!tracks.length) { say(tr('Adiciona músicas para começar')); return; }
+    ensureFx();
     if (current < 0) { select(0, true); return; }
     audio.play().catch(() => { say(tr('Não foi possível tocar esta faixa.')); renderState(); });
   }
   function pause() { audio.pause(); }
   function stop() { audio.pause(); try { audio.currentTime = 0; } catch (e) { /* sem faixa */ } renderState(); }
+  // Histórico das faixas tocadas: no modo aleatório, "anterior" volta à que tocou antes (e não a uma ao acaso)
+  const history = [];
   function next(auto) {
     if (!tracks.length) return;
-    select((current + 1) % tracks.length, auto === true || playing() || audio.ended);
+    let i = (current + 1) % tracks.length;
+    if (getMusic().shuffle && tracks.length > 1) { do { i = Math.floor(Math.random() * tracks.length); } while (i === current); }
+    if (current >= 0) history.push(current);
+    if (history.length > 100) history.shift();
+    select(i, auto === true || playing() || audio.ended);
   }
+  // Anterior: depois dos primeiros 4 s reinicia a faixa; logo no início, ou com dois toques seguidos (< 1,5 s), recua
+  let lastPrev = 0;
   function prev() {
     if (!tracks.length) return;
-    if (audio.currentTime > 3) { audio.currentTime = 0; return; } // volta ao início da faixa
-    select((current - 1 + tracks.length) % tracks.length, playing());
+    const now = Date.now(); const double = now - lastPrev < 1500; lastPrev = now;
+    if (audio.currentTime > 4 && !double) { audio.currentTime = 0; renderProgress(); return; }
+    const back = history.length ? history.pop() : (current - 1 + tracks.length) % tracks.length;
+    select(back, playing() || double);
   }
+
+  // ---- Cadeia de áudio: EQ de 5 bandas + Bass Boost + Loudness (Web Audio, criada no 1.º play) ----
+  let fx = null;
+  function ensureFx() {
+    if (fx !== null) { if (fx && fx.ctx.state === 'suspended') fx.ctx.resume(); return; }
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const src = ctx.createMediaElementSource(audio); // ficheiros locais (blob:) -> sem problemas de origem
+      const bands = [60, 230, 910, 3600, 14000].map((f, i) => {
+        const b = ctx.createBiquadFilter();
+        b.type = i === 0 ? 'lowshelf' : i === 4 ? 'highshelf' : 'peaking'; b.frequency.value = f; b.Q.value = 1; return b;
+      });
+      const bass = ctx.createBiquadFilter(); bass.type = 'lowshelf'; bass.frequency.value = 110;
+      const loudLow = ctx.createBiquadFilter(); loudLow.type = 'lowshelf'; loudLow.frequency.value = 90;
+      const loudHigh = ctx.createBiquadFilter(); loudHigh.type = 'highshelf'; loudHigh.frequency.value = 9000;
+      const out = ctx.createGain();
+      [src, ...bands, bass, loudLow, loudHigh, out].reduce((a, b) => a.connect(b));
+      out.connect(ctx.destination);
+      fx = { ctx, bands, bass, loudLow, loudHigh, out };
+      applyFx();
+    } catch (e) { fx = false; /* sem Web Audio: toca sem EQ */ }
+  }
+  function applyFx() {
+    if (!fx) return;
+    const m = getMusic();
+    const g = EQ_GAINS[m.eq] || EQ_GAINS.normal;
+    const t = fx.ctx.currentTime;
+    fx.bands.forEach((b, i) => b.gain.setTargetAtTime(g[i], t, 0.05));
+    const bassOn = m.boost === 'bass' || m.boost === 'both';
+    const loudOn = m.boost === 'loud' || m.boost === 'both';
+    fx.bass.gain.setTargetAtTime(bassOn ? 8 : 0, t, 0.05);
+    fx.loudLow.gain.setTargetAtTime(loudOn ? 5 : 0, t, 0.05);
+    fx.loudHigh.gain.setTargetAtTime(loudOn ? 4 : 0, t, 0.05);
+    // reforços somam ganho: baixa um pouco o volume geral para não distorcer
+    const boostDb = Math.max(0, ...g) + (bassOn ? 8 : 0) + (loudOn ? 5 : 0);
+    fx.out.gain.setTargetAtTime(Math.pow(10, -Math.min(boostDb, 12) * 0.5 / 20), t, 0.05);
+  }
+  let lastFx = '';
+  const fxKey = () => { const m = getMusic(); return `${m.eq}|${m.boost}|${m.shuffle}`; };
+  const offRemote = attachPlayer((cmd) => {
+    if (cmd === 'toggle') { if (playing()) pause(); else play(); }
+    else if (cmd === 'next') next(playing());
+    else if (cmd === 'prev') prev();
+  }, () => {
+    const k = fxKey(); if (k === lastFx) return; lastFx = k;
+    applyFx();
+    const m = getMusic();
+    say(`EQ: ${m.eq.toUpperCase()} · ${tr('Graves')}: ${m.boost.toUpperCase()} · ${m.shuffle ? tr('Aleatório') : tr('Sequencial')}`);
+  });
+  lastFx = fxKey();
+  let lastAnn = '';
+  report = () => {
+    reportMusic({ isPlaying: playing(), track: tracks[current]?.name || null, hasTracks: tracks.length > 0 });
+    // painel principal: "Aba Musica - [Nome da Música]" enquanto toca
+    const key = playing() ? tracks[current]?.name || '' : '';
+    if (key !== lastAnn) { lastAnn = key; window.dispatchEvent(new CustomEvent('pb-now-playing', { detail: { kind: 'music', playing: !!key, track: key } })); }
+  };
 
   async function addFiles(fileList) {
     const files = [...(fileList || [])];
@@ -272,6 +344,10 @@ export function mountVinylPlayer(root) {
 
   return function destroy() {
     destroyed = true;
+    offRemote();
+    reportMusic({ isPlaying: false });
+    if (lastAnn) window.dispatchEvent(new CustomEvent('pb-now-playing', { detail: { kind: 'music', playing: false, track: '' } }));
+    if (fx) fx.ctx.close().catch(() => {});
     clearInterval(clockTimer);
     window.removeEventListener('pb-audio-start', onOtherAudio);
     offs.forEach((f) => f());

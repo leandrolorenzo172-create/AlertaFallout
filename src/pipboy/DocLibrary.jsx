@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Star, Search, X, List, Maximize2, Minimize2, Upload, FileText, Image as ImageIcon, Database, Moon, Zap, MoveHorizontal } from 'lucide-react';
 import { listDocs, getDoc, getFile, getMeta, setMeta, onKbChange, takeOpenRequest, pdfjs, importFile, ACCEPT } from '@/lib/kb';
 import { t } from '@/i18n';
+import { useManualView, filtersActive } from '@/manual/manualTools';
+import { ThemeFilterPanel, OrganizePanel, organize } from '@/manual/ManualPanels';
 
 // Biblioteca do Manual em estilo e-reader (Kindle/Kobo):
 //  - ESTANTE: cada documento é um cartão com capa (1.ª página do PDF, ou capa gerada), título, páginas, progresso e resumo.
@@ -486,6 +488,7 @@ export default function DocLibrary() {
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const fileRef = useRef(null);
+  const view = useManualView();
 
   const load = useCallback(async () => {
     const list = await listDocs().catch(() => []);
@@ -494,8 +497,18 @@ export default function DocLibrary() {
   useEffect(() => {
     ensureSample().then(load); ensureGuide().then(load);
     const req = takeOpenRequest(); if (req) setOpen(req);
-    return onKbChange(load);
+    return onKbChange(load); // documento novo/alterado -> a vista atualiza sozinha (filtros e ordenação mantêm-se)
   }, [load]);
+  // ATUALIZAR VISTA (menu ≡): volta a ler a estante e confirma o Guia, sem perder filtros nem ordenação
+  useEffect(() => {
+    if (!view.tick) return;
+    setMsg(t('A atualizar…'));
+    Promise.all([ensureGuide().catch(() => {}), load()]).then(() => setMsg(t('✔ Vista atualizada.')));
+    const id = setTimeout(() => setMsg(''), 3000);
+    return () => clearTimeout(id);
+  }, [view.tick, load]);
+  const sections = organize(docs, view, isGuide);
+  const shown = sections.reduce((n, g) => n + g.docs.length, 0);
 
   const onFiles = async (files) => {
     const list = [...(files || [])]; if (!list.length) return;
@@ -523,12 +536,25 @@ export default function DocLibrary() {
         {t('PDF, DOCX, TXT, MD, JSON, CSV e XML são lidos e indexados neste dispositivo. A IA pesquisa neles e cita o documento e a página. Toca num documento para o ler em ecrã inteiro.')}
       </p>
       {(busy || msg) && <p className="text-[11px] mb-2" style={{ color: '#ffaa00' }}>{busy || msg}</p>}
+      {view.panel === 'filter' && <ThemeFilterPanel docs={docs} />}
+      {view.panel === 'organize' && <OrganizePanel />}
+      {filtersActive(view) && docs.length > 0 && (
+        <p className="text-[10px] mb-2 uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.6)' }}>
+          <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle" style={{ background: '#ff0000' }} />
+          {t('Filtros/organização ativos: {a} de {b} documentos.', { a: shown, b: docs.length })}
+        </p>
+      )}
       {open && <Reader key={`${open.docId}|${open.page || 0}`} docId={open.docId} startPage={open.page} onClose={() => { setOpen(null); load(); }} />}
       {docs.length === 0 ? (
         <p className="p-3 rounded-sm text-[11px]" style={{ ...box, color: 'rgb(var(--c) / 0.6)' }}>{t('Ainda não há documentos. Usa "Importar documentos" para os juntar à estante.')}</p>
       ) : (
-        <ul className="grid gap-2.5 sm:grid-cols-2">
-          {docs.map((d) => {
+        shown === 0 ? (
+          <p className="p-3 rounded-sm text-[11px]" style={{ ...box, color: 'rgb(var(--c) / 0.6)' }}>{t('Nenhum documento com estes filtros. Abre o menu ≡ para os mudar.')}</p>
+        ) : sections.map((g) => (
+          <div key={g.key} className="mb-3">
+            {g.label && <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: 'rgb(var(--c) / 0.55)' }}>{g.label} ({g.docs.length})</p>}
+          <ul className="grid gap-2.5 sm:grid-cols-2">
+          {g.docs.map((d) => {
             const total = d.pages?.length || 1; 
             const summary = isGuide(d)
               ? t('Manual de campo completo: abrigos, armadilhas, armas, caça e pesca, água, fogo (12 métodos), plantas, árvores, alimentos, medicina, orientação no Minho, nós e mais 6 módulos')
@@ -552,7 +578,9 @@ export default function DocLibrary() {
               </li>
             );
           })}
-        </ul>
+          </ul>
+          </div>
+        ))
       )}
     </div>
   );

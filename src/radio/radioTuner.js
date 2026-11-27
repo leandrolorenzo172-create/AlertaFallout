@@ -195,7 +195,15 @@ export function mountRadio(root, opts = {}) {
   const audio = new Audio();
   audio.preload = 'none';
   let hls = null; let loadedUrl = null; let connectTimer = null; let destroyed = false;
+  // Painel principal: avisa o que está a tocar (evento global, sem dependências — também corre no rádio autónomo)
+  let npTrack = ''; let announced = false;
+  const announce = (playing) => {
+    announced = playing;
+    window.dispatchEvent(new CustomEvent('pb-now-playing', { detail: { kind: 'radio', playing, station: state.station ? state.station.name : '', track: npTrack } }));
+  };
   const np = createNowPlaying((info) => {
+    npTrack = info ? (info.artist && info.title ? `${info.artist} - ${info.title}` : (info.title || info.artist)) : '';
+    if (announced) announce(true);
     if (!info) { el.np.hidden = true; el.nptext.textContent = ''; return; }
     el.nptext.textContent = info.artist && info.title ? `${info.artist} — ${info.title}` : (info.title || info.artist);
     el.np.hidden = false;
@@ -257,6 +265,8 @@ export function mountRadio(root, opts = {}) {
     armWatch(s);
     if (s === 'live' && loadedUrl) np.start(loadedUrl);
     else if (s !== 'conn') np.stop();
+    if (s === 'live') announce(true);
+    else if (s !== 'conn') { npTrack = ''; if (announced) announce(false); } // a religar mantém o que estava
     if (state.status === s) return;
     state.status = s;
     const map = {
@@ -801,6 +811,7 @@ export function mountRadio(root, opts = {}) {
 
   return function destroy() {
     destroyed = true;
+    if (announced) announce(false);
     cancelAnimationFrame(raf);
     clearInterval(clockTimer); clearTimeout(shareTimer); clearTimeout(noteTimer); themeWatch.disconnect();
     offs.forEach((f) => f());

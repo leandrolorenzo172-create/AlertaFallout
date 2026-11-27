@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, RefreshCw, ExternalLink } from 'lucide-react';
+import { plainText } from '@/lib/plainText';
 import { t, locale } from '@/i18n';
 
 export const card = { background: 'rgb(var(--cd) / 0.2)', border: '1px solid rgb(var(--c) / 0.07)' };
@@ -63,7 +64,7 @@ export function NewsItem({ a, badge, badgeColor }) {
     <a href={a.url || undefined} target="_blank" rel="noreferrer" className="block p-3 mb-2 rounded-sm"
       style={{ background: 'rgb(var(--cd) / 0.13)', border: '1px solid rgb(var(--c) / 0.07)', borderLeft: `3px solid ${badgeColor || 'rgb(var(--c) / 0.4)'}` }}>
       <div className="flex items-start gap-2">
-        <h4 className="text-xs font-bold flex-1 leading-snug" style={{ color: 'rgb(var(--c) / 0.85)' }}>{a.title}</h4>
+        <h4 className="text-xs font-bold flex-1 leading-snug" style={{ color: 'rgb(var(--c) / 0.85)' }}>{plainText(a.title)}</h4>
         {a.url && <ExternalLink size={12} className="shrink-0 mt-0.5" style={{ color: 'rgb(var(--c) / 0.4)' }} />}
       </div>
       <p className="text-[10px] mt-1" style={{ color: 'rgb(var(--c) / 0.45)' }}>
