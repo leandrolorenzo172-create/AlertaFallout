@@ -226,3 +226,13 @@
 /* O visor da frequência é só ilustrativo: não reage ao dedo e deixa a página deslizar */
 .rf-screen { touch-action: pan-y; cursor: default; }
 .rf-screen canvas { pointer-events: none; }
+
+/* Botão 🌍 País (ao lado de FM/AM) e painel de escolha do país das emissoras */
+.rf-band button[data-rf="ctry"] { letter-spacing: .06em; border-left: 1px solid #2a2e29; white-space: nowrap; }
+.rf-band button[data-rf="ctry"][aria-expanded="true"] { color: rgb(var(--cb)); background: var(--rf-green); }
+.rf-ctry ul { list-style: none; margin: 8px 0 0; padding: 0; max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.rf-ctry li { font-size: 13px; color: var(--rf-dim); }
+.rf-ctry li button { width: 100%; text-align: left; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 4px; cursor: pointer;
+  color: var(--rf-green); background: transparent; border: 1px solid rgb(var(--c) / 0.2); }
+.rf-ctry li button[aria-selected="true"] { background: rgb(var(--c) / 0.16); border-color: var(--rf-green); }
+.rf-ctry li button:hover, .rf-ctry li button:focus-visible { border-color: var(--rf-green); outline: none; }

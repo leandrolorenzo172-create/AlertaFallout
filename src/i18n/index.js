@@ -3,6 +3,7 @@
 // (se faltar, mostra o português). Variáveis: t('Greves {ano}', { ano: 2026 }).
 // O idioma fica em pb_settings.lang (Definições > Idioma); sem escolha, segue o idioma do telemóvel.
 import EN from './en.js';
+import { usesFahrenheit, usesMph } from '../geo/emergency';
 
 export const LANGS = [
   { id: 'pt', label: 'Português (PT)', flag: '🇵🇹' },
@@ -27,10 +28,16 @@ export function t(pt, vars) {
 // Idioma atual para componentes React (ao mudar de idioma a app recarrega, por isso não precisa de subscrição)
 export const useLang = () => getLang();
 
-// Unidades: por agora °C e km/h nos dois idiomas (pedido do dono da app). Para °F/mph em inglês, pôr IMPERIAL = isEn().
-const IMPERIAL = () => false;
+// Unidades pelo país detetado (src/geo/country.js guarda-o em sd_country): °F só nos EUA (e poucos outros);
+// mph nos EUA e no Reino Unido; o resto °C e km/h. Lê o localStorage diretamente porque este módulo também
+// entra no rádio e nos jogos autónomos (sem React).
+const COUNTRY = () => { try { return JSON.parse(localStorage.getItem('sd_country') || '{}').code || null; } catch { return null; } };
+const FAHRENHEIT = () => usesFahrenheit(COUNTRY());
+const MPH = () => usesMph(COUNTRY());
 const num = (v) => (v === null || v === undefined || v === '' || v === '—' || Number.isNaN(Number(v)) ? null : Number(v));
-export const tempVal = (c) => { const n = num(c); return n === null ? '—' : Math.round(IMPERIAL() ? n * 9 / 5 + 32 : n); };
-export const temp = (c) => { const v = tempVal(c); return v === '—' ? v : `${v}°${IMPERIAL() ? 'F' : 'C'}`; };
-export const windVal = (kmh) => { const n = num(kmh); return n === null ? '—' : Math.round(IMPERIAL() ? n * 0.621371 : n); };
-export const wind = (kmh) => { const v = windVal(kmh); return v === '—' ? v : `${v} ${IMPERIAL() ? 'mph' : 'km/h'}`; };
+export const tempUnit = () => (FAHRENHEIT() ? '°F' : '°C');
+export const windUnit = () => (MPH() ? 'mph' : 'km/h');
+export const tempVal = (c) => { const n = num(c); return n === null ? '—' : Math.round(FAHRENHEIT() ? n * 9 / 5 + 32 : n); };
+export const temp = (c) => { const v = tempVal(c); return v === '—' ? v : `${v}${tempUnit()}`; };
+export const windVal = (kmh) => { const n = num(kmh); return n === null ? '—' : Math.round(MPH() ? n * 0.621371 : n); };
+export const wind = (kmh) => { const v = windVal(kmh); return v === '—' ? v : `${v} ${windUnit()}`; };

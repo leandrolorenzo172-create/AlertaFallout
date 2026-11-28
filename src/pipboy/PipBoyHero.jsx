@@ -4,7 +4,7 @@ import Mascot from './Mascot';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { fetchWeather } from '@/api/liveData';
 import { useLoc } from '@/location';
-import { t, locale } from '@/i18n';
+import { t, locale, tempVal, windVal, windUnit, tempUnit } from '@/i18n';
 import { useSettings } from '@/theme';
 import { useNowPlaying, toggleNowPlaying } from '@/audio/useNowPlaying';
 
@@ -106,11 +106,12 @@ export default function PipBoyHero({ data }) {
   useEffect(() => {
     if (IS_ARTIFACT) { setWxError(true); return undefined; } // no claude.ai não há acesso a dados externos
     let alive = true;
+    if (!loc.ready) return undefined; // à espera do país
     const load = () => fetchWeather(loc).then((w) => { if (alive) { setWeather(w); setWxError(false); } }).catch(() => { if (alive) setWxError(true); });
     load();
     const t = setInterval(load, 15 * 60000);
     return () => { alive = false; clearInterval(t); };
-  }, [loc.id]);
+  }, [loc.key]); // muda com o país/posição detetados
 
   const g = Number(data?.global_threat_level) || 0;
   const braga = weather?.here || null; // tempo atual na cidade do utilizador
@@ -203,9 +204,9 @@ export default function PipBoyHero({ data }) {
             <p className="font-bold uppercase mt-2" style={{ color: 'rgb(var(--c))' }}>{t('Clima em tempo real:')}</p>
             {braga ? (
               <>
-                <p className="text-sm" style={{ color: 'rgb(var(--c) / 0.9)' }}>{loc.name.toUpperCase()} —{' '}{braga.temp}°C ({braga.condition})</p>
+                <p className="text-sm" style={{ color: 'rgb(var(--c) / 0.9)' }}>{loc.name.toUpperCase()} —{' '}{tempVal(braga.temp)}{tempUnit()} ({braga.condition})</p>
                 <p className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.7)' }}>
-                  {t('Hr:')}{' '}{braga.humidity}{t('% | Vento:')}{' '}{braga.wind_kmh}{' '}{t('km/h')}{' '}{braga.wind_direction}{' '}{t('| UV:')}{' '}{braga.uv_index} ({UV_TXT(braga.uv_index)}{t(') | Term:')}{' '}{braga.min_temp}°/{braga.max_temp}°
+                  {t('Hr:')}{' '}{braga.humidity}{t('% | Vento:')}{' '}{windVal(braga.wind_kmh)}{' '}{windUnit()}{' '}{braga.wind_direction}{' '}{t('| UV:')}{' '}{braga.uv_index} ({UV_TXT(braga.uv_index)}{t(') | Term:')}{' '}{tempVal(braga.min_temp)}°/{tempVal(braga.max_temp)}°
                 </p>
               </>
             ) : (

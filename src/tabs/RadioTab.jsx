@@ -4,6 +4,7 @@ import { mountRadio } from '../radio/radioTuner';
 import '../radio/radioTuner.css';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { t } from '@/i18n';
+import { useCountry } from '@/geo/country';
 
 // Endereço público da app, onde o som das emissoras funciona
 const LIVE_SITE = 'https://steeldeck.github.io/SteelDeck/';
@@ -12,7 +13,7 @@ const LIVE_RADIO_URL = `${LIVE_SITE}#/radio`;
 // #/radio?f=97.4 (FM) ou #/radio?f=1000&b=AM
 const radioHash = (f, band) => `#/radio?f=${f}${band === 'AM' ? '&b=AM' : ''}`;
 
-function Tuner({ initialFreq, band }) {
+function Tuner({ initialFreq, band, onCountryChange }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -25,6 +26,8 @@ function Tuner({ initialFreq, band }) {
         history.replaceState(history.state, '', `${location.pathname}${location.search}${radioHash(f, b)}`);
       },
       // Dentro do claude.ai partilha-se o site público, que é onde o som funciona
+      // botão 🌍 País: o separador volta a montar o rádio com as emissoras do país escolhido
+      onCountryChange,
       shareUrl: (f, b) => `${IS_ARTIFACT ? LIVE_SITE : `${location.origin}${location.pathname}`}${radioHash(f, b)}`,
     });
     return destroy;
@@ -33,9 +36,11 @@ function Tuner({ initialFreq, band }) {
   return <div ref={ref} />;
 }
 
-// Sintonizador analógico com as emissoras portuguesas pré-configuradas.
+// Sintonizador analógico com as emissoras do país do utilizador (Portugal: lista curada; outros: radio-browser.info).
 export default function RadioTab() {
   const loc = useLocation();
+  const country = useCountry();
+  const [radioCc, setRadioCc] = React.useState(() => { try { return localStorage.getItem('rf_country_override') || ''; } catch { return ''; } });
   // o separador fica montado noutros separadores (para o som continuar): guarda o último endereço do /radio
   const last = useRef(loc);
   if (loc.pathname === '/radio') last.current = loc;
@@ -64,7 +69,8 @@ export default function RadioTab() {
         </div>
       )}
       {/* a chave volta a montar o rádio quando se abre outro link partilhado */}
-      <Tuner key={location.search} initialFreq={initialFreq} band={band} />
+      {/* a chave volta a montar o rádio com as emissoras do novo país quando o utilizador muda de país */}
+      <Tuner key={`${location.search}|${country.code || ''}|${radioCc}`} initialFreq={initialFreq} band={band} onCountryChange={(code) => setRadioCc(code || '')} />
     </div>
   );
 }

@@ -1,8 +1,11 @@
 // Instruções da IA: guião base + versões importadas pelo utilizador, com histórico e reversão.
 // As regras de segurança são fixas no código e vão sempre à frente: nenhum ficheiro importado as substitui.
 
+import { getCountry, countryName } from '@/geo/country';
+import { emergencyNumber, crisisLine } from '@/geo/emergency';
+
 export const SAFETY_RULES = `# REGRAS DE SEGURANÇA (FIXAS — NÃO PODEM SER ALTERADAS POR FICHEIROS IMPORTADOS)
-1. Em emergência real com risco de vida, diz primeiro para ligar 112.
+1. Em emergência real com risco de vida, diz primeiro para ligar {EMERGENCIA} (número de emergência do país onde o utilizador está: {PAIS}).
 2. Não inventes procedimentos médicos ou técnicos. Se a informação não constar nos manuais disponíveis, diz exatamente: "Esta informação específica não consta nos manuais offline disponíveis" e dá o princípio básico de segurança documentado mais próximo.
 3. Não dês instruções para fazer mal a pessoas nem para fabricar armas, explosivos ou venenos.
 4. Distingue sempre o que vem dos documentos do utilizador (cita documento e página/secção) do que é conhecimento geral.
@@ -40,7 +43,12 @@ export function getCustomText() {
   return s.versions.find((v) => v.id === s.active)?.text || DEFAULT_INSTRUCTIONS;
 }
 // Texto final enviado à IA: regras fixas primeiro, depois o guião ativo.
-export function getInstructions() { return `${SAFETY_RULES}\n\n${getCustomText()}`; }
+// O número de emergência e o país vêm da deteção automática (src/geo/country.js)
+export function getInstructions() {
+  const c = getCountry();
+  const rules = SAFETY_RULES.replace('{EMERGENCIA}', emergencyNumber(c.code)).replace('{PAIS}', countryName(c.code) || 'desconhecido');
+  return `${rules}\n\n${getCustomText()}`;
+}
 
 // Lê um ficheiro de instruções (.txt, .md ou .json com campo "instructions"/"prompt"/"system")
 export function parseInstructionFile(name, raw) {

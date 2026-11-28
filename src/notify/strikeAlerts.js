@@ -1,10 +1,11 @@
 // Avisos de greve: "ALERTA — Greve da Função Pública dia 26/11/26".
-// Usa strikes.upcoming de data/news.json (gerado de hora a hora em scripts/fetch-news.mjs).
+// Usa strikes.upcoming do ficheiro de notícias do país do utilizador (data/news-<PAÍS>.json, gerado de hora a hora).
 // Avisa ANTECEDENCIA_DIAS antes (uma vez) e de novo no próprio dia.
 // - Com a app aberta: faixa no topo do ecrã + notificação do sistema (se o utilizador deu permissão).
 // - Com a app fechada: o service worker (sw.js) faz a mesma verificação quando o Android o deixa correr
 //   (Periodic Background Sync, só na app instalada no Chrome/Android).
 // O registo dos avisos já mostrados fica na Cache Storage, partilhado entre a página e o service worker.
+import { fetchStrikes, invalidateNews } from '@/api/liveData';
 import { IS_ARTIFACT } from '@/api/base44Client';
 import { syncPush } from './push';
 import { getLoc } from '@/location';
@@ -150,9 +151,10 @@ export async function checkStrikeAlerts() {
     // cor da app escolhida neste telemóvel: as miniaturas das notificações usam a mesma (public/icons/tempo/<cor>/)
     try { st.theme = JSON.parse(localStorage.getItem('pb_settings') || '{}').theme || 'green'; } catch { st.theme = 'green'; }
     if (enabled) {
-      const res = await fetch('./data/news.json', { cache: 'no-cache' });
-      const news = res.ok ? await res.json() : null;
-      for (const a of dueAlerts((news?.strikes?.upcoming || []).filter(isValidStrikeNotice), st.shown)) {
+      // greves do país detetado (ficheiro de notícias desse país; já vêm filtradas na língua certa)
+      invalidateNews();
+      const strikes = await fetchStrikes({ fresh: true }).catch(() => null);
+      for (const a of dueAlerts(strikes?.upcoming || [], st.shown)) {
         const msg = strikeMessage(a.s, a.kind);
         banner(msg); await systemNotify(msg, `greve-${a.key}`);
         st.shown[a.key] = Date.now();

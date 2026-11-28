@@ -1,7 +1,9 @@
 import { locale, t as tr, isEn } from '../i18n';
 import { getLoc } from '../location';
 import { computeCyberRisk } from '../lib/cyberRisk';
-import { isValidStrikeNotice, strikeSector } from '../lib/strikeFilter';
+import { isValidStrikeNotice as ptStrikeValid, strikeSector as ptStrikeSector } from '../lib/strikeFilter';
+import { isValidStrikeNotice as enStrikeValid, strikeSector as enStrikeSector } from '../lib/strikeFilterEn';
+import { getCountry, onCountryChange } from '../geo/country';
 // Dados reais de fontes públicas, usados quando a app corre fora do claude.ai.
 // - Meteorologia e avisos: IPMA (api.ipma.pt). Previsão a 15 dias: Open-Meteo, com o IPMA (5 dias) como reserva.
 // - Catástrofes: GDACS (alertas laranja/vermelho) e USGS (sismos).
@@ -67,8 +69,85 @@ const dayName = (iso) => {
 };
 const shortDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
 
-// loc: cidade do utilizador (src/location.js) — tempo atual, avisos e previsão de 15 dias são dessa cidade
+// loc: local do utilizador (src/location.js), sempre derivado do país detetado.
+// Portugal: IPMA (avisos por distrito, cidades, mar) + Open-Meteo nas coordenadas exatas.
+// Outros países: Open-Meteo nas coordenadas exatas (GPS ou cidade do IP) + avisos oficiais onde há API aberta (EUA: NWS).
 export async function fetchWeather(loc = getLoc()) {
+  if (!loc?.ready) throw new Error(tr('A detetar a tua localização…'));
+  if (loc.lat == null || loc.lon == null) throw new Error(tr('Sem coordenadas: ativa o GPS ou liga-te à internet para saber onde estás.'));
+  if (loc.country === 'PT' && loc.id) return fetchWeatherPT(loc);
+  return fetchWeatherWorld(loc);
+}
+
+// 15 dias do Open-Meteo no formato dos cartões da previsão
+async function openMeteo15(lat, lon) {
+  const om = await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto&forecast_days=15&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,relative_humidity_2m_mean`, 10000);
+  const d = om.daily;
+  if (!d?.time?.length) return [];
+  return d.time.map((t, i) => ({
+    date: shortDate(t),
+    day_name: dayName(t),
+    condition: WMO_PT(d.weather_code[i]),
+    min_temp: Math.round(d.temperature_2m_min[i]),
+    max_temp: Math.round(d.temperature_2m_max[i]),
+    humidity: d.relative_humidity_2m_mean?.[i] != null ? Math.round(d.relative_humidity_2m_mean[i]) : '—',
+    wind_kmh: Math.round(d.wind_speed_10m_max[i]),
+    wind_direction: DEG_DIR(d.wind_direction_10m_dominant[i]),
+    uv_index: d.uv_index_max?.[i] != null ? Math.round(d.uv_index_max[i]) : 0,
+    precipitation_prob: d.precipitation_probability_max?.[i] ?? 0,
+  }));
+}
+
+// Avisos oficiais dos EUA (National Weather Service, api.weather.gov, com CORS) para o ponto exato
+async function nwsAlerts(lat, lon, place) {
+  const j = await getJson(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`, 12000);
+  const sev = { Extreme: tr('vermelho'), Severe: tr('laranja'), Moderate: tr('amarelo'), Minor: tr('amarelo') };
+  const fmt = (t) => (t ? new Date(t).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+  return (j.features || []).slice(0, 10).map(({ properties: p }) => ({
+    city: p.areaDesc || place,
+    alert_type: p.event,
+    severity: sev[p.severity] || p.severity || '',
+    description: `${p.headline || p.description || ''}${p.ends || p.expires ? ` (${tr('{a} a {b}', { a: fmt(p.onset || p.effective), b: fmt(p.ends || p.expires) })})` : ''}`.trim(),
+  }));
+}
+
+async function fetchWeatherWorld(loc) {
+  const safe = (p) => p.catch(() => null);
+  const [omNow, days, alerts] = await Promise.all([
+    safe(getJson(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&timezone=auto&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,uv_index&daily=temperature_2m_max,temperature_2m_min&forecast_days=1`, 10000)),
+    safe(openMeteo15(loc.lat, loc.lon)),
+    loc.country === 'US' ? safe(nwsAlerts(loc.lat, loc.lon, loc.name)) : Promise.resolve([]),
+  ]);
+  const cur = omNow?.current;
+  if (!cur && !days?.length) throw new Error(tr('Open-Meteo indisponível'));
+  const here = {
+    name: loc.name,
+    temp: cur?.temperature_2m != null ? Math.round(cur.temperature_2m) : null,
+    condition: cur ? WMO_PT(cur.weather_code) : (days?.[0]?.condition || '—'),
+    humidity: cur?.relative_humidity_2m != null ? Math.round(cur.relative_humidity_2m) : '—',
+    wind_kmh: cur?.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : '—',
+    wind_direction: cur?.wind_direction_10m != null ? DEG_DIR(cur.wind_direction_10m) : '—',
+    uv_index: cur?.uv_index != null ? Math.round(cur.uv_index) : 0,
+    min_temp: omNow?.daily?.temperature_2m_min?.[0] != null ? Math.round(omNow.daily.temperature_2m_min[0]) : (days?.[0]?.min_temp ?? null),
+    max_temp: omNow?.daily?.temperature_2m_max?.[0] != null ? Math.round(omNow.daily.temperature_2m_max[0]) : (days?.[0]?.max_temp ?? null),
+  };
+  const list = alerts || [];
+  return {
+    place: loc.name,
+    country: loc.country,
+    source: loc.country === 'US' ? 'Open-Meteo · NWS' : 'Open-Meteo',
+    alertsSource: loc.country === 'US' ? 'NWS' : null, // null = sem API aberta de avisos oficiais para este país
+    here: here.temp !== null ? here : null,
+    here_alerts: list,
+    alerts: list,
+    cities: here.temp !== null ? [here] : [],
+    forecast_days: (days || []).slice(0, 5).map((d) => ({ day: `${d.day_name.slice(0, 3)} ${d.date}`, condition: d.condition, min_temp: d.min_temp, max_temp: d.max_temp })),
+    braga_15day_forecast: days || [],
+    sea_storms: [],
+  };
+}
+
+async function fetchWeatherPT(loc) {
   const safe = (p) => p.catch(() => null);
   const locIdx = CITIES.findIndex((c) => c.id === loc.id);
   const [types, obs, uv, warnings, sea, locDaily, omNow, ...daily] = await Promise.all([
@@ -210,6 +289,9 @@ export async function fetchWeather(loc = getLoc()) {
 
   return {
     place: loc.name,
+    country: 'PT',
+    source: 'IPMA',
+    alertsSource: 'IPMA',
     here: here.temp !== null ? here : null,
     here_alerts,
     alerts,
@@ -269,12 +351,34 @@ export async function fetchCatastrophes() {
 let newsCache = null;
 // "Atualizar agora" dos separadores: a próxima leitura ignora a cópia em memória
 export const invalidateNews = () => { newsCache = null; };
+// Países com notícias locais (data/news-index.json). Países sem ficheiro próprio recebem o mais próximo pela língua:
+// lusófonos -> PT; Américas -> US; resto -> GB (inglês internacional) ou PT se a app estiver em português.
+const LUSO = ['PT', 'BR', 'AO', 'MZ', 'CV', 'GW', 'ST', 'TL', 'MO'];
+const AMERICAS = ['US', 'CA', 'MX', 'GT', 'BZ', 'SV', 'HN', 'NI', 'CR', 'PA', 'CU', 'DO', 'HT', 'JM', 'PR', 'TT', 'BS', 'BB', 'CO', 'VE', 'EC', 'PE', 'BO', 'CL', 'AR', 'UY', 'PY', 'GY', 'SR'];
+let newsIndex = null;
+async function newsTarget() {
+  const cc = getCountry().code;
+  if (!newsIndex || Date.now() - newsIndex.at > 30 * 60000) {
+    try { newsIndex = { at: Date.now(), data: await getJson(`./data/news-index.json?t=${Math.floor(Date.now() / 300000)}`) }; } catch { newsIndex = { at: Date.now(), data: { countries: { PT: { lang: 'pt', file: 'news.json' } } } }; }
+  }
+  const list = newsIndex.data.countries || {};
+  if (cc && list[cc]) return { country: cc, file: list[cc].file, local: true, requested: cc };
+  const pick = (c) => (list[c] ? c : null);
+  const fallback = (LUSO.includes(cc) && pick('PT')) || (AMERICAS.includes(cc) && pick('US')) || (isEn() ? pick('GB') || pick('US') : pick('PT')) || Object.keys(list)[0] || 'PT';
+  return { country: fallback, file: list[fallback]?.file || 'news.json', local: false, requested: cc };
+}
 async function fetchNewsFile(fresh = false) {
-  if (!fresh && newsCache && Date.now() - newsCache.at < 5 * 60000) return newsCache.data;
-  const data = await getJson(`./data/news.json?t=${fresh ? Date.now() : Math.floor(Date.now() / 300000)}`);
-  newsCache = { at: Date.now(), data };
+  const target = await newsTarget();
+  if (!fresh && newsCache && newsCache.file === target.file && Date.now() - newsCache.at < 5 * 60000) return newsCache.data;
+  const raw = await getJson(`./data/${target.file}?t=${fresh ? Date.now() : Math.floor(Date.now() / 300000)}`);
+  // newsFor: de que país são as notícias; local=false quando o país do utilizador ainda não tem fonte própria
+  const data = { ...raw, lang: raw.lang || 'pt', newsFor: { country: target.country, local: target.local, requested: target.requested } };
+  newsCache = { at: Date.now(), file: target.file, data };
   return data;
 }
+// muda de país (viagem): esquece as notícias do país anterior
+onCountryChange(() => { newsCache = null; });
+export async function newsSource() { const n = await fetchNewsFile().catch(() => null); return n?.newsFor || null; }
 
 export async function fetchWarNews() {
   const n = await fetchNewsFile().catch(() => null);
@@ -302,7 +406,7 @@ export async function fetchDashboard() {
   const cyberRisk = n?.cyber?.items ? computeCyberRisk(n.cyber.items) : null;
   const cyber_risk = cyberRisk ? clamp(round1(cyberRisk.score / 10), 1, 10) : (n ? scoreFromCount(c.cyber, Math.max(6, c.total * 0.05)) : 0);
   // índice de greves (só para mostrar no Painel; não entra na ameaça global)
-  const strike_index = n?.strikes ? cleanStrikes(n.strikes).level : 0;
+  const strike_index = n?.strikes ? cleanStrikes(n.strikes, n.lang).level : 0;
   const global_threat_level = round1(war_risk * 0.35 + geopolitical_tension * 0.2 + natural_disaster_risk * 0.2 + economic_instability * 0.15 + cyber_risk * 0.1);
   const critical_events = [
     ...war.map((a) => ({ title: a.title, severity: a.severity, type: 'guerra', region: a.region })),
@@ -332,8 +436,11 @@ export async function fetchEconomy({ fresh = false } = {}) {
 }
 // strikes = { year, since, reference, count, last30, level 1-10, bySector: { setor: n }, items: [{ title, summary, url, source, date, sector }] }
 // Volta a validar na app (protege contra dados antigos publicados antes do filtro) e recalcula contagens e índice
-export function cleanStrikes(st) {
+export function cleanStrikes(st, lang = 'pt') {
   if (!st) return st;
+  // filtro na língua das notícias (português ou inglês); os setores saem sempre com os nomes em português
+  const isValidStrikeNotice = lang === 'en' ? enStrikeValid : ptStrikeValid;
+  const strikeSector = lang === 'en' ? enStrikeSector : ptStrikeSector;
   const live = (x) => x.title.replace(/^\s*\d{1,2}h\S*\s*/, '');
   const items = (st.items || []).filter(isValidStrikeNotice).map((x) => ({ ...x, sector: strikeSector(live(x), x.summary) }));
   const bySector = {}; for (const x of items) bySector[x.sector] = (bySector[x.sector] || 0) + 1;
@@ -348,7 +455,7 @@ export function cleanStrikes(st) {
 export async function fetchStrikes({ fresh = false } = {}) {
   const n = await fetchNewsFile(fresh).catch(() => null);
   if (!n?.strikes) throw new Error(tr('Dados de greves ainda não disponíveis. São recolhidos de hora a hora.'));
-  return { ...cleanStrikes(n.strikes), generated: n.generated };
+  return { ...cleanStrikes(n.strikes, n.lang), generated: n.generated, newsFor: n.newsFor };
 }
 
 export async function fetchPizza() {

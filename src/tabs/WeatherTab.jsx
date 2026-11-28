@@ -3,8 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Cloud, RefreshCw, Loader2, Thermometer, Wind, Droplets, Eye, Sun, CloudRain, Waves, Anchor, Compass, SunMedium } from 'lucide-react';
 import { alpha } from '../theme';
-import { t, locale } from '@/i18n';
+import { t, locale, tempVal, windVal, windUnit, tempUnit } from '@/i18n';
 import { useLoc } from '@/location';
+import { countryName } from '@/geo/country';
 import { reportMeteo, onWeatherRefresh } from '@/weather/weatherTools';
 
 // Carrossel horizontal sem a barra nativa (branca): desliza com o dedo, roda do rato ou arrastar com o rato
@@ -49,13 +50,13 @@ export default function WeatherTab() {
     reportMeteo({ loading: true });
     try {
     const data = await base44.integrations.Core.InvokeLLM({
-      prompt: `Fornece dados meteorológicos de Portugal obtidos do IPMA (Instituto Português do Mar e da Atmosfera - ipma.pt). Data atual: ${new Date().toISOString().split('T')[0]}.
+      prompt: `Fornece dados meteorológicos reais para ${loc.name} (${countryName(loc.country)}${loc.lat != null ? `, coordenadas ${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}` : ''}) obtidos do serviço meteorológico oficial desse país. Data atual: ${new Date().toISOString().split('T')[0]}.
 
 Inclui:
-1. Condições atuais para Lisboa, Porto, Braga, Coimbra, Faro, Évora (temperatura, humidade, vento km/h e direção do vento em rosa dos ventos, índice UV 0-11, mín/máx)
-2. Alertas meteorológicos ativos do IPMA
-3. Previsão detalhada para 15 dias para BRAGA (obtida do IPMA) - para cada dia: data, condição, temp mín/máx, humidade, vento km/h, direção do vento, índice UV, probabilidade precipitação
-4. Tempestades vindas do mar / avisos marítimos para a costa portuguesa (especialmente costa norte/Minho perto de Braga) - inclui altura das ondas, direção, intensidade do vento marítimo, e se há tempestade ou agitação marítima prevista`,
+1. Condições atuais para ${loc.name} e as principais cidades de ${countryName(loc.country)} (temperatura, humidade, vento km/h e direção do vento em rosa dos ventos, índice UV 0-11, mín/máx)
+2. Alertas meteorológicos oficiais ativos nesse país
+3. Previsão detalhada para 15 dias para ${loc.name} - para cada dia: data, condição, temp mín/máx, humidade, vento km/h, direção do vento, índice UV, probabilidade precipitação
+4. Tempestades vindas do mar / avisos marítimos para a costa mais próxima de ${loc.name} (lista vazia se não houver costa) - inclui altura das ondas, direção, intensidade do vento marítimo, e se há tempestade ou agitação marítima prevista`,
       add_context_from_internet: true,
       response_json_schema: {
         type: "object",
@@ -148,7 +149,8 @@ Inclui:
   };
 
   // a cidade escolhida (Definições ou menu ≡ > CIDADE PRINCIPAL) muda a previsão de 15 dias: volta a pedir os dados
-  useEffect(() => { fetchWeather(); }, [loc.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // espera pela deteção do país; recarrega quando o país/posição mudam (viagem) ou a cidade é escolhida à mão
+  useEffect(() => { if (loc.ready) fetchWeather(); }, [loc.key]); // eslint-disable-line react-hooks/exhaustive-deps
   // menu ≡ > ATUALIZAR AGORA
   const refreshRef = useRef(fetchWeather); refreshRef.current = fetchWeather;
   useEffect(() => onWeatherRefresh(() => refreshRef.current()), []);
@@ -161,6 +163,14 @@ Inclui:
     return Sun;
   };
 
+  if (!loc.ready) { // ainda a detetar o país: não mostra dados de um país errado
+    return (
+      <div className="flex flex-col items-center py-12">
+        <Loader2 size={24} className="animate-spin" style={{ color: 'rgb(var(--c))' }} />
+        <p className="mt-3 text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c) / 0.4)' }}>{t('A DETETAR A TUA LOCALIZAÇÃO...')}</p>
+      </div>
+    );
+  }
   if (loading && !weather) { // 1.ª carga: ecrã de espera; depois, a página fica e mostra "a atualizar"
     return (
       <div className="flex flex-col items-center py-12">
@@ -195,7 +205,7 @@ Inclui:
         <div className="flex items-center gap-2">
           <Cloud size={16} style={{ color: '#00aaff' }} />
           <h2 className="text-sm uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-            {t('Meteorologia Portugal')}
+            {t('Meteorologia · {p}', { p: countryName(loc.country) || '…' })}
           </h2>
         </div>
         <button onClick={fetchWeather} aria-label={t('Atualizar agora')} className="flex items-center gap-1.5 p-2 rounded-sm hover:bg-white/5 text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c) / 0.53)' }}>
@@ -228,6 +238,11 @@ Inclui:
         </div>
       )}
 
+      {weather && weather.alertsSource === null && (
+        <p className="text-[10px] mb-3" style={{ color: 'rgb(var(--c) / 0.5)' }}>
+          {t('Avisos oficiais: ainda não há uma fonte aberta para {p}. Consulta o serviço meteorológico nacional em caso de tempo severo.', { p: countryName(loc.country) })}
+        </p>
+      )}
       {/* Cities grid: a cidade de referência fica em primeiro e destacada */}
       <div id="meteo-cidades" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4 rounded-sm scroll-mt-20">
         {[...(weather?.cities || [])].sort((a, b) => (b.name === loc.name) - (a.name === loc.name)).map((city, i) => {
@@ -246,7 +261,7 @@ Inclui:
                 <span className="text-xs font-bold uppercase" style={{ color: 'rgb(var(--c) / 0.8)' }}>{ref ? '📍 ' : ''}{city.name}</span>
                 <WeatherIcon size={16} style={{ color: '#00aaff88' }} />
               </div>
-              <div className="text-2xl font-bold mb-1" style={{ color: 'rgb(var(--c))' }}>{city.temp}°C</div>
+              <div className="text-2xl font-bold mb-1" style={{ color: 'rgb(var(--c))' }}>{tempVal(city.temp)}{tempUnit()}</div>
               <p className="text-[10px] mb-2 capitalize" style={{ color: 'rgb(var(--c) / 0.53)' }}>{city.condition}</p>
               <div className="flex gap-3 flex-wrap">
                 <div className="flex items-center gap-1">
@@ -255,7 +270,7 @@ Inclui:
                 </div>
                 <div className="flex items-center gap-1">
                   <Wind size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
-                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.wind_kmh}{' '}{t('km/h')}</span>
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{windVal(city.wind_kmh)}{' '}{windUnit()}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Compass size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
@@ -267,7 +282,7 @@ Inclui:
                 </div>
                 <div className="flex items-center gap-1">
                   <Thermometer size={10} style={{ color: 'rgb(var(--c) / 0.4)' }} />
-                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{city.min_temp}°/{city.max_temp}°</span>
+                  <span className="text-[10px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{tempVal(city.min_temp)}°/{tempVal(city.max_temp)}°</span>
                 </div>
               </div>
             </motion.div>
@@ -275,16 +290,16 @@ Inclui:
         })}
       </div>
 
-      {/* Previsão 15 dias da cidade selecionada (IPMA) — logo abaixo das cidades */}
+      {/* Previsão 15 dias do local do utilizador (IPMA em Portugal, Open-Meteo noutros países) — logo abaixo das cidades */}
       {weather?.braga_15day_forecast?.length > 0 && (
         <div id="meteo-15dias" className="mb-4 rounded-sm scroll-mt-20">
           <div className="flex items-center gap-2 mb-3">
             <Cloud size={14} style={{ color: 'rgb(var(--c))' }} />
             <h3 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--c))' }}>
-              {t('Previsão 15 Dias - {c} (IPMA)', { c: weather?.place || loc.name })}
+              {t('Previsão 15 Dias - {c} ({s})', { c: weather?.place || loc.name, s: weather?.source || 'Open-Meteo' })}
             </h3>
           </div>
-          <HScroll label={t('Previsão 15 Dias - {c} (IPMA)', { c: weather?.place || loc.name })}>
+          <HScroll label={t('Previsão 15 Dias - {c} ({s})', { c: weather?.place || loc.name, s: weather?.source || 'Open-Meteo' })}>
             {weather.braga_15day_forecast.map((day, i) => {
               const DayIcon = getWeatherIcon(day.condition);
               const precipColor = day.precipitation_prob >= 70 ? '#00aaff' : day.precipitation_prob >= 40 ? '#00aaff88' : 'rgb(var(--c) / 0.4)';
@@ -298,7 +313,7 @@ Inclui:
                   </div>
                   <p className="text-[10px] mb-2 capitalize text-center" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.condition}</p>
                   <p className="text-sm font-bold text-center mb-2" style={{ color: 'rgb(var(--c) / 0.8)' }}>
-                    {day.min_temp}° / {day.max_temp}°
+                    {tempVal(day.min_temp)}° / {tempVal(day.max_temp)}°
                   </p>
                   <div className="space-y-1">
                     <div className="flex items-center gap-1">
@@ -307,7 +322,7 @@ Inclui:
                     </div>
                     <div className="flex items-center gap-1">
                       <Wind size={9} style={{ color: 'rgb(var(--c) / 0.4)' }} />
-                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{day.wind_kmh}{t('km/h')}</span>
+                      <span className="text-[9px]" style={{ color: 'rgb(var(--c) / 0.4)' }}>{windVal(day.wind_kmh)}{windUnit()}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Compass size={9} style={{ color: 'rgb(var(--c) / 0.4)' }} />

@@ -70,7 +70,7 @@ export default function HotBarMenuItem({ item, ctx, api, index, minWidth = 220 }
 
   const border = tone?.bg ? tone.border : alert ? '#ef444499' : active ? 'rgb(var(--c))' : tone?.border || 'rgb(var(--c) / 0.3)';
   const color = tone?.bg ? tone.color : active ? 'rgb(var(--c))' : tone?.color || 'rgb(var(--c) / 0.85)';
-  const label = t(item.label);
+  const label = t(typeof item.label === 'function' ? item.label(ctx) : item.label); // rótulo fixo ou dinâmico (ex.: Ligar 112/999/911)
 
   return (
     <>

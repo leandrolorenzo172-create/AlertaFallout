@@ -7,10 +7,12 @@ import './index.css';
 import { applyTheme } from './theme';
 import { t } from './i18n';
 import { startAutoFlip } from './autoFlip';
+import { startCountryDetection } from './geo/country';
 
 applyTheme(); // aplica o tema guardado antes de desenhar a app
-if (!IS_ARTIFACT) startAutoFlip();
-if (!IS_ARTIFACT) import('./location').then((m) => m.refreshAutoLocation()); // confirma a cidade no modo automático // roda a app quando o telemóvel fica de cabeça para baixo
+if (!IS_ARTIFACT) startAutoFlip(); // roda a app quando o telemóvel fica de cabeça para baixo
+// país e posição do utilizador (GPS autorizado -> IP -> idioma do telemóvel); no artefacto cai no idioma
+startCountryDetection();
 
 // Dentro do artefacto do claude.ai o endereço não pode mudar: usa-se um router em memória.
 // Fora do claude.ai usa-se o endereço com # para funcionar em qualquer alojamento estático.

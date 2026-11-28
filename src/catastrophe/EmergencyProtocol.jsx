@@ -4,16 +4,30 @@ import { ShieldAlert, X, Phone, BookOpen, CheckSquare, Square } from 'lucide-rea
 import { useNavigate } from 'react-router-dom';
 import { openProtocol } from './catTools';
 import { t } from '@/i18n';
+import { useCountry, countryName } from '@/geo/country';
+import { emergencyNumber } from '@/geo/emergency';
 
-const CONTACTS = [
-  ['112', 'Emergência (bombeiros, INEM, polícia) — grátis, de qualquer rede'],
-  ['808 24 24 24', 'SNS 24 — aconselhamento de saúde'],
-  ['800 250 250', 'Centro de Informação Antivenenos (CIAV)'],
-  ['214 247 100', 'Autoridade Nacional de Emergência e Proteção Civil (ANEPC)'],
-];
-const STEPS = [
+// Contactos úteis por país (números oficiais). O 1.º é sempre o número de emergência do país detetado.
+const CONTACTS_BY_COUNTRY = {
+  PT: [
+    ['808 24 24 24', 'SNS 24 — aconselhamento de saúde'],
+    ['800 250 250', 'Centro de Informação Antivenenos (CIAV)'],
+    ['214 247 100', 'Autoridade Nacional de Emergência e Proteção Civil (ANEPC)'],
+  ],
+  GB: [
+    ['111', 'NHS 111 — aconselhamento de saúde urgente'],
+    ['101', 'Polícia — situações não urgentes'],
+    ['116 123', 'Samaritans — apoio emocional, 24 h'],
+  ],
+  US: [
+    ['988', 'Linha de crise e prevenção do suicídio, 24 h'],
+    ['1-800-222-1222', 'Poison Control — centro antivenenos'],
+  ],
+  ES: [['061', 'Urgências médicas (varia por região)'], ['915 620 420', 'Instituto Nacional de Toxicologia']],
+};
+const steps = (n) => [
   ['Sismo', 'Baixar, proteger e aguardar: debaixo de uma mesa forte ou junto a uma parede interior, longe de janelas. Não uses o elevador. Depois do abalo, sai com calma e conta com réplicas.'],
-  ['Incêndio florestal', 'Liga 112. Afasta-te do fumo, no sentido contrário ao vento. Em casa: fecha janelas, molha a envolvente, tem a mochila pronta e segue as ordens de evacuação.'],
+  ['Incêndio florestal', t('Liga {n}. Afasta-te do fumo, no sentido contrário ao vento. Em casa: fecha janelas, molha a envolvente, tem a mochila pronta e segue as ordens de evacuação.', { n })],
   ['Cheia', 'Sobe para um ponto alto. Nunca atravesses estradas inundadas (30 cm de água em movimento derrubam um adulto). Desliga a luz e o gás se for seguro.'],
   ['Tempestade / aviso vermelho', 'Fica em casa, longe de janelas, árvores e estruturas soltas. Prende objetos na varanda. Tem lanterna, rádio a pilhas e telemóvel carregado.'],
 ];
@@ -22,6 +36,10 @@ const KEY = 'sd_protocol_checks';
 
 export default function EmergencyProtocol() {
   const navigate = useNavigate();
+  const c = useCountry();
+  const n = emergencyNumber(c.code);
+  const CONTACTS = [[n, t('Emergência (bombeiros, ambulância, polícia) — grátis, de qualquer rede')], ...(CONTACTS_BY_COUNTRY[c.code] || [])];
+  const STEPS = steps(n);
   const [checks, setChecks] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
   const toggle = (k) => { const n = { ...checks, [k]: !checks[k] }; setChecks(n); try { localStorage.setItem(KEY, JSON.stringify(n)); } catch { /* sem armazenamento */ } };
   const done = KIT.filter((k) => checks[k]).length;
@@ -34,7 +52,7 @@ export default function EmergencyProtocol() {
           <h3 id="proto-title" className="flex-1 text-xs uppercase tracking-wider font-bold" style={{ color: '#ef4444' }}>{t('Protocolo de emergência')}</h3>
           <button type="button" onClick={close} aria-label={t('Fechar')} className="p-1 rounded-sm" style={{ border: '1px solid rgb(var(--c) / 0.3)' }}><X size={14} /></button>
         </div>
-        <p className="text-[12px] font-bold mb-3 p-2 rounded-sm" style={{ background: '#ef444418', border: '1px solid #ef444466', color: '#ff6666' }}>{t('Em perigo imediato, liga 112 antes de tudo.')}</p>
+        <p className="text-[12px] font-bold mb-3 p-2 rounded-sm" style={{ background: '#ef444418', border: '1px solid #ef444466', color: '#ff6666' }}>{t('Em perigo imediato, liga {n} antes de tudo.', { n })}{c.code ? ` (${countryName(c.code)})` : ''}</p>
 
         <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: '#ffaa00' }}>{t('Procedimentos imediatos')}</p>
         <dl className="space-y-2 mb-4 text-[11px]">

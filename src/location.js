@@ -1,7 +1,8 @@
-// Localização para o tempo e os avisos: a cidade do IPMA mais próxima do telemóvel (com autorização),
-// ou a cidade escolhida à mão em Definições > Localização. Sem escolha, Braga.
-// A posição exata nunca sai do telemóvel: só se guarda a cidade (e é só a cidade que vai para as notificações).
+// Localização para o tempo, os avisos e as notificações: segue o país e a posição detetados (src/geo/country.js).
+// Em Portugal usa as cidades do IPMA (fornecedor oficial dos dados); noutros países, as coordenadas diretamente.
+// A posição exata só serve para pedir o tempo e as rotas; nas notificações só vai o nome da cidade.
 import { getSettings, setSettings, useSettings } from './theme';
+import { getCountry, useCountry, detectCountry } from './geo/country';
 
 // Cidades com previsão e avisos do IPMA (distrits-islands.json): id = globalIdLocal, area = distrito dos avisos
 export const LOCATIONS = [
@@ -41,35 +42,43 @@ export const LOCATIONS = [
   { id: 3480200, name: 'Santa Cruz das Flores', area: 'AOC', lat: 39.4500, lon: -31.1300 },
   { id: 3490100, name: 'Vila do Corvo', area: 'AOC', lat: 39.6700, lon: -31.1200 },
 ];
-export const DEFAULT_LOC = LOCATIONS.find((l) => l.id === 1030300); // Braga
-
-export const getLoc = () => LOCATIONS.find((l) => l.id === getSettings().loc?.id) || DEFAULT_LOC;
-export function useLoc() { const s = useSettings(); return LOCATIONS.find((l) => l.id === s.loc?.id) || DEFAULT_LOC; }
-export const locMode = () => getSettings().loc?.mode || 'default'; // 'auto' | 'manual' | 'default'
-
-export function setLocManual(id) { const l = LOCATIONS.find((x) => x.id === Number(id)); if (l) setSettings({ loc: { mode: 'manual', id: l.id } }); }
-
+// Cidades IPMA: são o fornecedor de dados de Portugal (previsão e avisos por distrito), não o país por omissão.
 const dist = (a, b, c, d) => { const r = Math.PI / 180; const x = (d - b) * r * Math.cos(((a + c) / 2) * r); const y = (c - a) * r; return Math.sqrt(x * x + y * y); };
 export const nearest = (lat, lon) => LOCATIONS.reduce((best, l) => (dist(lat, lon, l.lat, l.lon) < dist(lat, lon, best.lat, best.lon) ? l : best), LOCATIONS[0]);
 
-// Pede a posição ao telemóvel e escolhe a cidade mais próxima. Devolve a cidade ou lança um erro legível.
-export function detectLocation() {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) { reject(new Error('nogeo')); return; }
-    navigator.geolocation.getCurrentPosition((p) => {
-      const l = nearest(p.coords.latitude, p.coords.longitude);
-      setSettings({ loc: { mode: 'auto', id: l.id } });
-      resolve(l);
-    }, (e) => reject(new Error(e.code === 1 ? 'denied' : 'unavailable')), { enableHighAccuracy: false, timeout: 15000, maximumAge: 30 * 60000 });
-  });
+/**
+ * Local do utilizador para o tempo, avisos e notificações, sempre derivado do país detetado (src/geo/country.js).
+ * @typedef {{ key: string, country: string|null, name: string, lat: number|null, lon: number|null,
+ *   exact: boolean, source: string|null, id: number|null, area: string|null, ready: boolean }} UserLoc
+ * - id/area: cidade e distrito IPMA (só em Portugal), para a previsão e os avisos oficiais
+ * - lat/lon: posição exata do GPS, ou a cidade do IP; null quando só se sabe o país pelo idioma
+ * Em Portugal, a cidade escolhida à mão nas Definições (ou no menu ≡ da Meteo) tem prioridade.
+ * @returns {UserLoc}
+ */
+function buildLoc(c, s) {
+  if (c.status !== 'ready' || !c.code) return { key: 'loading', country: null, name: '', lat: null, lon: null, exact: false, source: null, id: null, area: null, ready: false };
+  if (c.code === 'PT') {
+    const manual = s.loc?.mode === 'manual' ? LOCATIONS.find((l) => l.id === s.loc.id) : null;
+    if (manual) return { key: `PT:${manual.id}`, country: 'PT', name: manual.name, lat: manual.lat, lon: manual.lon, exact: false, source: 'manual', id: manual.id, area: manual.area, ready: true };
+    if (c.lat != null) {
+      const n = nearest(c.lat, c.lon);
+      return { key: `PT:${c.lat.toFixed(2)},${c.lon.toFixed(2)}`, country: 'PT', name: c.city || n.name, lat: c.lat, lon: c.lon, exact: c.source === 'gps', source: c.source, id: n.id, area: n.area, ready: true };
+    }
+  }
+  return { key: `${c.code}:${c.lat != null ? `${c.lat.toFixed(2)},${c.lon.toFixed(2)}` : 'x'}`, country: c.code, name: c.city || c.name || c.code, lat: c.lat, lon: c.lon, exact: c.source === 'gps', source: c.source, id: null, area: null, ready: true };
 }
+export const getLoc = () => buildLoc(getCountry(), getSettings());
+export function useLoc() { const s = useSettings(); const c = useCountry(); return buildLoc(c, s); }
+export const locMode = () => getSettings().loc?.mode || 'auto'; // 'auto' (país/posição detetados) | 'manual' (cidade IPMA escolhida)
 
-// No modo automático, volta a confirmar a cidade ao abrir a app (sem voltar a pedir autorização se já foi dada)
-export async function refreshAutoLocation() {
-  if (locMode() !== 'auto') return;
-  try {
-    const st = await navigator.permissions?.query({ name: 'geolocation' });
-    if (st && st.state !== 'granted') return;
-    await detectLocation();
-  } catch { /* fica a última cidade */ }
+export function setLocManual(id) { const l = LOCATIONS.find((x) => x.id === Number(id)); if (l) setSettings({ loc: { mode: 'manual', id: l.id } }); }
+export const setLocAuto = () => setSettings({ loc: { mode: 'auto' } });
+
+// "Usar a minha localização": pede o GPS (autorização nasce do toque) e volta ao modo automático
+export async function detectLocation() {
+  setLocAuto();
+  const c = await detectCountry({ askGps: true });
+  if (c.source !== 'gps') throw new Error(c.permission === 'denied' ? 'denied' : 'unavailable');
+  return getLoc();
 }
+export const refreshAutoLocation = () => detectCountry();

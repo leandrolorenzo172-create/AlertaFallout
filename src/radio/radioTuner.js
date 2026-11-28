@@ -3,6 +3,7 @@
 import { themedCtx } from './canvasTheme';
 import { DEFAULT_STATIONS } from './defaultStations';
 import stationsPT from '../data/stationsPT.json';
+import { currentCountry, radioCountry, radioCountryOverride, setRadioCountry, loadCountryList, cachedCountryStations, loadCountryStations } from './countryStations';
 import { createNowPlaying } from './nowPlaying';
 import { locale, t as tr } from '../i18n';
 
@@ -22,8 +23,8 @@ const toPreset = (v) => (v && typeof v === 'object' && (v.band === 'FM' || v.ban
   : Number.isFinite(Number(v)) ? { band: Number(v) >= 480 ? 'AM' : 'FM', freq: Number(v) } : null);
 const presetLabel = (p) => (p.band === 'AM' ? `${Math.round(p.freq)} AM` : Number(p.freq).toFixed(1));
 
-// Todas as emissoras: as 16 principais + as do radio-browser.info (src/data/stationsPT.json)
-const ALL_STATIONS = [...DEFAULT_STATIONS, ...((stationsPT && stationsPT.stations) || [])];
+// Portugal: as 16 principais + as do radio-browser.info (src/data/stationsPT.json). Outros países: carregadas em direto.
+const PT_STATIONS = [...DEFAULT_STATIONS, ...((stationsPT && stationsPT.stations) || [])];
 const fmtFreq = (st) => (st.band === 'AM' ? `${Math.round(st.freq)} kHz AM` : `${Number(st.freq).toFixed(1)} MHz`);
 const online = () => typeof navigator === 'undefined' || navigator.onLine !== false;
 
@@ -72,6 +73,7 @@ const TEMPLATE = `
           <div class="rf-band" role="group" aria-label="${tr('Banda')}">
             <button type="button" data-rf="fm" aria-pressed="true">FM</button>
             <button type="button" data-rf="am" aria-pressed="false">AM</button>
+            <button type="button" data-rf="ctry" aria-haspopup="true" aria-expanded="false" aria-controls="rf-ctrypanel"></button>
           </div>
           <div class="rf-leds">
             <div class="rf-led pwr" data-rf="ledpwr"><i></i>POWER</div>
@@ -89,6 +91,11 @@ const TEMPLATE = `
     <button type="button" class="rf-add" data-rf="addbtn">${tr('[ + ADICIONAR FREQUÊNCIA ]')}</button>
   </div>
   <div class="rf-sharemsg" data-rf="sharemsg" role="status"></div>
+  <div class="rf-list rf-ctry" id="rf-ctrypanel" data-rf="ctrypanel" hidden>
+    <h3>${tr('PAÍS DAS EMISSORAS')} <span data-rf="ctrynow"></span></h3>
+    <input data-rf="ctryq" type="search" autocomplete="off" placeholder="${tr('Procurar país…')}" aria-label="${tr('Procurar país')}" />
+    <ul data-rf="ctryul" role="listbox" aria-label="${tr('Países')}"></ul>
+  </div>
   <div class="rf-list" data-rf="listpanel" hidden>
     <h3>${tr('&gt; EMISSORAS ')}<span data-rf="listcount"></span></h3>
     <input id="rf-list-search" data-rf="listq" type="search" autocomplete="off" placeholder="${tr('Procurar por nome ou género...')}" aria-label="${tr('Procurar emissora por nome ou género')}" />
@@ -161,7 +168,16 @@ export function mountRadio(root, opts = {}) {
   root.querySelectorAll('[data-rf]').forEach((n) => { el[n.dataset.rf] = n; });
   const chassis = root.querySelector('.rf-chassis');
 
-  const last = load('rf_last', null);
+  // país das emissoras: o escolhido no botão 🌍 ou o detetado. Portugal usa a lista curada; os outros, radio-browser.info
+  const cc = radioCountry();
+  const local = !cc || cc === 'PT';
+  const countryCache = local ? null : cachedCountryStations(cc);
+  let baseStations = local ? PT_STATIONS : (countryCache?.stations || []);
+  const presetKey = local ? 'rf_presets_v2' : `rf_presets_v2_${cc}`;
+  const savedPresets = load(presetKey, null);
+  const firstSix = (list) => list.slice(0, 6).map((x) => ({ band: x.band, freq: x.freq }));
+  const defaultPresets = local ? DEFAULT_PRESETS : (baseStations.length ? firstSix(baseStations) : DEFAULT_PRESETS);
+  const last = load(local ? 'rf_last' : `rf_last_${cc}`, null);
   const reqBand = opts.band === 'AM' || opts.band === 'FM' ? opts.band : null;
   const reqFreq = Number(opts.initialFreq);
   const startBand = reqBand || (Number.isFinite(reqFreq) && reqFreq >= 480 ? 'AM' : (Number.isFinite(reqFreq) ? 'FM' : (last && last.band === 'AM' ? 'AM' : 'FM')));
@@ -180,12 +196,12 @@ export function mountRadio(root, opts = {}) {
     gain: 0, // 0 = só estática, 1 = só emissora
     status: 'off',
     custom: load('rf_custom', []).filter((s) => s && s.freq && s.name && s.url).map((s) => ({ band: 'FM', ...s })),
-    presets: (load('rf_presets_v2', DEFAULT_PRESETS) || []).map(toPreset).slice(0, 6),
+    presets: (savedPresets || defaultPresets || []).map(toPreset).slice(0, 6),
   };
-  for (let i = 0; i < 6; i++) if (!state.presets[i]) state.presets[i] = DEFAULT_PRESETS[i];
+  for (let i = 0; i < 6; i++) if (!state.presets[i]) state.presets[i] = defaultPresets[i] || DEFAULT_PRESETS[i];
 
   let listOpen = false; // painel LISTA aberto
-  const stations = () => [...ALL_STATIONS, ...state.custom];
+  const stations = () => [...baseStations, ...state.custom];
   const stationAt = (b, f) => stations().find((x) => x.band === b && Math.abs(x.freq - f) <= BANDS[b].lock + 1e-6);
   const band = () => BANDS[state.band];
   const volume = () => (state.on ? clamp((state.volAngle + 135) / 270, 0, 1) : 0);
@@ -350,7 +366,7 @@ export function mountRadio(root, opts = {}) {
     if (st) {
       el.name.textContent = st.name;
       el.genre.textContent = `${fmtFreq(st)} · ${st.genre || (state.custom.includes(st) ? tr('Estação personalizada') : tr('Rádio portuguesa'))}`;
-      save('rf_last', { band: st.band, freq: st.freq });
+      save(local ? 'rf_last' : `rf_last_${cc}`, { band: st.band, freq: st.freq });
       if (st.band === 'FM') save('rf_last_fm', st.freq);
       showArt(st);
       el.site.hidden = !st.page;
@@ -510,7 +526,7 @@ export function mountRadio(root, opts = {}) {
   function savePreset(i) {
     const f = Number(state.freq[state.band].toFixed(band().digits));
     state.presets[i] = { band: state.band, freq: f };
-    save('rf_presets_v2', state.presets);
+    save(presetKey, state.presets);
     renderPresets();
     const nb = el.presets.children[i];
     nb.classList.add('saved'); setTimeout(() => nb.classList.remove('saved'), 900);
@@ -831,6 +847,66 @@ export function mountRadio(root, opts = {}) {
   const onOtherAudio = (e) => { if (e.detail !== 'radio' && state.on) setVolAngle(-135); };
   window.addEventListener('pb-audio-start', onOtherAudio);
   offs.push(() => window.removeEventListener('pb-audio-start', onOtherAudio));
+
+  // outro país: carrega (ou refresca) as emissoras locais; até lá o dial só tem estática e o painel diz porquê
+  if (!local) {
+    const note = (txt) => { if (el.genre && !state.station) el.genre.textContent = txt; };
+    if (!baseStations.length) note(tr('A carregar as emissoras do teu país…'));
+    loadCountryStations(cc).then((r) => {
+      if (destroyed) return;
+      baseStations = r.stations;
+      if (!savedPresets) { const six = firstSix(baseStations); state.presets = [0, 1, 2, 3, 4, 5].map((i) => six[i] || DEFAULT_PRESETS[i]); }
+      renderPresets(); if (listOpen) renderList(); drawDial();
+      note('');
+    }).catch(() => { if (!destroyed && !baseStations.length) note(tr('Sem rede: não consegui carregar as emissoras do teu país.')); });
+  }
+
+  // ---------- Botão 🌍 País: ouvir emissoras de outro país (fica guardado só para o rádio) ----------
+  const flagOf = (code) => (code ? String.fromCodePoint(...[...code].map((ch) => 127397 + ch.charCodeAt(0))) : '🌍');
+  const appLang = (() => { try { return JSON.parse(localStorage.getItem('pb_settings') || '{}').lang === 'en' ? 'en-GB' : 'pt-PT'; } catch { return 'pt-PT'; } })();
+  const nameOf = (code) => { try { return new Intl.DisplayNames([appLang], { type: 'region' }).of(code) || code; } catch { return code; } };
+  const detected = currentCountry();
+  const override = radioCountryOverride();
+  el.ctry.textContent = `${flagOf(cc)} ${cc || '—'}`;
+  el.ctry.setAttribute('aria-label', tr('País das emissoras: {p}. Tocar para mudar', { p: cc ? nameOf(cc) : '—' }));
+  el.ctrynow.textContent = override ? `· ${nameOf(cc)} (${tr('escolhido')})` : `· ${cc ? nameOf(cc) : '—'} (${tr('automático')})`;
+  let countries = null;
+  const choose = (code) => {
+    const next = code && code === detected ? null : code; // escolher o próprio país = voltar ao automático
+    if ((next || null) === (override || null)) { el.ctrypanel.hidden = true; el.ctry.setAttribute('aria-expanded', 'false'); return; }
+    setRadioCountry(next);
+    // na app o separador volta a montar o rádio com o novo país; no rádio autónomo recarrega a página
+    if (typeof opts.onCountryChange === 'function') opts.onCountryChange(next); else location.reload();
+  };
+  const renderCountries = () => {
+    const q = el.ctryq.value.trim().toLowerCase();
+    const list = (countries || []).map((c) => ({ ...c, name: nameOf(c.code) }))
+      .filter((c) => !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase() === q)
+      .sort((a, b) => (b.code === detected) - (a.code === detected) || a.name.localeCompare(b.name, appLang));
+    el.ctryul.innerHTML = '';
+    if (!q) {
+      const li = document.createElement('li');
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(!override));
+      b.textContent = `📍 ${tr('Automático (país onde estás)')}${detected ? ` · ${flagOf(detected)} ${nameOf(detected)}` : ''}`;
+      b.addEventListener('click', () => choose(null)); li.appendChild(b); el.ctryul.appendChild(li);
+    }
+    for (const c of list.slice(0, 250)) {
+      const li = document.createElement('li');
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(c.code === cc && !!override));
+      b.textContent = `${flagOf(c.code)} ${c.name}${c.n ? ` · ${c.n}` : ''}`;
+      b.addEventListener('click', () => choose(c.code)); li.appendChild(b); el.ctryul.appendChild(li);
+    }
+    if (!list.length) { const li = document.createElement('li'); li.textContent = tr('Nenhum país com esse nome.'); el.ctryul.appendChild(li); }
+  };
+  on(el.ctry, 'click', async () => {
+    const open = el.ctrypanel.hidden;
+    el.ctrypanel.hidden = !open; el.ctry.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    if (!countries) { el.ctryul.innerHTML = `<li>${tr('A carregar países…')}</li>`; countries = await loadCountryList(); }
+    renderCountries(); el.ctryq.focus();
+    el.ctrypanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  on(el.ctryq, 'input', renderCountries);
 
   return function destroy() {
     destroyed = true;

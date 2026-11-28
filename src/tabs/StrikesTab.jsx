@@ -4,6 +4,7 @@ import { Megaphone, Search, X } from 'lucide-react';
 import { useStrikesTools, reportStrikes, setSector, setQuery, openSearch, onStrikesRefresh, strikesFiltered, toggleOnlyActive } from '@/strikes/strikesTools';
 import ThreatGauge from '../pipboy/ThreatGauge';
 import { fetchStrikes } from '../api/liveData';
+import { countryName } from '@/geo/country';
 import { card, Loading, Header, ErrorBox, Stat, NewsItem } from './IndicatorParts';
 import { t, locale } from '@/i18n';
 
@@ -47,6 +48,11 @@ export default function StrikesTab() {
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <Header icon={Megaphone} title={`${t('Greves')} ${data.year}${loading ? ` · ${t('A atualizar…')}` : ''}`} onRefresh={() => load(true)} />
+      {data.newsFor && !data.newsFor.local && (
+        <p className="text-[10px] mb-3 p-2 rounded-sm" style={{ border: '1px solid #ffaa0055', color: '#ffaa00' }}>
+          {t('Ainda não há notícias locais para {p}: a mostrar greves de {q}.', { p: countryName(data.newsFor.requested) || '—', q: countryName(data.newsFor.country) })}
+        </p>
+      )}
       <div className="p-4 rounded-sm mb-4" style={card}>
         <ThreatGauge label={t('✊ Índice de greves')} value={data.level || 0} />
         <p className="text-xs" style={{ color: 'rgb(var(--c) / 0.75)' }}>
@@ -113,7 +119,7 @@ export default function StrikesTab() {
         {list.slice(0, 120).map((a, i) => <NewsItem key={i} a={a} badge={t(a.sector)} />)}
       </div>
       <p className="mt-4 text-[10px] leading-relaxed" style={{ color: 'rgb(var(--c) / 0.4)' }}>
-        {t('Índice calculado automaticamente, não é oficial: 1 + 9 × (greves noticiadas no ano ÷')}{' '}{data.reference}{t('), entre 1 e 10. Conta notícias sobre greves e paralisações (sem repetidas) de jornais portugueses, recolhidas de hora a hora e acumuladas desde')}{' '}{since}{t('. A referência anual muda-se em scripts/fetch-news.mjs (REFERENCIA_ANUAL).')}
+        {t('Índice calculado automaticamente, não é oficial: 1 + 9 × (greves noticiadas no ano ÷')}{' '}{data.reference}{t('), entre 1 e 10. Conta notícias sobre greves e paralisações (sem repetidas) de jornais do país, recolhidas de hora a hora e acumuladas desde')}{' '}{since}{t('. A referência anual muda-se em scripts/fetch-news.mjs (REFERENCIA_ANUAL).')}
       </p>
     </div>
   );

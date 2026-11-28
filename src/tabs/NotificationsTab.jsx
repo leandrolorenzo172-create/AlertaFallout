@@ -13,10 +13,10 @@ import { onSettingsAction, focusCard } from '@/settingsActions';
 const notifications = [
   { key: 'guerra_enabled', label: t('Guerra & Conflitos'), desc: t('Notícias sobre guerras ativas e conflitos armados'), icon: '⚔️', color: '#ff0000' },
   { key: 'catastrofes_enabled', label: t('Catástrofes Naturais'), desc: t('Terramotos, tsunamis, erupções e outros desastres'), icon: '🌋', color: '#ff6600' },
-  { key: 'meteorologia_enabled', label: t('Meteorologia Portugal'), desc: t('Alertas meteorológicos e condições extremas'), icon: '🌧️', color: '#00aaff' },
+  { key: 'meteorologia_enabled', label: t('Meteorologia'), desc: t('Alertas meteorológicos e condições extremas'), icon: '🌧️', color: '#00aaff' },
   { key: 'tensao_global_enabled', label: t('Tensão Global'), desc: t('Indicadores de escalada de tensão internacional'), icon: '🌍', color: '#ffaa00' },
   { key: 'pizza_index_enabled', label: t('Índice Pizza'), desc: t('Alterações significativas no índice de atividade'), icon: '🍕', color: '#ff9900' },
-  { key: 'greves_enabled', label: t('Greves Portugal'), desc: t('Novas greves e paralisações anunciadas em Portugal'), icon: '✊', color: '#cc33ff' },
+  { key: 'greves_enabled', label: t('Greves'), desc: t('Novas greves e paralisações anunciadas no teu país'), icon: '✊', color: '#cc33ff' },
 ];
 
 const DEFAULTS = {

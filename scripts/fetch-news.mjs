@@ -1,10 +1,14 @@
-// Recolhe notícias de feeds RSS de jornais portugueses e grava public/data/news.json.
+// Recolhe notícias de feeds RSS por país e grava public/data/news-<PAÍS>.json (+ news.json = Portugal, compatível)
+// e public/data/news-index.json (países disponíveis e idioma). A app escolhe o ficheiro do país detetado.
 // Corre no GitHub Actions antes de compilar a app (o browser não pode ler estes feeds diretamente).
+// Perfis: PT (jornais portugueses, palavras-chave em português), GB e US (jornais ingleses/americanos, em inglês).
+// Os índices (guerra, economia, greves, ciber) são calculados da mesma forma em todos os perfis.
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { isValidStrikeNotice, strikeSector } from '../src/lib/strikeFilter.js';
+import { isValidStrikeNotice as ptStrikeValid, strikeSector as ptStrikeSector } from '../src/lib/strikeFilter.js';
+import { isValidStrikeNotice as enStrikeValid, strikeSector as enStrikeSector, strikeDaysEn, CANCEL_EN } from '../src/lib/strikeFilterEn.js';
 import { CYBER_SOURCES, classifyCyber, isSecurityNews, computeCyberRisk } from '../src/lib/cyberRisk.js';
 
-const FEEDS = [
+const FEEDS_PT = [
   { source: 'RTP', url: 'https://www.rtp.pt/noticias/rss/mundo' },
   { source: 'Notícias ao Minuto', url: 'https://www.noticiasaominuto.com/rss/mundo' },
   { source: 'Euronews', url: 'https://pt.euronews.com/rss?level=theme&name=news' },
@@ -23,9 +27,31 @@ const FEEDS = [
   { source: 'Investing.com', url: 'https://pt.investing.com/rss/news_25.rss', topic: 'economia' },  // mercado de ações
   { source: 'Investing.com', url: 'https://pt.investing.com/rss/news_301.rss', topic: 'economia' }, // criptomoedas
 ];
-// Endereço da app publicada: o script lê o news.json anterior para acumular a contagem anual de greves
+const FEEDS_GB = [
+  { source: 'BBC News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+  { source: 'The Guardian', url: 'https://www.theguardian.com/world/rss' },
+  { source: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+  { source: 'BBC News', url: 'https://feeds.bbci.co.uk/news/uk/rss.xml', topic: 'pais' },
+  { source: 'The Guardian', url: 'https://www.theguardian.com/uk-news/rss', topic: 'pais' },
+  { source: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/uk.xml', topic: 'pais' },
+  { source: 'BBC News', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', topic: 'economia' },
+  { source: 'The Guardian', url: 'https://www.theguardian.com/uk/business/rss', topic: 'economia' },
+  { source: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/business.xml', topic: 'economia' },
+];
+const FEEDS_US = [
+  { source: 'NPR', url: 'https://feeds.npr.org/1004/rss.xml' },
+  { source: 'CBS News', url: 'https://www.cbsnews.com/latest/rss/world' },
+  { source: 'The New York Times', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml' },
+  { source: 'NPR', url: 'https://feeds.npr.org/1003/rss.xml', topic: 'pais' },
+  { source: 'CBS News', url: 'https://www.cbsnews.com/latest/rss/us', topic: 'pais' },
+  { source: 'The New York Times', url: 'https://rss.nytimes.com/services/xml/rss/nyt/US.xml', topic: 'pais' },
+  { source: 'NPR', url: 'https://feeds.npr.org/1006/rss.xml', topic: 'economia' },
+  { source: 'CBS News', url: 'https://www.cbsnews.com/latest/rss/moneywatch', topic: 'economia' },
+  { source: 'The New York Times', url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml', topic: 'economia' },
+];
+// Endereço da app publicada: o script lê o ficheiro anterior de cada país para acumular a contagem anual de greves
 // e o histórico do índice económico entre execuções (o GitHub Actions não guarda ficheiros de uma vez para a outra).
-const PUBLISHED = process.env.PUBLISHED_NEWS_URL || 'https://steeldeck.github.io/SteelDeck/data/news.json';
+const PUBLISHED_BASE = (process.env.PUBLISHED_NEWS_URL || 'https://steeldeck.github.io/SteelDeck/data/news.json').replace(/[^/]+$/, '');
 
 const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const WAR = /\b(guerra|ataques?|misse?is|missil|bombarde\w*|tropas|exercito|invas\w+|ofensiva|drones?|conflito armado|combates?|rebeldes|cessar-fogo|frente de batalha|artilharia|refens|hamas|hezbollah|houthis?|gaza|kiev|kremlin|ucrania|ucranian\w+|faixa de gaza)\b/;
@@ -82,6 +108,31 @@ const REGIONS = [
   [/nato|otan|uniao europeia|bruxelas|polonia|alemanha|franca|reino unido/, 'Europa'],
 ];
 
+// ---------- Palavras-chave em inglês (perfis GB e US) ----------
+const WAR_EN = /\b(war|attacks?|missiles?|bomb\w*|troops|army|invasion|invade\w*|offensive|drones?|armed conflict|fighting|rebels|ceasefire|front ?line|artillery|hostages|hamas|hezbollah|houthis?|gaza|kyiv|kiev|kremlin|ukrain\w*|air ?strikes?)\b/;
+const PREP_EN = /\b(nato|rearm\w*|weapons|military exercises?|defen[cs]e (budget|spending)|air defen[cs]e|sanctions|mobili[sz]ation|nuclear|missile test|armed forces|conscription|military service|fighter jets?|aircraft carriers?)\b/;
+const ECON_EN = /\b(inflation|recession|economic crisis|financial crisis|stock markets?|stocks|tariffs?|national debt|public debt|bankruptc\w+|unemployment|interest rates?|bank of england|federal reserve|ecb|oil prices?|share prices?)\b/;
+const ECON_NEG_EN = /\b(crisis|recession|inflation (rises|jumps|soars|accelerates)|prices? (rise|soar|surge)|bankruptc\w+|insolvenc\w+|layoffs?|job cuts|redundanc\w+|unemployment (rises|jumps)|(stocks?|shares|markets?) (fall|tumble|plunge|slump|sink)|sell-?off|tariffs?|trade war|debt (rises|soars)|bailout|default|slowdown|stagnation|contraction|losses|cuts?)\b/;
+const ECON_WIDE_EN = /\b(econom\w+|business(es)?|compan(y|ies)|prices?|wages?|salar\w+|budget|tax(es)?|vat|gdp|stocks?|shares|banks?|banking|markets?|invest\w+|exports?|inflation|interest|mortgages?|credit|housing|rents?|fuel|petrol|gasoline|energy|electricity|profits?|revenue|spending|debt|deficit|jobs|employment|unemployment|tariffs?|currency|dollar|pound|sterling|euro|crypto\w*|bitcoin|nasdaq|wall street|dow jones|s&p|ftse|bonds?|commodit\w+|gold|oil|brent)\b/;
+const CYBER_EN = /\b(cyber ?attacks?|cyber ?security|hackers?|hacked|ransomware|data breach|outage|malware|it failure)\b/;
+// as regiões ficam com os nomes em português (a app traduz)
+const REGIONS_EN = [
+  [/ukrain|russia|kyiv|kiev|moscow|kremlin|belarus/, 'Europa de Leste'],
+  [/gaza|israel|hamas|hezbollah|lebanon|syria|iran|yemen|houthi|iraq|west bank/, 'Médio Oriente'],
+  [/sudan|congo|sahel|mali|somalia|ethiopia|nigeria|mozambique|burkina/, 'África'],
+  [/taiwan|china|korea|japan|india|pakistan|myanmar|philippines/, 'Ásia-Pacífico'],
+  [/venezuela|colombia|mexico|haiti|united states|washington|pentagon/, 'Américas'],
+  [/nato|european union|brussels|poland|germany|france|united kingdom|britain/, 'Europa'],
+];
+function severityEn(text) {
+  let s = 4;
+  if (/nuclear/.test(text)) s += 3;
+  if (/killed|dead|deaths|casualties|massacre|bombing|bombed|civilians/.test(text)) s += 2;
+  if (/attack|missile|offensive|invasion|drone/.test(text)) s += 1;
+  if (/ceasefire|peace talks|truce|negotiat/.test(text)) s -= 1;
+  return Math.min(10, Math.max(1, s));
+}
+
 const decode = (s) => s
   .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
   .replace(/<[^>]+>/g, ' ')
@@ -119,127 +170,159 @@ function severity(text) {
   return Math.min(10, Math.max(1, s));
 }
 
-const all = [];
-for (const feed of FEEDS) {
-  try { const items = await readFeed(feed); all.push(...items); console.log(`${feed.source}: ${items.length} itens`); }
-  catch (e) { console.log(`${feed.source}: falhou (${e.message})`); }
-}
-if (!all.length) { console.log('Nenhum feed respondeu; news.json não foi gerado.'); process.exit(0); }
+const CANCEL_PT = /\b(suspens\w*|suspend\w*|desconvoc\w*|cancelad\w*|cancela\w*|adiad\w*|adia|sem efeito|levantad\w*|desmarcad\w*)\b/;
+async function buildProfile(P, cyber) {
+  const all = [];
+  for (const feed of P.feeds) {
+    try { const items = await readFeed(feed); all.push(...items); console.log(`[${P.code}] ${feed.source}: ${items.length} itens`); }
+    catch (e) { console.log(`[${P.code}] ${feed.source}: falhou (${e.message})`); }
+  }
+  let previous = null;
+  try { const r = await fetch(PUBLISHED_BASE + P.published, { signal: AbortSignal.timeout(15000) }); if (r.ok) previous = await r.json(); } catch { /* primeira vez ou site em baixo */ }
+  if (!all.length) {
+    console.log(`[${P.code}] nenhum feed respondeu; mantém-se o ficheiro publicado anterior.`);
+    return previous ? { ...previous, cyber, country: P.code, lang: P.lang } : null;
+  }
 
-const cutoff = Date.now() - 3 * 86400000; // só os últimos 3 dias
-const seen = new Set();
-const recent = all.filter((a) => a.date > cutoff).filter((a) => { const k = norm(a.title).slice(0, 60); if (seen.has(k)) return false; seen.add(k); return true; });
-const counts = { total: 0, war: 0, prep: 0, econ: 0, cyber: 0 };
-const war = []; const econArticles = []; let econNeg = 0; const strikesNow = [];
-for (const a of recent) {
-  const text = norm(`${a.title} ${a.summary}`);
-  const econFeed = a.topic === 'economia';
-  // os contadores antigos (guerra, ciber, economia geral) usam só os feeds originais, para os índices não mudarem de escala
-  if (a.topic === 'mundo' || a.topic == null) {
-    counts.total++;
-    const isWar = WAR.test(text); const isPrep = PREP.test(text);
-    if (isWar) counts.war++; else if (isPrep) counts.prep++;
-    if (ECON.test(text)) counts.econ++;
-    if (CYBER.test(text)) counts.cyber++;
-    if (isWar || isPrep) {
-      war.push({
-        title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date,
-        severity: severity(text),
-        region: (REGIONS.find(([re]) => re.test(text)) || [null, 'Global'])[1],
-        category: isWar ? 'guerra' : 'preparacao_guerra',
-      });
+  const cutoff = Date.now() - 3 * 86400000; // só os últimos 3 dias
+  const seen = new Set();
+  const recent = all.filter((a) => a.date > cutoff).filter((a) => { const k = norm(a.title).slice(0, 60); if (seen.has(k)) return false; seen.add(k); return true; });
+  const counts = { total: 0, war: 0, prep: 0, econ: 0, cyber: 0 };
+  const war = []; const econArticles = []; let econNeg = 0; const strikesNow = [];
+  for (const a of recent) {
+    const text = norm(`${a.title} ${a.summary}`);
+    const econFeed = a.topic === 'economia';
+    // os contadores antigos (guerra, ciber, economia geral) usam só os feeds originais, para os índices não mudarem de escala
+    if (a.topic === 'mundo' || a.topic == null) {
+      counts.total++;
+      const isWar = P.re.war.test(text); const isPrep = P.re.prep.test(text);
+      if (isWar) counts.war++; else if (isPrep) counts.prep++;
+      if (P.re.econ.test(text)) counts.econ++;
+      if (P.re.cyber.test(text)) counts.cyber++;
+      if (isWar || isPrep) {
+        war.push({
+          title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date,
+          severity: P.severity(text),
+          region: (P.regions.find(([re]) => re.test(text)) || [null, 'Global'])[1],
+          category: isWar ? 'guerra' : 'preparacao_guerra',
+        });
+      }
+    }
+    if ((econFeed && P.re.econWide.test(text)) || P.re.econ.test(text)) {
+      const neg = P.re.econNeg.test(text);
+      if (neg) econNeg++;
+      econArticles.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, negative: neg });
+    }
+    // só avisos de greve reais: o título tem de falar de greve e não pode ser desporto, direto sobre outro tema, opinião...
+    if (P.strike.valid(a)) {
+      strikesNow.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, sector: P.strike.sector(a.title.replace(/^\s*\d{1,2}h\S*\s*/, ''), a.summary) });
     }
   }
-  if ((econFeed && ECON_WIDE.test(text)) || ECON.test(text)) {
-    const neg = ECON_NEG.test(text);
-    if (neg) econNeg++;
-    econArticles.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, negative: neg });
-  }
-  // só avisos de greve reais: o título tem de falar de greve e não pode ser desporto, direto sobre outro tema, opinião...
-  if (isValidStrikeNotice(a)) {
-    strikesNow.push({ title: a.title, summary: a.summary, url: a.url, source: a.source, date: a.date, sector: strikeSector(a.title.replace(/^\s*\d{1,2}h\S*\s*/, ''), a.summary) });
-  }
-}
-war.sort((x, y) => y.date - x.date);
-econArticles.sort((x, y) => y.date - x.date);
+  war.sort((x, y) => y.date - x.date);
+  econArticles.sort((x, y) => y.date - x.date);
 
-// ---------- Instabilidade económica ----------
-// Índice 1-10 = 1 + 18 x (notícias económicas negativas / notícias económicas). Metade negativas = 10.
-const econTotal = econArticles.length;
-const econLevel = econTotal ? Math.min(10, Math.max(1, Math.round((1 + (econNeg / econTotal) * 18) * 10) / 10)) : 1;
+  // ---------- Instabilidade económica ----------
+  // Índice 1-10 = 1 + 18 x (notícias económicas negativas / notícias económicas). Metade negativas = 10.
+  const econTotal = econArticles.length;
+  const econLevel = econTotal ? Math.min(10, Math.max(1, Math.round((1 + (econNeg / econTotal) * 18) * 10) / 10)) : 1;
 
-// ---------- Greves no ano corrente (acumuladas entre execuções) ----------
-// Índice 1-10 = 1 + 9 x (greves noticiadas no ano / REFERENCIA_ANUAL). Chega a 10 com REFERENCIA_ANUAL greves.
-const REFERENCIA_ANUAL = 150;
-const year = new Date().getFullYear();
-let previous = null;
-try { const r = await fetch(PUBLISHED, { signal: AbortSignal.timeout(15000) }); if (r.ok) previous = await r.json(); } catch { /* primeira vez ou site em baixo */ }
-const prevStrikes = previous?.strikes?.year === year ? previous.strikes : null;
-const strikeKey = (t) => norm(t).replace(/[^a-z0-9 ]/g, '').split(' ').filter((w) => w.length > 3).slice(0, 7).join(' ');
-const items = new Map((prevStrikes?.items || []).map((x) => [strikeKey(x.title), x]));
-// greves recolhidas antes da mudança de endereço do site (o ficheiro publicado antigo deixou de existir)
-let seedSince = null;
-try {
-  const seed = JSON.parse(readFileSync('scripts/strikes-seed.json', 'utf8'));
-  if (seed.year === year) { seedSince = seed.since; for (const x of seed.items) if (!items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x); }
-} catch { /* sem ficheiro */ }
-for (const x of strikesNow) if (new Date(x.date).getFullYear() === year && !items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x);
-// o filtro corre também sobre as greves acumuladas antes (limpa falsos positivos antigos) e recalcula o setor
-const strikeItems = [...items.values()].filter(isValidStrikeNotice)
-  .map((x) => ({ ...x, sector: strikeSector(x.title.replace(/^\s*\d{1,2}h\S*\s*/, ''), x.summary) }))
-  .sort((x, y) => y.date - x.date);
-// greves desconvocadas/suspensas/adiadas não geram aviso (e anulam as do mesmo setor nesses dias)
-const CANCEL = /\b(suspens\w*|suspend\w*|desconvoc\w*|cancelad\w*|cancela\w*|adiad\w*|adia|sem efeito|levantad\w*|desmarcad\w*)\b/;
-for (const x of strikeItems) { const t = norm(`${x.title} ${x.summary || ''}`); x.days = strikeDays(t, x.date); x.cancelled = CANCEL.test(norm(x.title)); }
-const monthAgo = Date.now() - 30 * 86400000;
-const bySector = {};
-for (const x of strikeItems) bySector[x.sector] = (bySector[x.sector] || 0) + 1;
-const strikes = {
-  year, since: [prevStrikes?.since, seedSince, new Date().toISOString()].filter(Boolean).sort()[0], reference: REFERENCIA_ANUAL,
-  count: strikeItems.length, last30: strikeItems.filter((x) => x.date > monthAgo).length,
-  level: Math.min(10, Math.round((1 + (strikeItems.length / REFERENCIA_ANUAL) * 9) * 10) / 10),
-  bySector, items: strikeItems.slice(0, 400),
-  // greves com dia marcado de hoje em diante (a app usa esta lista para avisar com antecedência e no próprio dia)
-  upcoming: (() => {
-    const hoje = ymd(new Date()); const seenU = new Set(); const out = [];
-    const off = new Set(strikeItems.filter((x) => x.cancelled).flatMap((x) => x.days.map((d) => `${x.sector}|${d}`)));
-    for (const x of strikeItems.slice().sort((p, q) => q.date - p.date)) {
-      if (x.cancelled || !x.days?.length || x.days[x.days.length - 1] < hoje) continue;
-      if (x.days.some((d) => off.has(`${x.sector}|${d}`))) continue;
-      const k = `${x.sector}|${x.days[0]}`; if (seenU.has(k)) continue; seenU.add(k);
-      out.push({ id: k, sector: x.sector, days: x.days, title: x.title, url: x.url, source: x.source });
-    }
-    return out.sort((p, q) => p.days[0].localeCompare(q.days[0])).slice(0, 30);
-  })(),
-};
-
-// ---------- Histórico diário do índice económico (últimos 60 dias) ----------
-const today = new Date().toISOString().slice(0, 10);
-const hist = (previous?.economy?.history || []).filter((h) => h.d !== today);
-hist.push({ d: today, v: econLevel });
-const economy = { level: econLevel, total: econTotal, negative: econNeg, history: hist.slice(-60), articles: econArticles.slice(0, 40) };
-
-// ---------- Ciberataques: 13 fontes de cibersegurança (internacionais, PT/BR e alertas oficiais) ----------
-const cyberStatus = new Map(); const cyberAll = [];
-await Promise.all(CYBER_SOURCES.map(async (src) => {
+  // ---------- Greves no ano corrente (acumuladas entre execuções) ----------
+  // Índice 1-10 = 1 + 9 x (greves noticiadas no ano / REFERENCIA_ANUAL). Chega a 10 com REFERENCIA_ANUAL greves.
+  const REFERENCIA_ANUAL = 150;
+  const year = new Date().getFullYear();
+  const prevStrikes = previous?.strikes?.year === year ? previous.strikes : null;
+  const strikeKey = (t) => norm(t).replace(/[^a-z0-9 ]/g, '').split(' ').filter((w) => w.length > 3).slice(0, 7).join(' ');
+  const items = new Map((prevStrikes?.items || []).map((x) => [strikeKey(x.title), x]));
+  // greves recolhidas antes da mudança de endereço do site (o ficheiro publicado antigo deixou de existir)
+  let seedSince = null;
   try {
-    const items = (await readFeed({ source: src.name, url: src.url, topic: 'ciber' })).filter((a) => !src.filter || isSecurityNews(`${a.title} ${a.summary}`));
-    cyberAll.push(...items.map((a) => ({ ...a, ...classifyCyber({ ...a, official: src.official }), domain: src.domain })));
-    const st = cyberStatus.get(src.name) || { name: src.name, domain: src.domain, group: src.group, ok: false, n: 0 };
-    cyberStatus.set(src.name, { ...st, ok: true, n: st.n + items.length });
-  } catch (e) {
-    if (!cyberStatus.get(src.name)?.ok) cyberStatus.set(src.name, { name: src.name, domain: src.domain, group: src.group, ok: false, n: 0, error: e.message });
-  }
-}));
-const seenC = new Set();
-const cyberItems = cyberAll.filter((a) => Date.now() - a.date <= 7 * 86400000)
-  .sort((p, q) => q.date - p.date)
-  .filter((a) => { const k = norm(a.title).slice(0, 70); if (seenC.has(k)) return false; seenC.add(k); return true; })
-  .slice(0, 200)
-  .map(({ topic, ...a }) => a);
-const cyber = { items: cyberItems, sources: [...cyberStatus.values()], risk: computeCyberRisk(cyberItems) };
-console.log(`ciber: ${cyberItems.length} ocorrências em 7 dias de ${cyber.sources.filter((x) => x.ok).length}/${cyber.sources.length} fontes; risco ${cyber.risk.score}/100 (${cyber.risk.level})`);
+    if (!P.seed) throw new Error('sem semente');
+    const seed = JSON.parse(readFileSync(P.seed, 'utf8'));
+    if (seed.year === year) { seedSince = seed.since; for (const x of seed.items) if (!items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x); }
+  } catch { /* sem ficheiro */ }
+  for (const x of strikesNow) if (new Date(x.date).getFullYear() === year && !items.has(strikeKey(x.title))) items.set(strikeKey(x.title), x);
+  // o filtro corre também sobre as greves acumuladas antes (limpa falsos positivos antigos) e recalcula o setor
+  const strikeItems = [...items.values()].filter(P.strike.valid)
+    .map((x) => ({ ...x, sector: P.strike.sector(x.title.replace(/^\s*\d{1,2}h\S*\s*/, ''), x.summary) }))
+    .sort((x, y) => y.date - x.date);
+  // greves desconvocadas/suspensas/adiadas não geram aviso (e anulam as do mesmo setor nesses dias)
+  for (const x of strikeItems) { const t = norm(`${x.title} ${x.summary || ''}`); x.days = P.strike.days(t, x.date); x.cancelled = P.strike.cancel.test(norm(x.title)); }
+  const monthAgo = Date.now() - 30 * 86400000;
+  const bySector = {};
+  for (const x of strikeItems) bySector[x.sector] = (bySector[x.sector] || 0) + 1;
+  const strikes = {
+    year, since: [prevStrikes?.since, seedSince, new Date().toISOString()].filter(Boolean).sort()[0], reference: REFERENCIA_ANUAL,
+    count: strikeItems.length, last30: strikeItems.filter((x) => x.date > monthAgo).length,
+    level: Math.min(10, Math.round((1 + (strikeItems.length / REFERENCIA_ANUAL) * 9) * 10) / 10),
+    bySector, items: strikeItems.slice(0, 400),
+    // greves com dia marcado de hoje em diante (a app usa esta lista para avisar com antecedência e no próprio dia)
+    upcoming: (() => {
+      const hoje = ymd(new Date()); const seenU = new Set(); const out = [];
+      const off = new Set(strikeItems.filter((x) => x.cancelled).flatMap((x) => x.days.map((d) => `${x.sector}|${d}`)));
+      for (const x of strikeItems.slice().sort((p, q) => q.date - p.date)) {
+        if (x.cancelled || !x.days?.length || x.days[x.days.length - 1] < hoje) continue;
+        if (x.days.some((d) => off.has(`${x.sector}|${d}`))) continue;
+        const k = `${x.sector}|${x.days[0]}`; if (seenU.has(k)) continue; seenU.add(k);
+        out.push({ id: k, sector: x.sector, days: x.days, title: x.title, url: x.url, source: x.source });
+      }
+      return out.sort((p, q) => p.days[0].localeCompare(q.days[0])).slice(0, 30);
+    })(),
+  };
 
+  // ---------- Histórico diário do índice económico (últimos 60 dias) ----------
+  const today = new Date().toISOString().slice(0, 10);
+  const hist = (previous?.economy?.history || []).filter((h) => h.d !== today);
+  hist.push({ d: today, v: econLevel });
+  const economy = { level: econLevel, total: econTotal, negative: econNeg, history: hist.slice(-60), articles: econArticles.slice(0, 40) };
+  console.log(`[${P.code}] ${counts.total} notícias do mundo, ${war.length} sobre conflitos; economia ${econTotal} (${econNeg} negativas, índice ${econLevel}); greves no ano ${strikes.count} (${strikesNow.length} recentes, ${strikes.upcoming.length} com dia marcado)`);
+  return { generated: new Date().toISOString(), country: P.code, lang: P.lang, counts, war: war.slice(0, 30), economy, strikes, cyber };
+}
+
+// ---------- Perfis por país ----------
+const PT_RE = { war: WAR, prep: PREP, econ: ECON, econNeg: ECON_NEG, econWide: ECON_WIDE, cyber: CYBER };
+const EN_RE = { war: WAR_EN, prep: PREP_EN, econ: ECON_EN, econNeg: ECON_NEG_EN, econWide: ECON_WIDE_EN, cyber: CYBER_EN };
+const EN_STRIKE = { valid: enStrikeValid, sector: enStrikeSector, days: strikeDaysEn, cancel: CANCEL_EN };
+const PROFILES = [
+  { code: 'PT', lang: 'pt', feeds: FEEDS_PT, re: PT_RE, severity, regions: REGIONS, files: ['news.json', 'news-PT.json'], published: 'news.json', seed: 'scripts/strikes-seed.json',
+    strike: { valid: ptStrikeValid, sector: ptStrikeSector, days: strikeDays, cancel: CANCEL_PT } },
+  { code: 'GB', lang: 'en', feeds: FEEDS_GB, re: EN_RE, severity: severityEn, regions: REGIONS_EN, files: ['news-GB.json'], published: 'news-GB.json', seed: null, strike: EN_STRIKE },
+  { code: 'US', lang: 'en', feeds: FEEDS_US, re: EN_RE, severity: severityEn, regions: REGIONS_EN, files: ['news-US.json'], published: 'news-US.json', seed: null, strike: EN_STRIKE },
+];
+
+// ---------- Ciberataques (fontes internacionais, iguais para todos os países) ----------
+async function buildCyber() {
+  const cyberStatus = new Map(); const cyberAll = [];
+  await Promise.all(CYBER_SOURCES.map(async (src) => {
+    try {
+      const items = (await readFeed({ source: src.name, url: src.url, topic: 'ciber' })).filter((a) => !src.filter || isSecurityNews(`${a.title} ${a.summary}`));
+      cyberAll.push(...items.map((a) => ({ ...a, ...classifyCyber({ ...a, official: src.official }), domain: src.domain })));
+      const st = cyberStatus.get(src.name) || { name: src.name, domain: src.domain, group: src.group, ok: false, n: 0 };
+      cyberStatus.set(src.name, { ...st, ok: true, n: st.n + items.length });
+    } catch (e) {
+      if (!cyberStatus.get(src.name)?.ok) cyberStatus.set(src.name, { name: src.name, domain: src.domain, group: src.group, ok: false, n: 0, error: e.message });
+    }
+  }));
+  const seenC = new Set();
+  const cyberItems = cyberAll.filter((a) => Date.now() - a.date <= 7 * 86400000)
+    .sort((p, q) => q.date - p.date)
+    .filter((a) => { const k = norm(a.title).slice(0, 70); if (seenC.has(k)) return false; seenC.add(k); return true; })
+    .slice(0, 200)
+    .map(({ topic, ...a }) => a);
+  const cyber = { items: cyberItems, sources: [...cyberStatus.values()], risk: computeCyberRisk(cyberItems) };
+  console.log(`ciber: ${cyberItems.length} ocorrências em 7 dias de ${cyber.sources.filter((x) => x.ok).length}/${cyber.sources.length} fontes; risco ${cyber.risk.score}/100 (${cyber.risk.level})`);
+  return cyber;
+}
+
+const cyber = await buildCyber();
 mkdirSync('public/data', { recursive: true });
-writeFileSync('public/data/news.json', JSON.stringify({ generated: new Date().toISOString(), counts, war: war.slice(0, 30), economy, strikes, cyber }));
-console.log(`news.json: ${counts.total} notícias do mundo, ${war.length} sobre conflitos; economia ${econTotal} (${econNeg} negativas, índice ${econLevel}); greves no ano ${strikes.count} (${strikesNow.length} recentes, ${strikes.upcoming.length} com dia marcado)`);
+const index = { generated: new Date().toISOString(), countries: {} };
+for (const P of PROFILES) {
+  const out = await buildProfile(P, cyber);
+  if (!out) { console.log(`[${P.code}] sem dados (nem ficheiro anterior): não foi gerado.`); continue; }
+  for (const f of P.files) writeFileSync(`public/data/${f}`, JSON.stringify(out));
+  index.countries[P.code] = { lang: P.lang, file: P.files[P.files.length - 1], generated: out.generated };
+}
+// Portugal: se o perfil falhar de vez, o news.json do repositório continua a servir
+if (!index.countries.PT) index.countries.PT = { lang: 'pt', file: 'news.json', generated: null };
+writeFileSync('public/data/news-index.json', JSON.stringify(index));
+console.log(`news-index.json: ${Object.keys(index.countries).join(', ')}`);

@@ -21,7 +21,8 @@ export default {
         options: () => METEO_SECTIONS.map((sec) => ({ id: sec.id, label: sec.label })),
         onPick: (o, _m, api) => { toggleSub('jump'); api.goSection(o.id); },
       } },
-    { id: 'city', label: 'Cidade principal', icon: MapPin, badge: (m) => m.loc.name.toUpperCase(),
+    // cidades e avisos marítimos do IPMA: só fazem sentido em Portugal
+    { id: 'city', label: 'Cidade principal', icon: MapPin, visibleWhen: (m) => m.loc.country === 'PT', badge: (m) => m.loc.name.toUpperCase(),
       submenu: {
         isOpen: (m) => m.sub === 'city', toggle: () => toggleSub('city'), layout: 'grid',
         options: (m) => MAIN_CITIES.map((name) => ({ id: name, label: name, selected: m.loc.name === name })),
@@ -31,10 +32,10 @@ export default {
           api.goSection('meteo-15dias'); // a previsão de 15 dias recarrega para a cidade nova
         },
       } },
-    { id: 'sea', label: 'Avisos marítimos', icon: Anchor, alert: (m) => m.seaActive > 0,
+    { id: 'sea', label: 'Avisos marítimos', icon: Anchor, visibleWhen: (m) => m.loc.country === 'PT', alert: (m) => m.seaActive > 0,
       badge: (m) => (m.seaTotal ? (m.seaActive ? t('{n} ATIVO(S)', { n: m.seaActive }) : String(m.seaTotal)) : t('SEM AVISOS')),
       keepOpen: true, run: (_m, api) => api.goSection('meteo-mar') },
-    { id: 'forecast', label: 'Previsão 15 dias', icon: CalendarDays, badge: (m) => m.loc.name.toUpperCase(),
+    { id: 'forecast', label: 'Previsão 15 dias', icon: CalendarDays, badge: (m) => (m.loc.name || '…').toUpperCase(),
       keepOpen: true, run: (_m, api) => api.goSection('meteo-15dias') },
   ],
 };

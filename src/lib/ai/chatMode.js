@@ -2,6 +2,8 @@
 // O Mr. Steel só deve ir aos manuais (e usar a fórmula de resumo) quando lhe pedem informação.
 // Desabafos, opiniões, piadas, "como estás?", falar da vida… são CONVERSA: resposta de amigo, sem citar ficheiros.
 import { smallTalk, isJoke, intentOf, pick } from './steelPersonaOffline';
+import { getCountry } from '@/geo/country';
+import { emergencyNumber, crisisLine } from '@/geo/emergency';
 
 const n = (s) => ` ${String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()} `;
 // pedido de informação: perguntas práticas, "fala-me de", "como fazer", temas técnicos/emergência
@@ -30,7 +32,9 @@ Fala como um amigo e parceiro sobrevivencialista à mesa de um café: natural, c
 - Se fizer sentido, devolve uma pergunta simples para a conversa continuar; não faças interrogatórios.
 - Se a conversa puxar por algo prático (ir à serra, faltar a luz, uma dúvida de sobrevivência), podes oferecer ajuda de forma leve ("queres que veja isso no Guia?") em vez de despejar informação.
 - A regra de segurança sobre "informação que não consta nos manuais" só se aplica a procedimentos médicos ou técnicos, não a conversa.
-- Em sinais de sofrimento sério (desespero, ideias de fazer mal a si próprio), responde com cuidado e sugere ajuda: SNS 24 (808 24 24 24) ou 112 em perigo imediato.`;
+- Em sinais de sofrimento sério (desespero, ideias de fazer mal a si próprio), responde com cuidado e sugere ajuda: {APOIO} ou {EMERGENCIA} em perigo imediato.`;
+// Preenche a linha de apoio e o número de emergência do país detetado
+export const chatPrompt = () => { const c = getCountry(); const n = emergencyNumber(c.code); return CHAT_PROMPT.replace('{APOIO}', crisisLine(c.code) || `os serviços de emergência (${n})`).replace('{EMERGENCIA}', n); };
 
 // ---------- Conversa offline (sem IA): reações de amigo, em vez de ir aos manuais ----------
 const ABOUT_ME = / (e tu|e contigo|tu es|tu gostas|achas|o que achas|na tua opiniao|fala me de ti|conta me de ti|tens) /;
@@ -47,7 +51,7 @@ const R_DOWN = [
   'Isso pesa, compreendo. Queres desabafar um bocado ou preferes distrair-te com outra coisa?',
   'Há dias assim, e não tens de os aguentar sozinho. O que é que está a custar mais?',
   'Respira fundo um momento. Às vezes ajuda pôr em palavras: o que aconteceu?',
-  'Lamento que estejas assim. Se precisares de falar com alguém a sério, o SNS 24 (808 24 24 24) está lá. E eu estou aqui para conversar.',
+  () => { const c = getCountry(); const l = crisisLine(c.code); return l ? `Lamento que estejas assim. Se precisares de falar com alguém a sério, liga ${l}. E eu estou aqui para conversar.` : `Lamento que estejas assim. Se estiveres em perigo, liga ${emergencyNumber(c.code)}. E eu estou aqui para conversar.`; },
 ];
 const R_UP = [
   'Isso é que é bom de ouvir! Conta-me mais, que eu gosto de boas notícias.',
@@ -69,6 +73,6 @@ export function offlineChatReply(question) {
   if (UP.test(q) && !DOWN.test(q)) return pick('chat-up', R_UP);
   const cafe = smallTalk(question);
   if (cafe) return cafe.text;
-  if (DOWN.test(q)) return pick('chat-down', R_DOWN);
+  if (DOWN.test(q)) { const r = pick('chat-down', R_DOWN); return typeof r === 'function' ? r() : r; } // a resposta com a linha de apoio segue o país
   return pick('chat-any', R_ANY);
 }

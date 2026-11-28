@@ -39,7 +39,7 @@
  * @typedef {Object} HotBarItemConfig
  * @property {string} id
  * @property {'item'|'separator'} [type]                    por omissão 'item'
- * @property {string} [label]                               texto PT (o motor traduz com t())
+ * @property {string | ((ctx: HotBarCtx) => string)} [label]  texto PT (o motor traduz com t()) ou função para rótulos dinâmicos
  * @property {import('react').ComponentType | ((ctx: HotBarCtx) => import('react').ComponentType)} [icon]
  * @property {string} [symbol]                              texto no lugar do ícone (ex.: '>>|')
  * @property {string} [symbolColor]

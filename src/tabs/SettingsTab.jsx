@@ -6,7 +6,8 @@ import NotificationsTab from './NotificationsTab';
 import AiSettings from '../pipboy/AiSettings';
 import BackupSection from '../backup/BackupSection';
 import { t, LANGS, useLang } from '@/i18n';
-import { LOCATIONS, useLoc, locMode, setLocManual, detectLocation } from '@/location';
+import { LOCATIONS, useLoc, locMode, setLocManual, setLocAuto, detectLocation } from '@/location';
+import { useCountry, countryName } from '@/geo/country';
 import { useNetwork } from '@/lib/ai/net';
 import { useAiConfig, activeProvider } from '@/lib/ai/config';
 import { PROVIDERS } from '@/lib/ai/providers';
@@ -35,35 +36,49 @@ function Title({ icon: Icon, children }) {
   );
 }
 
-// Localização: cidade do tempo, dos avisos e das notificações
+// Localização: país e posição detetados automaticamente (GPS -> IP -> idioma do telemóvel).
+// Em Portugal pode escolher-se uma cidade do IPMA à mão para o tempo e os avisos.
 function LocationSection() {
   const loc = useLoc();
+  const c = useCountry();
   const [msg, setMsg] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const mode = locMode();
+  const SRC = { gps: t('GPS (posição exata)'), ip: t('endereço de internet (aproximada)'), locale: t('idioma do telemóvel (sem posição)'), manual: t('escolhida à mão') };
+  const PERM = { granted: t('autorizada'), denied: t('bloqueada'), prompt: t('por autorizar'), unavailable: t('indisponível neste aparelho') };
   const auto = async () => {
     setBusy(true); setMsg('');
-    try { const l = await detectLocation(); setMsg(t('✔ Localização encontrada: {c}.', { c: l.name })); }
-    catch (e) { setMsg(e.message === 'denied' ? t('A localização está bloqueada para esta app. Ativa-a nas definições do telemóvel ou escolhe a cidade na lista.') : t('Não foi possível obter a localização. Escolhe a cidade na lista.')); }
+    try { const l = await detectLocation(); setMsg(t('✔ Localização encontrada: {c}.', { c: `${l.name}, ${countryName(l.country)}` })); }
+    catch (e) { setMsg(e.message === 'denied' ? t('A localização está bloqueada para esta app. Ativa-a nas definições do telemóvel. Entretanto uso o país pelo endereço de internet.') : t('Não foi possível usar o GPS. Uso o país pelo endereço de internet ou pelo idioma do telemóvel.')); }
     finally { setBusy(false); }
   };
+  const flag = c.code ? String.fromCodePoint(...[...c.code].map((ch) => 127397 + ch.charCodeAt(0))) : '';
   return (
     <section id={CARD_IDS.localizacao} className="p-3 rounded-sm mb-4" style={box}>
       <Title icon={MapPin}>{t('Localização')}</Title>
       <p className="text-[10px] mb-3" style={{ color: 'rgb(var(--c) / 0.6)' }}>
-        {t('O tempo, os alertas do IPMA e as notificações do tempo são da cidade escolhida. A posição exata fica só no telemóvel; só se usa a cidade.')}
+        {t('O país é detetado automaticamente e muda o número de emergência do SOS, as notícias, o tempo, as unidades e as rádios. Quem viaja vê o novo país ao voltar à app.')}
       </p>
-      <p className="text-xs mb-3" style={{ color: 'rgb(var(--c))' }}>
-        📍 {loc.name}{' '}<span style={{ color: 'rgb(var(--c) / 0.55)' }}>({mode === 'auto' ? t('automática') : mode === 'manual' ? t('escolhida à mão') : t('por omissão')})</span>
-      </p>
+      {c.status === 'loading' ? (
+        <p className="text-xs mb-3 animate-pulse" style={{ color: 'rgb(var(--c))' }}>{t('A detetar o país…')}</p>
+      ) : (
+        <div className="text-xs mb-3 space-y-1" style={{ color: 'rgb(var(--c))' }}>
+          <p>{flag} <b>{countryName(c.code) || '—'}</b>{c.code ? ` (${c.code})` : ''}{loc.name && loc.name !== countryName(c.code) ? ` · 📍 ${loc.name}` : ''}</p>
+          <p style={{ color: 'rgb(var(--c) / 0.6)' }}>{t('Origem:')} {SRC[mode === 'manual' && c.code === 'PT' ? 'manual' : c.source] || '—'} · {t('GPS:')} {PERM[c.permission]}</p>
+          {c.error && <p style={{ color: '#ef4444' }}>{t(c.error)}</p>}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2 items-center">
         <button type="button" onClick={auto} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-sm text-xs uppercase tracking-wider" style={{ ...btn, opacity: busy ? 0.6 : 1 }}>
           <LocateFixed size={13} /> {busy ? t('A localizar…') : t('Usar a minha localização')}
         </button>
-        <select aria-label={t('Escolher cidade')} value={loc.id} onChange={(e) => { setLocManual(e.target.value); setMsg(''); }}
-          className="px-2 py-2 rounded-sm text-xs" style={{ ...btn, background: 'rgb(var(--cb))' }}>
-          {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-        </select>
+        {c.code === 'PT' && (
+          <select aria-label={t('Escolher cidade')} value={mode === 'manual' ? loc.id ?? '' : ''} onChange={(e) => { if (e.target.value) setLocManual(e.target.value); else setLocAuto(); setMsg(''); }}
+            className="px-2 py-2 rounded-sm text-xs" style={{ ...btn, background: 'rgb(var(--cb))' }}>
+            <option value="">{t('Cidade automática')}</option>
+            {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        )}
       </div>
       {msg && <p className="text-[10px] mt-2" style={{ color: '#ffaa00' }}>{msg}</p>}
     </section>

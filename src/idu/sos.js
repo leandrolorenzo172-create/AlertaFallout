@@ -1,9 +1,11 @@
-// Ações do ecrã SOS (menu ≡ da aba IDU): 112, SMS com localização, estroboscópio, sirene e ligar ao contacto.
+// Ações do ecrã SOS (menu ≡ da aba IDU): número de emergência do país, SMS com localização, estroboscópio, sirene e ligar ao contacto.
 import { useSyncExternalStore } from 'react';
 import { getProfile, emergencyContact, requestEdit } from './iduStore';
 import { startSiren, stopSiren, isSirenOn, onSirenChange } from './siren';
 import { toggleStrobe, stopStrobe, getStrobe, onStrobeChange } from './strobe';
 import { getLoc } from '@/location';
+import { getCountry } from '@/geo/country';
+import { emergencyNumber } from '@/geo/emergency';
 import { t, locale } from '@/i18n';
 
 // Estado agregado para o menu: { siren, strobe, lit, sms: 'idle'|'gps'|'sent', notice }
@@ -21,8 +23,9 @@ const say = (notice, ms = 6000) => { clearTimeout(noticeTimer); set({ notice });
 
 const dial = (n) => { window.location.href = `tel:${n}`; };
 
-// 1) 112
-export const call112 = () => dial('112');
+// 1) Número de emergência do país onde o utilizador está (112 / 999 / 911 …; 112 se o país não for conhecido)
+export const currentEmergencyNumber = () => emergencyNumber(getCountry().code);
+export const callEmergency = () => dial(currentEmergencyNumber());
 
 // Sem número de emergência: avisa e abre a ficha no campo do telefone
 function missingContact() {

@@ -2,6 +2,7 @@ import React, { useCallback, useState, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import HotBar, { TABS, useVisibleTabs } from './HotBar';
 import { useSettings } from './theme';
+import { useCountry } from './geo/country';
 import PipBoyStartup from './PipBoyStartup';
 import StatusBar from './pipboy/StatusBar';
 import TabBar from './pipboy/TabBar';
@@ -30,6 +31,7 @@ import { t, useLang } from '@/i18n';
 const SIMULATED = ['dashboard', 'guerra', 'catastrofes', 'meteo', 'pizza'];
 
 export default function App() {
+  const country = useCountry();
   const location = useLocation();
   const navigate = useNavigate();
   const [booting, setBooting] = useState(true);
@@ -82,6 +84,9 @@ export default function App() {
       </div>
       {/* o Mr. Steel usa a largura toda no computador (barra lateral + conversa); os outros separadores ficam numa coluna */}
       <main key={lang} className={`${activeTab === 'assistente' ? 'max-w-6xl' : 'max-w-2xl'} mx-auto pb-40`}>
+        {/* ao mudar de país (viagem) os separadores voltam a montar e pedem os dados do novo país; o rádio e a música
+            (mantidos montados abaixo) não são interrompidos — o rádio troca as emissoras pela própria chave */}
+        <React.Fragment key={country.code || 'detecting'}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {TABS.map((tab) => (
@@ -90,6 +95,7 @@ export default function App() {
           <Route path="/alertas" element={<Navigate to="/definicoes" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        </React.Fragment>
         {[...kept.current].map((id) => (
           <div key={id} hidden={activeTab !== id}>{elements[id]}</div>
         ))}
