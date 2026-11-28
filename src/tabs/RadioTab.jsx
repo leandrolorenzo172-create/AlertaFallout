@@ -13,7 +13,7 @@ const LIVE_RADIO_URL = `${LIVE_SITE}#/radio`;
 // #/radio?f=97.4 (FM) ou #/radio?f=1000&b=AM
 const radioHash = (f, band) => `#/radio?f=${f}${band === 'AM' ? '&b=AM' : ''}`;
 
-function Tuner({ initialFreq, band, onCountryChange }) {
+function Tuner({ initialFreq, band }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -26,8 +26,6 @@ function Tuner({ initialFreq, band, onCountryChange }) {
         history.replaceState(history.state, '', `${location.pathname}${location.search}${radioHash(f, b)}`);
       },
       // Dentro do claude.ai partilha-se o site público, que é onde o som funciona
-      // botão 🌍 País: o separador volta a montar o rádio com as emissoras do país escolhido
-      onCountryChange,
       shareUrl: (f, b) => `${IS_ARTIFACT ? LIVE_SITE : `${location.origin}${location.pathname}`}${radioHash(f, b)}`,
     });
     return destroy;
@@ -40,7 +38,6 @@ function Tuner({ initialFreq, band, onCountryChange }) {
 export default function RadioTab() {
   const loc = useLocation();
   const country = useCountry();
-  const [radioCc, setRadioCc] = React.useState(() => { try { return localStorage.getItem('rf_country_override') || ''; } catch { return ''; } });
   // o separador fica montado noutros separadores (para o som continuar): guarda o último endereço do /radio
   const last = useRef(loc);
   if (loc.pathname === '/radio') last.current = loc;
@@ -69,8 +66,8 @@ export default function RadioTab() {
         </div>
       )}
       {/* a chave volta a montar o rádio quando se abre outro link partilhado */}
-      {/* a chave volta a montar o rádio com as emissoras do novo país quando o utilizador muda de país */}
-      <Tuner key={`${location.search}|${country.code || ''}|${radioCc}`} initialFreq={initialFreq} band={band} onCountryChange={(code) => setRadioCc(code || '')} />
+      {/* a chave volta a montar o rádio quando o país DETETADO muda (viagem); o botão 🌍 e as memórias trocam de país sem remontar */}
+      <Tuner key={`${location.search}|${country.code || ''}`} initialFreq={initialFreq} band={band} />
     </div>
   );
 }

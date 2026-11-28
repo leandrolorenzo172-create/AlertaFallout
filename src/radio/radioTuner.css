@@ -139,6 +139,11 @@
 .rf-presets button:active small, .rf-presets button.saved small { color: rgb(var(--cb)); }
 .rf-presets b { font-weight: normal; font-size: 14px; }
 .rf-presets small { font-size: 10px; color: var(--rf-green2); font-variant-numeric: tabular-nums; }
+/* nome e país de origem da memória (ex.: "Mega Hits · PT"), numa linha cortada com reticências */
+.rf-presets em { display: block; font-style: normal; font-size: 8.5px; letter-spacing: .02em; color: var(--rf-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 3px; }
+.rf-presets button { min-width: 0; }
+.rf-presets button.empty small { opacity: .55; }
+.rf-presets button:active em, .rf-presets button.saved em { color: rgb(var(--cb)); }
 .rf-presets button:focus-visible, .rf-band button:focus-visible, .rf-add:focus-visible, .rf-panel button:focus-visible, .rf-sel button:focus-visible { outline: 2px solid var(--rf-green); outline-offset: 2px; }
 .rf-note { margin-top: 6px; font-size: 9px; letter-spacing: .1em; color: #8d9388; text-align: center; }
 .rf-note.ok { color: var(--rf-amber); letter-spacing: .12em; }
@@ -236,3 +241,7 @@
   color: var(--rf-green); background: transparent; border: 1px solid rgb(var(--c) / 0.2); }
 .rf-ctry li button[aria-selected="true"] { background: rgb(var(--c) / 0.16); border-color: var(--rf-green); }
 .rf-ctry li button:hover, .rf-ctry li button:focus-visible { border-color: var(--rf-green); outline: none; }
+
+/* memórias: nome da rádio em até 2 linhas (cortado com reticências) */
+.rf-presets small.rf-mname { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+  font-size: 10px; line-height: 1.15; min-height: 2.3em; padding: 0 3px; font-variant-numeric: normal; }

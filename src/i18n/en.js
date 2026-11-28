@@ -1400,4 +1400,7 @@ export default {
   "Automático (país onde estás)": "Automatic (where you are)",
   "Nenhum país com esse nome.": "No country with that name.",
   "A carregar países…": "Loading countries…",
+  "Sem emissora": "No station",
+  "Memória {n}: vazia.": "Memory {n}: empty.",
+  "MEMÓRIA {n} VAZIA: mantém premido para gravar a frequência atual.": "MEMORY {n} EMPTY: press and hold to save the current frequency.",
 };
